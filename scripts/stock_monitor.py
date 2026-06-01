@@ -135,14 +135,11 @@ def check_thresholds(stocks, quotes, config):
     
     return alerts
 
-def send_webhook(webhook_url, alerts, custom_content=None):
+def send_webhook(webhook_url, alerts):
     """发送企业微信Webhook消息"""
-    if custom_content:
-        content = custom_content
-    else:
-        now_str = datetime.now(CST).strftime('%Y-%m-%d %H:%M:%S')
-        lines = [f'- **{a["name"]}**（{a["code"]}）：<font color="info">{a["value"]}</font>' for a in alerts]
-        content = f'## 📈 股票定时提醒\n> 触发时间：{now_str}\n> 触发数量：<font color="warning">{len(alerts)}</font> 只\n\n' + '\n'.join(lines)
+    now_str = datetime.now(CST).strftime('%Y-%m-%d %H:%M:%S')
+    lines = [f'- **{a["name"]}**（{a["code"]}）：<font color="info">{a["value"]}</font>' for a in alerts]
+    content = f'## 📈 股票定时提醒\n> 触发时间：{now_str}\n> 触发数量：<font color="warning">{len(alerts)}</font> 只\n\n' + '\n'.join(lines)
     
     data = json.dumps({
         'msgtype': 'markdown',
@@ -159,21 +156,6 @@ def send_webhook(webhook_url, alerts, custom_content=None):
             log(f'微信推送失败: {result.get("errmsg")}')
     except Exception as e:
         log(f'微信推送异常: {e}')
-
-def load_alert_cache():
-    """读取上次触发的告警缓存，避免重复推送"""
-    cache_file = '/tmp/stock_alert_cache.json'
-    try:
-        with open(cache_file, 'r') as f:
-            return json.load(f)
-    except:
-        return []
-
-def save_alert_cache(alerts):
-    """保存本次触发的告警"""
-    cache_file = '/tmp/stock_alert_cache.json'
-    with open(cache_file, 'w') as f:
-        json.dump(alerts, f)
 
 def main():
     # 加载配置
@@ -229,31 +211,11 @@ def main():
     # 检查阈值
     alerts = check_thresholds(stocks, quotes, config)
     
-    # 去重：与上次告警比较，没有变化就不推送
-    last_alerts = load_alert_cache()
-    
     if alerts:
-        # 构建用于比较的指纹，排序后转tuple方便比较
-        current_fingerprint = tuple(sorted((a['code'], a['value']) for a in alerts))
-        last_fingerprint = tuple(sorted((item.get('code',''), item.get('value','')) for item in last_alerts)) if last_alerts else ()
-        
-        if current_fingerprint == last_fingerprint:
-            log(f'与上次相同，跳过推送 ({len(alerts)} 只)')
-        else:
-            log(f'✅ 触发 {len(alerts)} 只: {", ".join(f"{a["name"]}({a["value"]})" for a in alerts)}')
-            send_webhook(webhook_url, alerts)
-            # 保存缓存
-            save_alert_cache([{'code': a['code'], 'value': a['value']} for a in alerts])
+        log(f'✅ 触发 {len(alerts)} 只: {", ".join(f"{a["name"]}({a["value"]})" for a in alerts)}')
+        send_webhook(webhook_url, alerts)
     else:
-        # 之前有告警现在没了 = 恢复
-        if last_alerts:
-            log('所有股票已恢复正常，不再触发')
-            now_str = datetime.now(CST).strftime('%H:%M')
-            recovery_msg = f'## ✅ 股票恢复正常\n> 时间：{now_str}\n> 之前触发的股票已全部恢复到阈值以上'
-            send_webhook(webhook_url, [], recovery_msg)
-        else:
-            log('无股票触发提醒')
-        save_alert_cache([])
+        log('无股票触发提醒')
 
 if __name__ == '__main__':
     main()
