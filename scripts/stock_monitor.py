@@ -184,6 +184,15 @@ def main():
         log('无监控股票，退出')
         return
     
+    # 严格按 stock-config.json 中配置的时间点检查
+    check_times = config.get('check_times', [])
+    current_time = datetime.now(CST).strftime('%H:%M')
+    if check_times and current_time not in check_times:
+        # 不是配置的时间点，静默跳过
+        return
+
+    log(f'时间点 {current_time} 触发检查')
+    
     # 获取Webhook URL（优先从环境变量读取）
     webhook_url = os.environ.get('WECHAT_WEBHOOK_URL', '')
     if not webhook_url:
