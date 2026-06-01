@@ -184,12 +184,27 @@ def main():
         log('无监控股票，退出')
         return
     
-    # 严格按 stock-config.json 中配置的时间点检查
+    # 严格按 check_times 配置的时间点检查（±2分钟容差）
+    # cron 每5分钟触发一次，容差确保不因延迟而遗漏
     check_times = config.get('check_times', [])
-    current_time = datetime.now(CST).strftime('%H:%M')
-    if check_times and current_time not in check_times:
-        # 不是配置的时间点，静默跳过
-        return
+    if check_times:
+        now = datetime.now(CST)
+        matched = False
+        for t in check_times:
+            parts = t.split(':')
+            if len(parts) == 2:
+                try:
+                    th, tm = int(parts[0]), int(parts[1])
+                    if now.hour == th and abs(now.minute - tm) <= 2:
+                        matched = True
+                        break
+                except:
+                    continue
+        if not matched:
+            return
+        current_time = now.strftime('%H:%M')
+    else:
+        current_time = datetime.now(CST).strftime('%H:%M')
 
     log(f'时间点 {current_time} 触发检查')
     
