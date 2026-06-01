@@ -2,8 +2,7 @@ name: 股票定时监控
 
 on:
   schedule:
-    # 北京时间8:00-23:59，每5分钟检查一次（UTC=北京时间-8）
-    - cron: '*/5 0-15 * * *'
+    - cron: '*/5 * * * *'
 
   workflow_dispatch:
 
