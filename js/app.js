@@ -31,6 +31,90 @@ async function initApp() {
 
   // 设置全局事件委托
   setupGlobalEvents();
+
+  // 启动定时检查（每分钟检查一次）
+  startScheduledCheck();
+}
+
+// ===== 定时检查 =====
+let lastCheckedMinute = null;
+
+function startScheduledCheck() {
+  // 每分钟检查一次
+  setInterval(async () => {
+    if (!appSettings) return;
+    
+    let times = [];
+    try { times = JSON.parse(appSettings.schedule_times || '[]'); } catch(e) { times = []; }
+    if (times.length === 0) return;
+    
+    let now = new Date();
+    let currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+    
+    // 避免同一分钟重复检查
+    if (currentTime === lastCheckedMinute) return;
+    lastCheckedMinute = currentTime;
+    
+    // 检查是否匹配设定的时间
+    if (!times.includes(currentTime)) return;
+    
+    console.log('定时检查触发:', currentTime);
+    await runScheduledCheck();
+  }, 30000); // 每30秒检查一次，确保不会错过整点
+}
+
+async function runScheduledCheck() {
+  try {
+    // 获取所有股票
+    let allStocks = [...watchlistStocks, ...holdingsStocks];
+    if (allStocks.length === 0) return;
+    
+    let allCodes = allStocks.map(s => s.code);
+    let quotes = await fetchStockQuotes(allCodes);
+    let alerts = await checkThresholds(allStocks, quotes, appSettings);
+    
+    if (alerts.length > 0) {
+      // 浏览器通知
+      let messages = alerts.map(a => a.message).join('\n');
+      sendBrowserNotification('股票定时提醒', messages).catch(() => {});
+      
+      // 微信推送
+      if (appSettings.webhook_url) {
+        let nowStr = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+        // 修复：a.message 已经包含股票名，这里只取倍数/达成率部分
+        let wxContent = `## 📈 股票定时提醒\n> 触发时间：${nowStr}\n> 触发数量：<font color="warning">${alerts.length}</font> 只\n\n${alerts.map(a => {
+          // 从 message 中提取数值部分（去掉前面的股票名）
+          let valuePart = a.message.replace(/^[^:]+[:：]/, '').trim();
+          return `- **${a.stock.name}**（${extractDigits(a.stock.code)}）：<font color="info">${valuePart}</font>`;
+        }).join('\n')}`;
+        sendWechatWebhook(appSettings.webhook_url, wxContent).catch(() => {});
+      }
+      
+      // 记录日志
+      let summary = alerts.map(a => a.message).join(', ');
+      addLog({
+        triggered_at: new Date().toISOString(),
+        trigger_type: 'schedule',
+        status: 'success',
+        summary: `定时触发 ${alerts.length} 只: ${summary}`
+      });
+    } else {
+      addLog({
+        triggered_at: new Date().toISOString(),
+        trigger_type: 'schedule',
+        status: 'success',
+        summary: '定时检查：无股票触发'
+      });
+    }
+  } catch (e) {
+    console.error('定时检查失败:', e);
+    addLog({
+      triggered_at: new Date().toISOString(),
+      trigger_type: 'schedule',
+      status: 'error',
+      summary: '定时检查失败: ' + e.message
+    });
+  }
 }
 
 // ===== 主题管理 =====
@@ -493,7 +577,12 @@ async function renderSettings() {
           // 企业微信机器人推送
           if (appSettings.webhook_url) {
             let nowStr = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
-            let wxContent = `## 📈 股票监控提醒\n> 触发时间：${nowStr}\n> 触发数量：<font color="warning">${alerts.length}</font> 只\n\n${alerts.map(a => `- **${a.stock.name}**（${extractDigits(a.stock.code)}）：<font color="info">${a.message}</font>`).join('\n')}`;
+            // 修复：a.message 已经包含股票名，这里只取倍数/达成率部分
+            let wxContent = `## 📈 股票监控提醒\n> 触发时间：${nowStr}\n> 触发数量：<font color="warning">${alerts.length}</font> 只\n\n${alerts.map(a => {
+              // 从 message 中提取数值部分（去掉前面的股票名）
+              let valuePart = a.message.replace(/^[^:]+[:：]/, '').trim();
+              return `- **${a.stock.name}**（${extractDigits(a.stock.code)}）：<font color="info">${valuePart}</font>`;
+            }).join('\n')}`;
             sendWechatWebhook(appSettings.webhook_url, wxContent).catch(() => {});
           }
 
