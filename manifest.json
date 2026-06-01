@@ -1,0 +1,22 @@
+{
+  "name": "自选股价格监控",
+  "short_name": "股票监控",
+  "description": "A股自选股/持仓股实时价格监控与推送提醒",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#121212",
+  "theme_color": "#00c48c",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
