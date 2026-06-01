@@ -32,8 +32,29 @@ async function initApp() {
   // 设置全局事件委托
   setupGlobalEvents();
 
-  // 启动定时检查（每分钟检查一次）
+  // 启动定时检查（主方案：PWA内置定时器）
   startScheduledCheck();
+  
+  // 请求后台同步权限（Android Chrome 锁屏也能唤醒）
+  requestPeriodicSync();
+}
+
+// ===== 后台同步 =====
+async function requestPeriodicSync() {
+  if (!('serviceWorker' in navigator) || !('periodicSync' in navigator.serviceWorker)) {
+    // 不支持后台同步，仅靠前台定时器
+    return;
+  }
+  try {
+    let status = await navigator.permissions.query({ name: 'periodic-background-sync' });
+    if (status.state === 'granted') {
+      let reg = await navigator.serviceWorker.ready;
+      await reg.periodicSync.register('stock-check', { minInterval: 5 * 60 * 1000 }); // 最小5分钟间隔
+      console.log('后台同步已注册');
+    }
+  } catch (e) {
+    console.log('后台同步注册失败:', e.message);
+  }
 }
 
 // ===== 定时检查 =====
