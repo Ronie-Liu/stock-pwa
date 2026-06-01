@@ -1,11 +1,165 @@
 {
-  "_comment": "股票监控配置 - 修改此文件后提交到GitHub即可更新定时监控",
-  "check_times": ["09:30", "10:00", "11:00", "11:40", "14:00", "14:30", "14:50", "15:10"],
-  "watchlist_threshold": 0.9,
-  "holdings_rate_threshold": 1.0,
+  "check_times": [
+    "10:00",
+    "11:00",
+    "11:40",
+    "14:00",
+    "14:30",
+    "14:50",
+    "15:10",
+    "19:43",
+    "19:57"
+  ],
+  "watchlist_threshold": 1.05,
+  "holdings_rate_threshold": 1.7,
   "holdings_buy_threshold": 0.9,
   "stocks": [
-    { "code": "300049", "name": "福瑞医科", "type": "watchlist", "buy_price": 10.5 },
-    { "code": "000001", "name": "平安银行", "type": "holdings", "buy_price": 12.0, "target_price": 15.0 }
+    {
+      "code": "300049",
+      "name": "福瑞医科",
+      "type": "watchlist",
+      "buy_price": 44
+    },
+    {
+      "code": "920396",
+      "name": "常辅股份",
+      "type": "watchlist",
+      "buy_price": 23
+    },
+    {
+      "code": "300650",
+      "name": "太龙股份",
+      "type": "watchlist",
+      "buy_price": 12
+    },
+    {
+      "code": "920445",
+      "name": "龙竹科技",
+      "type": "watchlist",
+      "buy_price": 7.7
+    },
+    {
+      "code": "603015",
+      "name": "弘讯科技",
+      "type": "watchlist",
+      "buy_price": 10
+    },
+    {
+      "code": "002882",
+      "name": "金龙羽",
+      "type": "watchlist",
+      "buy_price": 21
+    },
+    {
+      "code": "600571",
+      "name": "信雅达",
+      "type": "watchlist",
+      "buy_price": 10.5
+    },
+    {
+      "code": "002576",
+      "name": "通达动力",
+      "type": "watchlist",
+      "buy_price": 16.7
+    },
+    {
+      "code": "002553",
+      "name": "南方精工",
+      "type": "watchlist",
+      "buy_price": 18
+    },
+    {
+      "code": "002765",
+      "name": "蓝黛科技",
+      "type": "watchlist",
+      "buy_price": 7
+    },
+    {
+      "code": "003021",
+      "name": "兆威机电",
+      "type": "watchlist",
+      "buy_price": 88
+    },
+    {
+      "code": "300680",
+      "name": "隆盛科技",
+      "type": "watchlist",
+      "buy_price": 30
+    },
+    {
+      "code": "300882",
+      "name": "万胜智能",
+      "type": "watchlist",
+      "buy_price": 15
+    },
+    {
+      "code": "002664",
+      "name": "信质集团",
+      "type": "watchlist",
+      "buy_price": 18
+    },
+    {
+      "code": "605228",
+      "name": "神通科技",
+      "type": "watchlist",
+      "buy_price": 12
+    },
+    {
+      "code": "000409",
+      "name": "云鼎科技",
+      "type": "watchlist",
+      "buy_price": 9
+    },
+    {
+      "code": "688698",
+      "name": "伟创电气",
+      "type": "watchlist",
+      "buy_price": 56
+    },
+    {
+      "code": "300727",
+      "name": "润禾材料",
+      "type": "watchlist",
+      "buy_price": 30
+    },
+    {
+      "code": "605128",
+      "name": "上海沿浦",
+      "type": "watchlist",
+      "buy_price": 30
+    },
+    {
+      "code": "300772",
+      "name": "运达股份",
+      "type": "watchlist",
+      "buy_price": 13
+    },
+    {
+      "code": "300634",
+      "name": "彩讯股份",
+      "type": "watchlist",
+      "buy_price": 22
+    },
+    {
+      "code": "300573",
+      "name": "兴齐眼药",
+      "type": "holdings",
+      "buy_price": 38,
+      "target_price": 0
+    },
+    {
+      "code": "601127",
+      "name": "赛力斯",
+      "type": "holdings",
+      "buy_price": 80,
+      "target_price": 0
+    },
+    {
+      "code": "300457",
+      "name": "赢合科技",
+      "type": "holdings",
+      "buy_price": 24,
+      "target_price": 0
+    }
   ]
 }
