@@ -714,57 +714,83 @@ async function renderSettings() {
     });
   }
 
-  // 同步配置到 GitHub Actions
+  // 同步配置到 GitHub Actions（通过 API 自动更新）
   let syncConfigBtn = document.getElementById('btn-sync-config');
   if (syncConfigBtn) {
     syncConfigBtn.addEventListener('click', async () => {
+      let resultDiv = document.getElementById('sync-result');
+      let tokenEl = document.getElementById('setting-github-token');
+      let token = (tokenEl ? tokenEl.value : '').trim();
+
+      if (!token) {
+        if (resultDiv) resultDiv.innerHTML = '<span style="color:var(--danger)">❌ 请先设置 GitHub Token</span>';
+        return;
+      }
+
+      if (resultDiv) resultDiv.innerHTML = '<span style="color:var(--text-secondary)">⏳ 同步中...</span>';
+
       try {
+        // 保存 token
+        await saveSettings({ github_token: token });
+        appSettings.github_token = token;
+
         // 读取所有股票
         let watchlist = await getAllStocks('watchlist');
         let holdings = await getAllStocks('holdings');
-        let settings = await getSettings();
 
         let stocks = [];
         for (let s of watchlist) {
-          stocks.push({
-            code: extractDigits(s.code),
-            name: s.name,
-            type: 'watchlist',
-            buy_price: s.buy_price || 0
-          });
+          stocks.push({ code: extractDigits(s.code), name: s.name, type: 'watchlist', buy_price: s.buy_price || 0 });
         }
         for (let s of holdings) {
-          stocks.push({
-            code: extractDigits(s.code),
-            name: s.name,
-            type: 'holdings',
-            buy_price: s.buy_price || 0,
-            target_price: s.target_price || 0
-          });
+          stocks.push({ code: extractDigits(s.code), name: s.name, type: 'holdings', buy_price: s.buy_price || 0, target_price: s.target_price || 0 });
         }
 
         let config = {
-          check_times: JSON.parse(settings.schedule_times || '["10:00","11:00","11:40","14:00","14:30","14:50","15:10"]'),
-          watchlist_threshold: settings.watchlist_multiple_threshold || 0.9,
-          holdings_rate_threshold: settings.holdings_rate_threshold || 1.0,
-          holdings_buy_threshold: settings.holdings_buy_ratio_threshold || 0.9,
+          check_times: JSON.parse(appSettings.schedule_times || '["10:00","11:00","11:40","14:00","14:30","14:50","15:10"]'),
+          watchlist_threshold: appSettings.watchlist_multiple_threshold || 0.9,
+          holdings_rate_threshold: appSettings.holdings_rate_threshold || 1.0,
+          holdings_buy_threshold: appSettings.holdings_buy_ratio_threshold || 0.9,
           stocks: stocks
         };
 
+        // Base64 编码（浏览器兼容写法）
         let jsonStr = JSON.stringify(config, null, 2);
+        let content = btoa(unescape(encodeURIComponent(jsonStr)));
 
-        // 显示在 textarea 中
-        let output = document.getElementById('sync-config-output');
-        if (output) {
-          output.style.display = 'block';
-          output.value = jsonStr;
+        // 先获取文件 SHA
+        let getResp = await fetch('https://api.github.com/repos/Ronie-Liu/stock-pwa/contents/stock-config.json', {
+          headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github+json' }
+        });
+        let getData = await getResp.json();
+        let sha = getData.sha;
+
+        if (!sha) {
+          if (resultDiv) resultDiv.innerHTML = '<span style="color:var(--danger)">❌ 无法获取文件信息，请检查 Token 是否正确</span>';
+          return;
         }
 
-        // 复制到剪贴板
-        await navigator.clipboard.writeText(jsonStr);
-        showToast('✅ 配置已复制到剪贴板！请点击下方链接粘贴到 GitHub');
+        // 更新文件
+        let putResp = await fetch('https://api.github.com/repos/Ronie-Liu/stock-pwa/contents/stock-config.json', {
+          method: 'PUT',
+          headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: '从APP同步股票配置 [skip ci]',
+            content: content,
+            sha: sha
+          })
+        });
+
+        let putData = await putResp.json();
+
+        if (putData.content) {
+          if (resultDiv) resultDiv.innerHTML = '<span style="color:var(--up-color)">✅ 同步成功！定时监控已更新（' + stocks.length + ' 只股票）</span>';
+          showToast('✅ 同步成功');
+        } else {
+          if (resultDiv) resultDiv.innerHTML = '<span style="color:var(--danger)">❌ 同步失败: ' + (putData.message || '未知错误') + '</span>';
+        }
       } catch (e) {
-        showToast('导出失败: ' + e.message, 'error');
+        if (resultDiv) resultDiv.innerHTML = '<span style="color:var(--danger)">❌ 同步异常: ' + e.message + '</span>';
       }
     });
   }

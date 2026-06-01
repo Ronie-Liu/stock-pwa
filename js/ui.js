@@ -603,19 +603,21 @@ function renderSettingsPage(settings) {
       </div>
     </div>
 
-    <!-- GitHub Actions 同步 -->
+    <!-- GitHub Actions 自动同步 -->
     <div class="settings-section">
       <h4>🔄 同步到 GitHub Actions</h4>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">
-        将当前股票列表+阈值导出为配置，覆盖 GitHub 上的 stock-config.json，即可同步到定时监控
+        设置 GitHub Token 后，一键同步股票列表和阈值到定时监控
       </div>
-      <button class="btn btn-primary" id="btn-sync-config">📋 复制配置到剪贴板</button>
-      <a href="https://github.com/Ronie-Liu/stock-pwa/edit/main/stock-config.json" target="_blank" class="btn btn-sm" style="margin-top:6px;display:inline-block;text-decoration:none;text-align:center;">
-        🔗 打开 GitHub 编辑页面
-      </a>
-      <div style="margin-top:8px;">
-        <textarea id="sync-config-output" readonly style="width:100%;height:200px;background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:11px;padding:8px;display:none;"></textarea>
+      <div class="settings-item">
+        <span class="label">GitHub Token</span>
+        <input type="password" id="setting-github-token" value="${escapeHtml(settings.github_token || '')}" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
       </div>
+      <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px;">
+        <a href="https://github.com/settings/tokens/new?scopes=repo&description=stock-pwa-sync" target="_blank" style="color:var(--accent);">点此创建Token</a>（勾选 repo 权限，不设过期）
+      </div>
+      <button class="btn btn-primary" id="btn-sync-config" style="width:100%;">🔄 一键同步到 GitHub</button>
+      <div id="sync-result" style="margin-top:6px;font-size:12px;"></div>
     </div>
 
     <!-- 日志 -->
