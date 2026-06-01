@@ -714,6 +714,61 @@ async function renderSettings() {
     });
   }
 
+  // 同步配置到 GitHub Actions
+  let syncConfigBtn = document.getElementById('btn-sync-config');
+  if (syncConfigBtn) {
+    syncConfigBtn.addEventListener('click', async () => {
+      try {
+        // 读取所有股票
+        let watchlist = await getAllStocks('watchlist');
+        let holdings = await getAllStocks('holdings');
+        let settings = await getSettings();
+
+        let stocks = [];
+        for (let s of watchlist) {
+          stocks.push({
+            code: extractDigits(s.code),
+            name: s.name,
+            type: 'watchlist',
+            buy_price: s.buy_price || 0
+          });
+        }
+        for (let s of holdings) {
+          stocks.push({
+            code: extractDigits(s.code),
+            name: s.name,
+            type: 'holdings',
+            buy_price: s.buy_price || 0,
+            target_price: s.target_price || 0
+          });
+        }
+
+        let config = {
+          check_times: JSON.parse(settings.schedule_times || '["10:00","11:00","11:40","14:00","14:30","14:50","15:10"]'),
+          watchlist_threshold: settings.watchlist_multiple_threshold || 0.9,
+          holdings_rate_threshold: settings.holdings_rate_threshold || 1.0,
+          holdings_buy_threshold: settings.holdings_buy_ratio_threshold || 0.9,
+          stocks: stocks
+        };
+
+        let jsonStr = JSON.stringify(config, null, 2);
+
+        // 显示在 textarea 中
+        let output = document.getElementById('sync-config-output');
+        if (output) {
+          output.style.display = 'block';
+          output.value = jsonStr;
+        }
+
+        // 复制到剪贴板
+        await navigator.clipboard.writeText(jsonStr);
+        showToast('✅ 配置已复制到剪贴板！请点击下方链接粘贴到 GitHub');
+      } catch (e) {
+        showToast('导出失败: ' + e.message, 'error');
+      }
+    });
+  }
+
   // 渲染日志
   renderLogsSection();
 }

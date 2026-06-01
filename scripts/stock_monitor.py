@@ -158,16 +158,6 @@ def send_webhook(webhook_url, alerts, trigger_type='定时'):
     except Exception as e:
         log(f'微信推送异常: {e}')
 
-def is_trading_time():
-    """判断是否交易时间（含盘前盘后）"""
-    now = datetime.now(CST)
-    weekday = now.weekday()  # 0=Monday, 6=Sunday
-    if weekday >= 5:
-        return False
-    
-    time_str = now.strftime('%H%M')
-    return '0915' <= time_str <= '1535'
-
 def main():
     # 加载配置
     config = load_config()
@@ -177,10 +167,7 @@ def main():
         log('无监控股票，退出')
         return
     
-    # 检查交易日
-    if not is_trading_time():
-        log('非交易时间，跳过检查')
-        return
+    # 全天运行，不再限制交易时间
     
     # 获取Webhook URL（优先从环境变量读取）
     webhook_url = os.environ.get('WECHAT_WEBHOOK_URL', '')

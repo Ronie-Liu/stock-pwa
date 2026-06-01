@@ -603,6 +603,21 @@ function renderSettingsPage(settings) {
       </div>
     </div>
 
+    <!-- GitHub Actions 同步 -->
+    <div class="settings-section">
+      <h4>🔄 同步到 GitHub Actions</h4>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">
+        将当前股票列表+阈值导出为配置，覆盖 GitHub 上的 stock-config.json，即可同步到定时监控
+      </div>
+      <button class="btn btn-primary" id="btn-sync-config">📋 复制配置到剪贴板</button>
+      <a href="https://github.com/Ronie-Liu/stock-pwa/edit/main/stock-config.json" target="_blank" class="btn btn-sm" style="margin-top:6px;display:inline-block;text-decoration:none;text-align:center;">
+        🔗 打开 GitHub 编辑页面
+      </a>
+      <div style="margin-top:8px;">
+        <textarea id="sync-config-output" readonly style="width:100%;height:200px;background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:11px;padding:8px;display:none;"></textarea>
+      </div>
+    </div>
+
     <!-- 日志 -->
     <div class="settings-section">
       <h4>📋 近期推送日志</h4>
