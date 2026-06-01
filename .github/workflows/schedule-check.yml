@@ -1,0 +1,46 @@
+name: 股票定时监控
+
+on:
+  schedule:
+    # 北京时间 9:30-15:30，每10分钟检查（GitHub cron = UTC）
+    # 9:30 CST = 1:30 UTC, 15:30 CST = 7:30 UTC
+    - cron: '30 1 * * 1-5'   # 工作日 9:30
+    - cron: '40 1 * * 1-5'   # 工作日 9:40
+    - cron: '50 1 * * 1-5'   # 工作日 9:50
+    - cron: '0 2 * * 1-5'    # 工作日 10:00
+    - cron: '10 2 * * 1-5'   # 工作日 10:10
+    - cron: '20 2 * * 1-5'   # 工作日 10:20
+    - cron: '30 2 * * 1-5'   # 工作日 10:30
+    - cron: '0 3 * * 1-5'    # 工作日 11:00
+    - cron: '10 3 * * 1-5'
+    - cron: '20 3 * * 1-5'
+    - cron: '30 3 * * 1-5'
+    - cron: '40 3 * * 1-5'   # 工作日 11:40
+    - cron: '50 3 * * 1-5'
+    - cron: '0 6 * * 1-5'    # 工作日 14:00
+    - cron: '10 6 * * 1-5'
+    - cron: '20 6 * * 1-5'
+    - cron: '30 6 * * 1-5'   # 工作日 14:30
+    - cron: '40 6 * * 1-5'
+    - cron: '50 6 * * 1-5'   # 工作日 14:50
+    - cron: '0 7 * * 1-5'    # 工作日 15:00
+    - cron: '10 7 * * 1-5'   # 工作日 15:10
+
+  # 也可以手动触发
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Run stock monitor
+        env:
+          WECHAT_WEBHOOK_URL: ${{ secrets.WECHAT_WEBHOOK_URL }}
+        run: python scripts/stock_monitor.py

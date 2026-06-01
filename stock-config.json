@@ -1,0 +1,11 @@
+{
+  "_comment": "股票监控配置 - 修改此文件后提交到GitHub即可更新定时监控",
+  "check_times": ["09:30", "10:00", "11:00", "11:40", "14:00", "14:30", "14:50", "15:10"],
+  "watchlist_threshold": 0.9,
+  "holdings_rate_threshold": 1.0,
+  "holdings_buy_threshold": 0.9,
+  "stocks": [
+    { "code": "300049", "name": "福瑞医科", "type": "watchlist", "buy_price": 10.5 },
+    { "code": "000001", "name": "平安银行", "type": "holdings", "buy_price": 12.0, "target_price": 15.0 }
+  ]
+}
