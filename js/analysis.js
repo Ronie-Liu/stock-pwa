@@ -103,28 +103,109 @@ function analyzeMacro(indexData) {
     let bbPos = bb.pos[idx], bbWidth = bb.width[idx];
     let bbSignal = '';
     if (bbPos !== null) {
-      if (bbPos < 10) { bbSignal = '触下轨超卖'; bullish += 2; }
+      if (bbPos < 10) { bbSignal = '触下轨超卖'; bullish += 1; }
       else if (bbPos > 90) { bbSignal = '触上轨超买'; bearish += 1; }
-      else if (bbPos < 30) { bbSignal = '偏下轨'; bullish += 1; }
-      else if (bbPos > 70) { bbSignal = '偏上轨'; }
+      else if (bbPos < 30) { bbSignal = '偏下轨'; bullish += 0.5; }
+      else if (bbPos > 70) { bbSignal = '偏上轨'; bearish += 0.5; }
       else bbSignal = '中轨附近';
     }
+
+    // === 指数也要用个股同样的技术面四维 ===
+    // 1. 底背离/顶背离 (MACD+RSI)
+    let macdData = calcMACDDataSeries(closes);
+    let difArr = macdData.diff, rsiArr = calcRSISeries(closes, 14);
+    let lookback = Math.min(60, closes.length);
+    let segCloses = closes.slice(-lookback), segDifs = difArr.slice(-lookback), segRSIs = rsiArr.slice(-lookback);
+    let segment = cs.slice(-lookback);
+    let lows = findLocalLows(segCloses, 5), highs = findLocalHighs(segCloses, 5);
+    let macdDiv = false, rsiDiv = false, macdTopDiv = false, rsiTopDiv = false;
+    if (lows.length >= 2) {
+      let l1 = lows[lows.length - 1], l2 = lows[lows.length - 2];
+      let p1 = segCloses[l1], p2 = segCloses[l2], d1 = segDifs[l1] || 0, d2 = segDifs[l2] || 0, r1 = segRSIs[l1] || 50, r2 = segRSIs[l2] || 50;
+      if (p1 < p2) { if (d1 > d2) macdDiv = true; if (r1 > r2) rsiDiv = true; }
+    }
+    if (highs.length >= 2) {
+      let h1 = highs[highs.length - 1], h2 = highs[highs.length - 2];
+      let p1 = segCloses[h1], p2 = segCloses[h2], d1 = segDifs[h1] || 0, d2 = segDifs[h2] || 0, r1 = segRSIs[h1] || 50, r2 = segRSIs[h2] || 50;
+      if (p1 > p2) { if (d1 < d2) macdTopDiv = true; if (r1 < r2) rsiTopDiv = true; }
+    }
+
+    // 2. 下跌/上涨结构
+    function slope(data, p) { if (data.length < p * 2) return 0; let r = safeAvg(data.slice(-p)), o = safeAvg(data.slice(-p * 2, -p)); return o ? ((r - o) / o * 100) / p : 0; }
+    let s10 = slope(closes, 10), s20 = slope(closes, 20);
+    let flattening = s10 < 0 && s20 < 0 && Math.abs(s10) < Math.abs(s20) * 0.7;
+    let steepUp = s10 > 0.5 && s20 > 0.3;
+
+    // 3. 支撑位 (斐波那契)
+    let lookback120 = Math.min(120, cs.length);
+    let segH = closes.slice(-lookback120), segL = closes.slice(-lookback120);
+    let swingHigh = Math.max(...segH), swingLow = Math.min(...segL);
+    let range = swingHigh - swingLow;
+    let fib618 = range > 0 ? swingHigh - range * 0.618 : close;
+    let nearFib618 = Math.abs(close - fib618) / close < 0.03;
+    let belowFib618 = close < fib618;
+
+    // 4. 量价关系
+    let redVol = 0, greenVol = 0, redDays = 0, greenDays = 0;
+    for (let c of cs.slice(-10)) {
+      let v = safeNum(c.volume, 0);
+      if (c.close >= c.open) { redVol += v; redDays++; } else { greenVol += v; greenDays++; }
+    }
+    let totalVol = redVol + greenVol, redRatio = totalVol ? parseFloat((redVol / totalVol * 100).toFixed(1)) : 50;
+    let redFat = redRatio >= 55 && redDays >= greenDays;
+    let priceChg10 = cs.length > 10 ? pct(cs[cs.length - 1].close, cs[cs.length - 10].close) : 0;
+
+    // 综合打分 (指数版)
+    let idxBullish = 0, idxBearish = 0;
+    // 均线
+    if (aboveMA20 && aboveMA60 && slope20 > 0) { idxBullish += 2; }
+    else if (!aboveMA20 && slope20 < -0.1) { idxBearish += 2; }
+    else { idxBullish += 1; idxBearish += 1; }
+    // 背离
+    if (macdDiv && rsiDiv) { idxBullish += 2; }
+    else if (macdTopDiv && rsiTopDiv) { idxBearish += 2; }
+    else if (macdDiv || rsiDiv) { idxBullish += 1; }
+    else if (macdTopDiv || rsiTopDiv) { idxBearish += 1; }
+    // 结构
+    if (steepUp) { idxBullish += 1; }
+    else if (s10 < 0 && !flattening) { idxBearish += 1; }
+    // 支撑
+    if (nearFib618 && !belowFib618) { idxBullish += 1; }
+    else if (belowFib618) { idxBearish += 1; }
+    // 量价
+    if (redFat && volTrend === '放量' && priceChg10 > 0) { idxBullish += 1; }
+    else if (!redFat && volTrend === '放量' && priceChg10 < 0) { idxBearish += 1; }
+    // BB
+    if (bbPos !== null) {
+      if (bbPos < 10) idxBullish += 1;
+      else if (bbPos > 90) idxBearish += 1;
+    }
+
+    bullish += idxBullish; bearish += idxBearish;
+
     let trendSignal = '';
-    if (aboveMA20 && aboveMA60 && slope20 > 0) { trendSignal = '多头排列'; bullish += 2; }
-    else if (!aboveMA20 && slope20 < -0.1) { trendSignal = '空头排列'; bearish += 2; }
-    else { trendSignal = '震荡'; bullish += 1; bearish += 1; }
-    if (volTrend === '放量') bullish += 1; else if (volTrend === '缩量') bearish += 1;
+    if (aboveMA20 && aboveMA60 && slope20 > 0) { trendSignal = '多头排列'; }
+    else if (!aboveMA20 && slope20 < -0.1) { trendSignal = '空头排列'; }
+    else { trendSignal = '震荡'; }
+
+    let divSignal = macdDiv && rsiDiv ? '底背离✅' : macdTopDiv && rsiTopDiv ? '顶背离⚠️' : macdDiv ? 'MACD底背离' : macdTopDiv ? 'MACD顶背离' : '无背离';
+    let structSignal = steepUp ? '加速上涨' : flattening ? '跌速放缓' : s10 < 0 ? '短期下跌' : '短期企稳';
+    let supportSignal = nearFib618 ? (belowFib618 ? '跌破61.8%支撑' : '考验61.8%支撑') : '远离关键位';
+    let vpSignal = redFat && volTrend === '放量' && priceChg10 > 0 ? '放量上涨' : !redFat && volTrend === '放量' && priceChg10 < 0 ? '放量下跌' : volTrend === '缩量' ? '缩量' : '持平';
+
     rows.push({ name: info.name, code: info.code, close: close.toFixed(2),
       ma20: (ma20[idx]||'--'), ma60: (ma60[idx]||'--'), ma250: (ma250[idx]||'--'),
       dma20, dma60, dma250, bbPos, bbWidth, bbSignal,
-      slope20: slope20.toFixed(2), volRatio, volTrend, trendSignal, aboveMA20, aboveMA60, aboveMA250, dataDate: cs[idx].date });
-    details.push(info.name + ': ' + close.toFixed(2) + ' | MA20' + (ma20[idx]||'--') + ' ' + (aboveMA20?'✅':'❌') + ' MA60' + (ma60[idx]||'--') + ' ' + (aboveMA60?'✅':'❌') + ' MA250' + (ma250[idx]||'--') + ' ' + (aboveMA250?'✅':'❌') + ' | ' + volTrend + '(' + volRatio + ') | BB:' + (bbSignal||'--'));
+      slope20: slope20.toFixed(2), volRatio, volTrend, trendSignal,
+      divSignal, structSignal, supportSignal, vpSignal,
+      aboveMA20, aboveMA60, aboveMA250, dataDate: cs[idx].date });
+    details.push(info.name + ': ' + close.toFixed(2) + ' | 均线:' + trendSignal + ' | 背离:' + divSignal + ' | 结构:' + structSignal + ' | 支撑:' + supportSignal + ' | 量价:' + vpSignal);
   }
   let net = bullish - bearish;
   let signal, resultText, positionAdvice;
-  if (net >= 5) { signal = 'green'; resultText = '🟢 强势市场'; positionAdvice = '建议仓位 7-9成。多头排列+量能配合。'; }
-  else if (net >= 2) { signal = 'yellow'; resultText = '🟡 震荡市场'; positionAdvice = '建议仓位 5成左右。注重板块选择。'; }
-  else { signal = 'red'; resultText = '🔴 弱势市场'; positionAdvice = '建议仓位 ≤3成。空头排列，倾巢之下无完卵。'; }
+  if (net >= 6) { signal = 'green'; resultText = '🟢 强势市场'; positionAdvice = '建议仓位 7-9成。多维度确认强势。'; }
+  else if (net >= 2) { signal = 'yellow'; resultText = '🟡 震荡市场'; positionAdvice = '建议仓位 5成左右。信号交织，精选个股。'; }
+  else { signal = 'red'; resultText = '🔴 弱势市场'; positionAdvice = '建议仓位 ≤3成。多维度偏空，谨慎操作。'; }
   return { signal, resultText, positionAdvice, rows, details: details.join('\n'), bullish, bearish, net, dataDate: rows.length ? rows[0].dataDate : '--' };
 }
 
@@ -605,10 +686,10 @@ function renderResonanceHTML(stock, quote, macro, meso, micro, resonance) {
       <div class="dim-section-label">📊 市场面（均线+量能）</div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">数据日: ${macro.dataDate} | 净分: ${macro.net}</div>
       <table class="res-table">
-        <tr><th>指数</th><th>收盘</th><th>DMA20</th><th>DMA60</th><th>BB位置</th><th>斜率(%/日)</th><th>量能</th><th>趋势</th></tr>
-        ${macro.rows.map(r => '<tr><td>' + r.name + '</td><td>' + r.close + '</td><td style="color:' + (r.dma20 > 0 ? 'var(--up-color)' : 'var(--down-color)') + '">' + (r.dma20 > 0 ? '+' : '') + r.dma20 + '%</td><td style="color:' + (r.dma60 > 0 ? 'var(--up-color)' : 'var(--down-color)') + '">' + (r.dma60 > 0 ? '+' : '') + r.dma60 + '%</td><td>' + (r.bbPos !== null ? r.bbPos + '% ' + r.bbSignal : '--') + '</td><td>' + r.slope20 + '</td><td>' + r.volRatio + '(' + r.volTrend + ')</td><td>' + r.trendSignal + '</td></tr>').join('')}
+        <tr><th>指数</th><th>收盘</th><th>DMA20</th><th>DMA60</th><th>背离</th><th>结构</th><th>支撑</th><th>量价</th></tr>
+        ${macro.rows.map(r => '<tr><td>' + r.name + '</td><td>' + r.close + '</td><td style="color:' + (r.dma20 > 0 ? 'var(--up-color)' : 'var(--down-color)') + '">' + (r.dma20 > 0 ? '+' : '') + r.dma20 + '%</td><td style="color:' + (r.dma60 > 0 ? 'var(--up-color)' : 'var(--down-color)') + '">' + (r.dma60 > 0 ? '+' : '') + r.dma60 + '%</td><td>' + r.divSignal + '</td><td>' + r.structSignal + '</td><td>' + r.supportSignal + '</td><td>' + r.vpSignal + '</td></tr>').join('')}
       </table>
-      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">📐 DMA=偏离率(距均线%) | BB=布林带(20日2σ)位置 | 超卖&lt;10%=抄底机会, 超买&gt;90%=注意回调</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">📐 指数四维：均线排列+背离信号+涨跌结构+关键支撑+量价关系，同个股分析标准</div>
 
       <!-- 资金面 -->
       <div class="dim-section-label">💰 资金面（北向+涨跌比）</div>
@@ -709,6 +790,42 @@ function renderResonanceHTML(stock, quote, macro, meso, micro, resonance) {
 }
 
 // ==================== 辅助函数 ====================
+function findLocalLows(data, period) {
+  let lows = [];
+  for (let i = period; i < data.length - period; i++) {
+    let isLow = true;
+    for (let j = i - period; j <= i + period; j++) { if (j === i) continue; if (data[j] <= data[i]) { isLow = false; break; } }
+    if (isLow) lows.push(i);
+  }
+  return lows;
+}
+
+function findLocalHighs(data, period) {
+  let highs = [];
+  for (let i = period; i < data.length - period; i++) {
+    let isHigh = true;
+    for (let j = i - period; j <= i + period; j++) { if (j === i) continue; if (data[j] >= data[i]) { isHigh = false; break; } }
+    if (isHigh) highs.push(i);
+  }
+  return highs;
+}
+
+function calcMACDDataSeries(closes) {
+  let ema12 = [closes[0]], ema26 = [closes[0]];
+  for (let i = 1; i < closes.length; i++) {
+    ema12.push(ema12[i-1] * 11/13 + closes[i] * 2/13);
+    ema26.push(ema26[i-1] * 25/27 + closes[i] * 2/27);
+  }
+  let diff = [], dea = [];
+  for (let i = 0; i < closes.length; i++) {
+    diff.push(parseFloat((ema12[i] - ema26[i]).toFixed(4)));
+    if (i === 0) dea.push(diff[0]);
+    else dea.push(parseFloat((dea[i-1] * 8/10 + diff[i] * 2/10).toFixed(4)));
+  }
+  return { diff, dea };
+}
+
+// 覆盖旧定义
 function findLocalLows(data, period) {
   let lows = [];
   for (let i = period; i < data.length - period; i++) {
