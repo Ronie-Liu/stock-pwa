@@ -32,29 +32,8 @@ async function initApp() {
   // 设置全局事件委托
   setupGlobalEvents();
 
-  // 启动定时检查（主方案：PWA内置定时器）
+  // 启动定时检查（每分钟检查一次）
   startScheduledCheck();
-  
-  // 请求后台同步权限（Android Chrome 锁屏也能唤醒）
-  requestPeriodicSync();
-}
-
-// ===== 后台同步 =====
-async function requestPeriodicSync() {
-  if (!('serviceWorker' in navigator) || !('periodicSync' in navigator.serviceWorker)) {
-    // 不支持后台同步，仅靠前台定时器
-    return;
-  }
-  try {
-    let status = await navigator.permissions.query({ name: 'periodic-background-sync' });
-    if (status.state === 'granted') {
-      let reg = await navigator.serviceWorker.ready;
-      await reg.periodicSync.register('stock-check', { minInterval: 5 * 60 * 1000 }); // 最小5分钟间隔
-      console.log('后台同步已注册');
-    }
-  } catch (e) {
-    console.log('后台同步注册失败:', e.message);
-  }
 }
 
 // ===== 定时检查 =====
@@ -907,13 +886,39 @@ function setupGlobalEvents() {
 // ===== Service Worker =====
 
 function registerSW() {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').then((reg) => {
-      console.log('Service Worker 注册成功:', reg.scope);
-    }).catch((err) => {
-      console.log('Service Worker 注册失败:', err);
+  if (!('serviceWorker' in navigator)) return;
+
+  // 先注销所有旧 SW，再注册新的（确保版本切换）
+  navigator.serviceWorker.getRegistrations().then((regs) => {
+    return Promise.all(regs.map(r => r.unregister()));
+  }).then(() => {
+    return navigator.serviceWorker.register('/sw.js?v=20260602');
+  }).then((reg) => {
+    console.log('SW 注册成功:', reg.scope);
+
+    // 监听 SW 消息（版本更新通知）
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'SW_UPDATED') {
+        console.log('SW 版本更新，即将刷新页面...');
+        setTimeout(() => window.location.reload(), 500);
+      }
     });
-  }
+
+    // 检测 SW 更新
+    reg.addEventListener('updatefound', () => {
+      let newWorker = reg.installing;
+      if (!newWorker) return;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          // 新 SW 已就绪 → 通知用户刷新
+          console.log('新版本已就绪，即将刷新...');
+          setTimeout(() => window.location.reload(), 1000);
+        }
+      });
+    });
+  }).catch((err) => {
+    console.log('SW 注册失败:', err);
+  });
 }
 
 // ===== 启动应用 =====
