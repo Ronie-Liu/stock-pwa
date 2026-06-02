@@ -431,6 +431,15 @@ function showDetailPage(stock, quote) {
             <span class="spinner"></span> AI分析中...
           </div>
         </div>
+        <div class="ai-section">
+          <h4>📋 四维买入分析</h4>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">底背离 · 支撑位 · 下跌结构 · 量价关系 → 买入价调整建议</div>
+          <button class="btn btn-primary btn-sm" id="btn-analysis" style="margin-bottom:10px">开始分析</button>
+          <div class="ai-result" id="analysis-result"></div>
+          <div class="ai-loading" id="analysis-loading" style="display:none">
+            <span class="spinner"></span> 四维分析中（获取K线+周线+计算斐波那契+量价...请稍候）
+          </div>
+        </div>
       </div>
     </div>
   `;
@@ -468,6 +477,14 @@ function showDetailPage(stock, quote) {
       btn.style.display = 'inline-block';
     }
   });
+
+  // 四维分析按钮
+  let analysisBtn = document.getElementById('btn-analysis');
+  if (analysisBtn && typeof runAnalysisAndRender === 'function') {
+    analysisBtn.addEventListener('click', () => {
+      runAnalysisAndRender(stock, quote);
+    });
+  }
 }
 
 // ===== Tab 3: CSV 上传页 =====
