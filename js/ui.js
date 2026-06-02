@@ -424,20 +424,12 @@ function showDetailPage(stock, quote) {
           </div>
         </div>
         <div class="ai-section">
-          <h4>🤖 AI 技术分析</h4>
-          <button class="btn btn-primary btn-sm" id="btn-ai-analysis" style="margin-bottom:10px">开始分析</button>
-          <div class="ai-result" id="ai-result"></div>
-          <div class="ai-loading" id="ai-loading" style="display:none">
-            <span class="spinner"></span> AI分析中...
-          </div>
-        </div>
-        <div class="ai-section">
-          <h4>📋 四维买入分析</h4>
-          <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">底背离 · 支撑位 · 下跌结构 · 量价关系 → 买入价调整建议</div>
+          <h4>🔬 三维共振分析</h4>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">宏观(大盘+资金) · 中观(板块方向) · 微观(资金+技术) → 买入价调整建议</div>
           <button class="btn btn-primary btn-sm" id="btn-analysis" style="margin-bottom:10px">开始分析</button>
           <div class="ai-result" id="analysis-result"></div>
           <div class="ai-loading" id="analysis-loading" style="display:none">
-            <span class="spinner"></span> 四维分析中（获取K线+周线+计算斐波那契+量价...请稍候）
+            <span class="spinner"></span> 三维共振分析中（获取指数K线+北向资金+涨跌比+板块对标+个股资金+四维技术...请稍候）
           </div>
         </div>
       </div>
@@ -457,28 +449,7 @@ function showDetailPage(stock, quote) {
     renderKLineChart(stock.code);
   }
 
-  // AI分析按钮
-  document.getElementById('btn-ai-analysis').addEventListener('click', async () => {
-    let btn = document.getElementById('btn-ai-analysis');
-    let loading = document.getElementById('ai-loading');
-    let result = document.getElementById('ai-result');
-    btn.style.display = 'none';
-    loading.style.display = 'block';
-    result.innerHTML = '';
-
-    try {
-      let klineData = await fetchKLine(stock.code, 120);
-      let report = await fetchAIAnalysis(stock.code, stock.name, klineData.candles);
-      result.innerHTML = markdownToHtml(report);
-    } catch (e) {
-      result.innerHTML = `<span class="error-text">分析失败: ${escapeHtml(e.message)}</span>`;
-    } finally {
-      loading.style.display = 'none';
-      btn.style.display = 'inline-block';
-    }
-  });
-
-  // 四维分析按钮
+  // 三维共振分析按钮
   let analysisBtn = document.getElementById('btn-analysis');
   if (analysisBtn && typeof runAnalysisAndRender === 'function') {
     analysisBtn.addEventListener('click', () => {

@@ -747,7 +747,7 @@ async function renderSettings() {
         }
 
         let config = {
-          check_times: JSON.parse(appSettings.schedule_times || '["10:00","11:00","11:40","14:00","14:30","14:50","15:10"]'),
+          check_times: JSON.parse(appSettings.schedule_times || '["08:30","09:30","10:00","10:30","11:00","11:30","11:40","14:00","14:30","14:50","15:10","15:30"]'),
           watchlist_threshold: appSettings.watchlist_multiple_threshold || 0.9,
           holdings_rate_threshold: appSettings.holdings_rate_threshold || 1.0,
           holdings_buy_threshold: appSettings.holdings_buy_ratio_threshold || 0.9,
