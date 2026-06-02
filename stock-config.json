@@ -6,11 +6,9 @@
     "10:30",
     "11:00",
     "11:30",
-    "11:40",
     "14:00",
     "14:30",
     "14:50",
-    "15:10",
     "15:30"
   ],
   "watchlist_threshold": 1.05,
@@ -58,12 +56,6 @@
       "name": "信雅达",
       "type": "watchlist",
       "buy_price": 10.5
-    },
-    {
-      "code": "002576",
-      "name": "通达动力",
-      "type": "watchlist",
-      "buy_price": 16.7
     },
     {
       "code": "002553",
@@ -142,6 +134,13 @@
       "name": "彩讯股份",
       "type": "watchlist",
       "buy_price": 22
+    },
+    {
+      "code": "002576",
+      "name": "通达动力",
+      "type": "holdings",
+      "buy_price": 16.7,
+      "target_price": 0
     },
     {
       "code": "300573",
