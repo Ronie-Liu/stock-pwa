@@ -988,66 +988,124 @@ body {
   margin: 0 auto;
 }
 
-/* ===== 四维分析卡片 ===== */
-.analysis-card {
+/* ===== 三维共振分析卡片 ===== */
+.resonance-card {
   font-size: 13px;
   line-height: 1.6;
 }
-.analysis-dim {
-  margin: 10px 0;
+.resonance-dim {
+  margin: 8px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.resonance-dim .dim-summary {
   padding: 10px 12px;
   background: var(--bg-input);
-  border-radius: 8px;
-  border: 1px solid var(--border);
-}
-.analysis-dim .dim-header {
+  cursor: pointer;
   font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-.analysis-dim .dim-result {
-  font-size: 12px;
-  font-weight: 600;
-  margin-bottom: 4px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  display: inline-block;
-}
-.dim-strong_bullish, .dim-bullish { background: rgba(16,185,129,0.15); color: #10b981; }
-.dim-mild_bullish { background: rgba(16,185,129,0.08); color: #059669; }
-.dim-strong_support, .dim-stabilizing, .dim-accumulation, .dim-panic_cleared { background: rgba(16,185,129,0.15); color: #10b981; }
-.dim-approaching, .dim-mild_decline, .dim-flattening { background: rgba(251,191,36,0.15); color: #d97706; }
-.dim-far, .dim-weak_support, .dim-steep_decline, .dim-panic_selling, .dim-grinding_down, .dim-none, .dim-neutral { background: rgba(239,68,68,0.12); color: #ef4444; }
-
-.analysis-dim .dim-data {
+  user-select: none;
+  list-style: none;
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  font-size: 11px;
-  color: var(--text-muted);
-  margin: 4px 0;
+  align-items: center;
+  gap: 4px;
 }
-.analysis-dim .dim-detail {
+.resonance-dim .dim-summary::-webkit-details-marker { display: none; }
+.resonance-dim[open] .dim-summary { border-bottom: 1px solid var(--border); }
+.resonance-dim .dim-body {
+  padding: 10px 12px;
+}
+.resonance-dim .dim-detail-text {
   font-size: 11px;
   color: var(--text-secondary);
-  line-height: 1.6;
-  margin-top: 4px;
-  padding: 6px 8px;
-  background: rgba(0,0,0,0.08);
-  border-radius: 4px;
+  line-height: 1.7;
+  margin-bottom: 4px;
 }
-.fib-table {
+.resonance-dim .dim-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 6px 8px;
+  background: rgba(99,102,241,0.06);
+  border-radius: 4px;
+  margin-top: 6px;
+}
+.res-table {
   width: 100%;
   border-collapse: collapse;
   margin: 6px 0;
   font-size: 11px;
 }
-.fib-table th, .fib-table td {
-  padding: 3px 6px;
+.res-table th, .res-table td {
+  padding: 4px 6px;
   border: 1px solid var(--border);
   text-align: left;
 }
-.fib-table th { background: var(--bg-input); font-weight: 600; }
-.fib-table .fib-key { background: rgba(99,102,241,0.1); font-weight: 600; }
+.res-table th { background: var(--bg-input); font-weight: 600; font-size: 10px; }
+.fib-golden { background: rgba(245,158,11,0.1); font-weight: 600; }
+
+/* 微观子维度 */
+.micro-sub {
+  margin: 6px 0;
+  padding: 8px 10px;
+  background: rgba(0,0,0,0.03);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+.micro-sub-header {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.micro-sub-header .signal-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-right: 4px;
+  font-size: 10px;
+}
+.signal-tag.strong_bullish, .signal-tag.bullish { background: rgba(16,185,129,0.15); color: #10b981; }
+.signal-tag.mild_bullish { background: rgba(16,185,129,0.08); color: #059669; }
+.signal-tag.strong_support { background: rgba(16,185,129,0.15); color: #10b981; }
+.signal-tag.approaching { background: rgba(251,191,36,0.15); color: #d97706; }
+.signal-tag.far, .signal-tag.none { background: rgba(239,68,68,0.12); color: #ef4444; }
+.signal-tag.stabilizing { background: rgba(16,185,129,0.15); color: #10b981; }
+.signal-tag.flattening { background: rgba(16,185,129,0.08); color: #059669; }
+.signal-tag.mild_decline { background: rgba(251,191,36,0.15); color: #d97706; }
+.signal-tag.steep_decline { background: rgba(239,68,68,0.12); color: #ef4444; }
+.signal-tag.accumulation, .signal-tag.panic_cleared { background: rgba(16,185,129,0.15); color: #10b981; }
+.signal-tag.mild_bullish.vp { background: rgba(251,191,36,0.15); color: #d97706; }
+.signal-tag.panic_selling, .signal-tag.grinding_down { background: rgba(239,68,68,0.12); color: #ef4444; }
+.signal-tag.neutral { background: rgba(156,163,175,0.12); color: #6b7280; }
+.micro-sub-result {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 3px;
+}
+.micro-sub-data {
+  font-size: 10px;
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.micro-sub-detail {
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+  padding: 4px 6px;
+  background: rgba(0,0,0,0.04);
+  border-radius: 3px;
+  line-height: 1.5;
+}
+
+/* 删除旧四维分析样式 */
+.analysis-dim, .analysis-dim .dim-header, .analysis-dim .dim-result,
+.dim-strong_bullish, .dim-bullish, .dim-mild_bullish,
+.dim-strong_support, .dim-stabilizing, .dim-accumulation, .dim-panic_cleared,
+.dim-approaching, .dim-mild_decline, .dim-flattening,
+.dim-far, .dim-weak_support, .dim-steep_decline, .dim-panic_selling,
+.dim-grinding_down, .dim-none, .dim-neutral,
+.analysis-dim .dim-data, .analysis-dim .dim-detail, .fib-table,
+.fib-table th, .fib-table td, .fib-table .fib-key { display: none; }
 
 @keyframes spin { to { transform: rotate(360deg); } }

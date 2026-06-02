@@ -147,7 +147,7 @@ async function fetchKLine(code, count = 120) {
       close: parseFloat(item[2]),
       high: parseFloat(item[3]),
       low: parseFloat(item[4]),
-      volume: parseFloat(item[5]) * 100, // 手→股
+      volume: (parseFloat(item[5]) || 0) * 100, // 手→股, safeNum防NaN
       amount: 0,
       amplitude: 0,
       change_rate: 0,
