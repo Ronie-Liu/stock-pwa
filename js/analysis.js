@@ -310,7 +310,7 @@ function diagnoseSectorStage(name, indicators) {
 
 // ==================== SKILL 精选池（盘后静态JSON） ====================
 
-let _selectionCache = null;
+let _selectionCache = null, _diagCache = null;
 async function fetchSelectionPools() {
   if (_selectionCache) return _selectionCache;
   try {
@@ -320,6 +320,18 @@ async function fetchSelectionPools() {
     _selectionCache = await resp.json();
     return _selectionCache;
   } catch (e) { console.log('精选池加载失败:', e.message); return null; }
+}
+
+async function fetchSectorDiagnosis() {
+  if (_diagCache) return _diagCache;
+  try {
+    let url = 'https://raw.githubusercontent.com/Ronie-Liu/stock-pwa/main/data/sector_diagnosis.json';
+    let resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    let data = await resp.json();
+    _diagCache = data.sectors || {};
+    return _diagCache;
+  } catch (e) { console.log('板块诊断加载失败:', e.message); return {}; }
 }
 
 function matchSelectionPool(boardName, pools) {
@@ -486,8 +498,9 @@ async function analyzeMeso(stock, stockCandles, indexData) {
   let topIndustries = boards.industries.slice(0, 2); // 前2个行业板块
   let topConcepts = boards.concepts.slice(0, 5);     // 前5个概念板块（按rank排序）
 
-  // 2. 获取精选池
+  // 2. 获取精选池+诊断摘要
   let pools = await fetchSelectionPools();
+  let diagCache = await fetchSectorDiagnosis();
 
   // 3. 取板块K线并诊断
   let diagResults = [];
@@ -504,6 +517,14 @@ async function analyzeMeso(stock, stockCandles, indexData) {
     let indicators = computeSectorIndicators(kl.candles);
     let diagnosis = diagnoseSectorStage(board.name, indicators);
     let sel = matchSelectionPool(board.name, pools);
+    let skillDiag = diagCache[board.name] || null; // SKILL历史数据诊断（更全面）
+    if (skillDiag && diagnosis.confidence === 'medium') {
+      // 如果JS实时诊断置信度一般，用SKILL数据增强
+      if (skillDiag.c === 'high') diagnosis.confidence = 'high(盘后验证)';
+      if (skillDiag.rs && skillDiag.rs.length && (!diagnosis.reasons || diagnosis.reasons.length < 2)) {
+        diagnosis.reasons = [...(diagnosis.reasons || []), ...skillDiag.rs.filter(r => !diagnosis.reasons.includes(r)).slice(0, 2)];
+      }
+    }
     diagResults.push({
       name: board.name, code: board.code,
       category: i < topIndustries.length ? '行业' : '概念',
