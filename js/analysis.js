@@ -1,5 +1,5 @@
-// ===== 三维共振技术分析引擎 v3 =====
-// 宏观: 政策+资金+市场 | 中观: 景气度+相对强度+板块结构 | 微观: 基本面+资金面+技术面+消息面
+// ===== 三维共振技术分析引擎 v4 =====
+// 宏观: 大盘+资金+市场 | 中观: 板块四阶段诊断+精选池 | 微观: 资金面+技术面四维
 // 数据来源: 腾讯行情 + 东方财富 + 新浪 | 基于历史数据的指标运算，不构成投资建议
 
 // ==================== 工具函数 ====================
@@ -28,39 +28,20 @@ async function fetchKLineRaw(tcode, count = 120, period = 'day') {
     let raw = sd[key] || sd[period];
     if (!raw || !raw.length) throw new Error('无' + period + '线');
     return raw.map(item => ({
-      date: item[0], open: safeNum(item[1]), close: safeNum(item[2]),
-      high: safeNum(item[3]), low: safeNum(item[4]), volume: safeNum(item[5]) * 100
+      date: item[0], open: parseFloat(item[1]), close: parseFloat(item[2]),
+      high: parseFloat(item[3]), low: parseFloat(item[4]), volume: parseFloat(item[5]) || 0
     }));
-  } catch (e) { console.error('K线获取失败:', e.message); return []; }
+  } catch (e) { console.log('K线获取失败:', tcode, e.message); return []; }
 }
 
-function fetchDailyRaw(code, count = 120) {
-  let tc = window.stdToTencent ? window.stdToTencent(code) : ('sz' + code.replace(/\D/g, ''));
-  return fetchKLineRaw(tc, count, 'day');
-}
-function fetchWeeklyRaw(code, count = 120) {
-  let tc = window.stdToTencent ? window.stdToTencent(code) : ('sz' + code.replace(/\D/g, ''));
-  return fetchKLineRaw(tc, count, 'week');
+async function fetchDailyRaw(code, count = 120) {
+  let digits = code.replace(/\D/g, ''), prefix = code.startsWith('60') || code.startsWith('68') || code.startsWith('900') ? 'sh' : code.startsWith('920') || code.startsWith('8') ? 'bj' : 'sz';
+  return await fetchKLineRaw(prefix + digits, count, 'day');
 }
 
-const INDEX_CODES = {
-  sh: { name: '上证指数', code: '000001', tc: 'sh000001', ext: '1.000001' },
-  sz: { name: '深证成指', code: '399001', tc: 'sz399001', ext: '0.399001' },
-  cyb: { name: '创业板指', code: '399006', tc: 'sz399006', ext: '0.399006' },
-  hs300: { name: '沪深300', code: '000300', tc: 'sh000300', ext: '1.000300' },
-  kc50: { name: '科创50', code: '000688', tc: 'sh000688', ext: '1.000688' }
-};
-
-// ==================== 宏观：大盘指数分析（市场面） ====================
-async function fetchIndexData() {
-  let keys = ['sh', 'cyb', 'hs300'];
-  let results = {};
-  await Promise.all(keys.map(async k => {
-    let info = INDEX_CODES[k];
-    let candles = await fetchKLineRaw(info.tc, 250, 'day');
-    results[k] = { info, candles };
-  }));
-  return results;
+async function fetchWeeklyRaw(code, count = 120) {
+  let digits = code.replace(/\D/g, ''), prefix = code.startsWith('60') || code.startsWith('68') || code.startsWith('900') ? 'sh' : code.startsWith('920') || code.startsWith('8') ? 'bj' : 'sz';
+  return await fetchKLineRaw(prefix + digits, count, 'week');
 }
 
 function calcBB(data, period = 20, mult = 2) {
@@ -78,6 +59,326 @@ function calcBB(data, period = 20, mult = 2) {
     bb.pos[i] = parseFloat(((data[i] - bb.lower[i]) / (bb.upper[i] - bb.lower[i]) * 100).toFixed(1));
   }
   return bb;
+}
+
+// ==================== 板块数据获取 ====================
+
+async function fetchSectorBoards(code) {
+  let prefix = code.startsWith('6') ? 'SH' : 'SZ';
+  let fullCode = prefix + code.replace(/\D/g, '');
+  let url = 'https://emweb.securities.eastmoney.com/PC_HSF10/CoreConception/PageAjax?code=' + fullCode;
+  try {
+    let resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    let data = await resp.json();
+    let ssbk = data.ssbk || [];
+    let industries = [], concepts = [];
+    for (let b of ssbk) {
+      let entry = { name: b.BOARD_NAME, code: b.BOARD_CODE, rank: b.BOARD_RANK, isPrecise: b.IS_PRECISE };
+      if (b.BOARD_CODE && parseInt(b.BOARD_CODE) >= 1000) {
+        industries.push(entry);
+      } else if (b.BOARD_CODE && parseInt(b.BOARD_CODE) >= 100) {
+        concepts.push(entry);
+      } else {
+        if (b.IS_PRECISE === '1') concepts.push(entry);
+        else industries.push(entry);
+      }
+    }
+    industries.sort((a, b) => a.rank - b.rank);
+    concepts.sort((a, b) => a.rank - b.rank);
+    return { industries, concepts, all: ssbk };
+  } catch (e) { console.log('板块查询失败:', e.message); return { industries: [], concepts: [], all: [] }; }
+}
+
+async function fetchSectorKLine(boardCode, count = 120) {
+  let url = 'https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=90.BK' + boardCode + '&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57&klt=101&fqt=0&lmt=' + count;
+  try {
+    let resp = await fetch(url, { signal: AbortSignal.timeout(12000) });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    let json = await resp.json();
+    if (json.rc !== 0 || !json.data || !json.data.klines) throw new Error('无数据');
+    return {
+      name: json.data.name || boardCode,
+      dktotal: json.data.dktotal || 0,
+      candles: json.data.klines.map(line => { let p = line.split(','); return { date: p[0], open: parseFloat(p[1]), close: parseFloat(p[2]), high: parseFloat(p[3]), low: parseFloat(p[4]), volume: parseFloat(p[5]) || 0, amount: parseFloat(p[6]) || 0 }; })
+    };
+  } catch (e) { console.log('板块K线获取失败:', boardCode, e.message); return null; }
+}
+
+// ==================== 板块四阶段诊断引擎 (JS版) ====================
+
+function computeSectorIndicators(candles) {
+  if (!candles || candles.length < 10) return { error: '数据不足' };
+  let closes = candles.map(c => c.close).filter(v => v > 0);
+  let volumes = candles.map(c => c.volume).filter(v => v > 0);
+  let highs = candles.map(c => c.high).filter(v => v > 0);
+  let lows = candles.map(c => c.low).filter(v => v > 0);
+  let result = {};
+  // 均线
+  for (let p of [5, 10, 20, 60, 120]) {
+    let ma = calcMASeriesS(closes, p);
+    let idx = closes.length - 1;
+    result['MA' + p + '_current'] = ma[idx] !== null ? parseFloat(ma[idx].toFixed(2)) : null;
+    result['MA' + p + '_direction'] = null;
+    if (idx >= 4 && ma[idx] !== null && ma[idx - 3] !== null) {
+      result['MA' + p + '_direction'] = ma[idx] > ma[idx - 3] ? 'up' : (ma[idx] < ma[idx - 3] ? 'down' : 'flat');
+    }
+    // 降级策略
+    if (result['MA' + p + '_current'] === null && p === 60) {
+      for (let fb of [40, 35, 30]) {
+        let fma = calcMASeriesS(closes, fb);
+        if (fma[idx] !== null) { result['MA60_current'] = parseFloat(fma[idx].toFixed(2)); result['MA60_fallback'] = fb; break; }
+      }
+    }
+    if (result['MA' + p + '_current'] === null && p === 120) {
+      for (let fb of [80, 60, 50, 40]) {
+        let fma = calcMASeriesS(closes, fb);
+        if (fma[idx] !== null) { result['MA120_current'] = parseFloat(fma[idx].toFixed(2)); result['MA120_fallback'] = fb; break; }
+      }
+    }
+  }
+  // 均线排列
+  let ma10 = result['MA10_current'], ma20 = result['MA20_current'], ma60 = result['MA60_current'], ma120 = result['MA120_current'];
+  if (ma10 && ma20) {
+    if (ma10 > ma20) {
+      result['ma_alignment'] = ma60 && ma20 > ma60 ? (ma120 && ma60 > ma120 ? 'full_bull' : 'partial_bull') : 'partial_bull';
+    } else if (ma10 < ma20) {
+      result['ma_alignment'] = 'bear';
+    } else { result['ma_alignment'] = 'flat'; }
+  } else { result['ma_alignment'] = null; }
+  result['close_vs_MA5'] = closes[closes.length - 1] > (result['MA5_current'] || 0) ? 'above' : 'below';
+  result['close_vs_MA10'] = closes[closes.length - 1] > (result['MA10_current'] || 0) ? 'above' : 'below';
+  result['close_vs_MA20'] = closes[closes.length - 1] > (result['MA20_current'] || 0) ? 'above' : 'below';
+  result['close_vs_MA60'] = closes[closes.length - 1] > (result['MA60_current'] || 0) ? 'above' : 'below';
+  result['MA5_slope'] = result['MA5_direction'] || null;
+
+  // MACD
+  let macdData = calcMACDDataSeries(closes);
+  let difArr = macdData.diff, deaArr = macdData.dea;
+  result['DIF_current'] = difArr[difArr.length - 1] !== undefined ? parseFloat(difArr[difArr.length - 1].toFixed(4)) : null;
+  result['DEA_current'] = deaArr[deaArr.length - 1] !== undefined ? parseFloat(deaArr[deaArr.length - 1].toFixed(4)) : null;
+  result['BAR_current'] = result['DIF_current'] !== null && result['DEA_current'] !== null ? parseFloat((2 * (result['DIF_current'] - result['DEA_current'])).toFixed(4)) : null;
+  if (result['DIF_current'] !== null && result['DEA_current'] !== null) {
+    result['macd_state'] = result['DIF_current'] > result['DEA_current'] ? 'golden' : 'dead';
+    result['DIF_above_zero'] = result['DIF_current'] > 0;
+  }
+
+  // 顶底背离
+  result['divergence_top'] = false; result['divergence_bottom'] = false;
+  if (highs.length >= 32 && result['DIF_current'] !== null) {
+    let recentHigh = Math.max(...highs.slice(-16)), prevHigh = Math.max(...highs.slice(-32, -16));
+    let recentDifs = difArr.slice(-16).filter(x => x != null), prevDifs = difArr.slice(-32, -16).filter(x => x != null);
+    if (recentDifs.length && prevDifs.length) {
+      result['divergence_top'] = recentHigh > prevHigh * 1.01 && Math.max(...recentDifs) < Math.max(...prevDifs) * 0.95;
+    }
+    let recentLow = Math.min(...lows.slice(-16)), prevLow = Math.min(...lows.slice(-32, -16));
+    if (recentDifs.length && prevDifs.length) {
+      result['divergence_bottom'] = recentLow < prevLow * 0.99 && Math.min(...recentDifs) > Math.min(...prevDifs) * 1.05;
+    }
+  }
+
+  // 距60日高低点
+  if (closes.length >= 60) {
+    let dCloses = closes.slice(-60);
+    let maxIdx = dCloses.indexOf(Math.max(...dCloses)), minIdx = dCloses.indexOf(Math.min(...dCloses));
+    result['days_from_60d_high'] = 59 - maxIdx;
+    result['days_from_60d_low'] = 59 - minIdx;
+    result['price_60d_high'] = parseFloat(Math.max(...dCloses).toFixed(2));
+    result['price_60d_low'] = parseFloat(Math.min(...dCloses).toFixed(2));
+  }
+
+  // 量价
+  if (volumes.length >= 5) { result['vol_ratio_5d'] = parseFloat((safeAvg(volumes.slice(-1)) / safeAvg(volumes.slice(-6, -1))).toFixed(2)); }
+  if (volumes.length >= 20) { result['vol_ratio_20d'] = parseFloat((safeAvg(volumes.slice(-1)) / safeAvg(volumes.slice(-21, -1))).toFixed(2)); }
+
+  // 本周变化
+  if (closes.length >= 5) { result['week_pct'] = parseFloat(pct(closes[closes.length - 1], closes[closes.length - 6] || closes[closes.length - 5]).toFixed(2)); }
+  if (highs.length >= 5 && lows.length >= 5) {
+    let weekHigh = Math.max(...highs.slice(-5)), weekLow = Math.min(...lows.slice(-5));
+    result['week_amp'] = parseFloat(((weekHigh - weekLow) / closes[closes.length - 1] * 100).toFixed(2));
+  }
+
+  // 日线异常
+  result['daily_signals'] = {};
+  let recent10 = candles.slice(-10);
+  if (recent10.length >= 5) { result['daily_signals']['v_shape'] = _checkVShape(recent10); }
+  result['daily_signals']['big_red'] = _checkBigRed(candles);
+
+  return result;
+}
+
+function _checkVShape(recent) {
+  if (recent.length < 5) return false;
+  let closes = recent.map(c => c.close), volumes = recent.map(c => c.volume || 0);
+  let minIdx = closes.indexOf(Math.min(...closes));
+  if (minIdx >= closes.length - 4) {
+    for (let i = minIdx + 1; i < recent.length; i++) {
+      if (i <= minIdx + 3) {
+        let pctChg = (closes[i] / closes[i - 1] - 1) * 100;
+        let volRatio = volumes[i - 1] > 0 ? volumes[i] / volumes[i - 1] : 99;
+        if (pctChg > 3 && volRatio > 2) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function _checkBigRed(candles) {
+  if (candles.length < 3) return false;
+  let i = candles.length - 1, pctChg = (candles[i].close / candles[i].open - 1) * 100;
+  let volToday = candles[i].volume || 0, volYesterday = candles[i - 1].volume || 0;
+  return pctChg > 3 && volYesterday > 0 && volToday / volYesterday > 2;
+}
+
+function diagnoseSectorStage(name, indicators) {
+  let ind = indicators;
+  if (ind.error) return { stage: 0, stage_name: '数据不足', sub_type: null, confidence: 'low', reasons: [ind.error], alert: null };
+  let reasons = [], alerts = [], sub_type = null;
+  let ma_align = ind.ma_alignment, macd_state = ind.macd_state, dif_above = ind.DIF_above_zero;
+  let days_low = ind.days_from_60d_low, days_high = ind.days_from_60d_high;
+
+  // V形反转 - 最高优先级
+  if (ind.daily_signals && ind.daily_signals.v_shape) {
+    return { stage: 1, stage_name: '底部蓄势', sub_type: 'V形反转', confidence: 'medium',
+      reasons: ['V形反转信号：创新低后3日内倍量阳线'], alert: '重点观察！等待缩量回踩确认。' };
+  }
+
+  // S4: 下跌趋势
+  let isS4 = false, s4Reasons = [];
+  if (ma_align === 'bear' && ind.close_vs_MA20 === 'below') { isS4 = true; s4Reasons.push('均线空头排列，股价在MA20下方'); }
+  if (macd_state === 'dead' && dif_above === false) { isS4 = true; s4Reasons.push('MACD死叉零轴下'); }
+  if (days_low !== null && days_low <= 5) { isS4 = true; s4Reasons.push('距60日最低仅' + days_low + '天，持续新低'); }
+  if (isS4 && s4Reasons.length >= 2) {
+    if (ind.daily_signals && ind.daily_signals.big_red) { sub_type = '诱多反弹'; alerts.push('出现放量大阳线但均线空头未改，可能诱多'); }
+    return { stage: 4, stage_name: '下跌趋势', sub_type: sub_type || '标准下跌', confidence: 'high',
+      reasons: s4Reasons, alert: alerts.join(';') || '禁飞区，不抄底不抢反弹。' };
+  }
+
+  // S3: 加速赶顶
+  let isS3 = false, s3Reasons = [];
+  if (ind.divergence_top) { isS3 = true; s3Reasons.push('⚠️ MACD顶背离：价格新高DIF不跟'); }
+  if (ind.week_amp && ind.week_amp > 12 && ind.week_pct && ind.week_pct < -4) { isS3 = true; s3Reasons.push('高位异常放量下跌(周振幅' + ind.week_amp + '%)'); }
+  if (macd_state === 'dead' && dif_above && ind.close_vs_MA10 === 'below') { isS3 = true; s3Reasons.push('MACD高位死叉跌破MA10'); }
+  if (isS3 && s3Reasons.length >= 2) {
+    return { stage: 3, stage_name: '加速赶顶', sub_type: '顶背离型', confidence: 'high',
+      reasons: s3Reasons, alert: '⚠️ 建议清仓！等回踩确认再考虑。' };
+  } else if (isS3) {
+    return { stage: 3, stage_name: '加速赶顶', sub_type: '赶顶初期', confidence: 'medium',
+      reasons: s3Reasons, alert: '高度警惕！减仓或设置紧密止损。' };
+  }
+
+  // S1: 底部蓄势
+  let isS1 = false, s1Reasons = [];
+  if ((ma_align === 'bear' || ma_align === 'flat') && days_low !== null && days_low >= 15) { isS1 = true; s1Reasons.push('距60日低点' + days_low + '天，跌不动磨底中'); }
+  if (ind.MA5_direction && ['up', 'flat'].includes(ind.MA5_direction) && ind.close_vs_MA5 === 'above') { isS1 = true; s1Reasons.push('站上MA5，短期止跌'); }
+  if (macd_state === 'dead') {
+    let barNow = ind.BAR_current, barPrev = null;
+    if (barNow !== null) s1Reasons.push('MACD死叉中');
+  } else if (macd_state === 'golden' && dif_above === false) { isS1 = true; s1Reasons.push('MACD零轴下金叉，动能转强'); }
+  if (ind.divergence_bottom) { isS1 = true; s1Reasons.push('⭐ 底背离信号'); }
+  if (ind.vol_ratio_5d && ind.vol_ratio_5d > 2) { s1Reasons.push('倍量(量比' + ind.vol_ratio_5d + 'x)，资金试探建仓'); }
+  let strongS1 = s1Reasons.some(r => r.includes('背离') || r.includes('金叉') || r.includes('倍量'));
+  if (isS1 && strongS1) {
+    return { stage: 1, stage_name: '底部蓄势', sub_type: '标准底部', confidence: 'high',
+      reasons: s1Reasons, alert: '左侧候选区，按计划分批买入。' };
+  } else if (isS1) {
+    return { stage: 1, stage_name: '底部蓄势', sub_type: '底部初现', confidence: 'medium',
+      reasons: s1Reasons, alert: '关注中，等待更多确认信号。' };
+  }
+
+  // S2: 主升浪
+  let isS2 = false, s2Reasons = [];
+  if (['full_bull', 'partial_bull'].includes(ma_align)) { isS2 = true; s2Reasons.push('均线多头排列'); }
+  if (macd_state === 'golden' && dif_above) { isS2 = true; s2Reasons.push('MACD金叉零轴上'); }
+  if (days_high !== null && days_high <= 20 && days_low !== null && days_low >= 30) { isS2 = true; s2Reasons.push('持续强势'); }
+  if (isS2) {
+    // 洗盘检测
+    if (ind.week_pct !== null && ind.week_pct < -3 && ind.vol_ratio_5d && ind.vol_ratio_5d < 0.8 && ind.close_vs_MA20 === 'above' && macd_state === 'golden') {
+      return { stage: 2, stage_name: '主升浪', sub_type: '洗盘(黄金坑)', confidence: 'high',
+        reasons: s2Reasons.concat(['触发洗盘：缩量回踩MA20上方，黄金坑加仓机会']), alert: '💎 黄金坑！洗盘非见顶，可加仓。' };
+    }
+    return { stage: 2, stage_name: '主升浪', sub_type: '标准主升浪', confidence: 'high',
+      reasons: s2Reasons, alert: '主仓位持有。新资金回踩MA20缩量时加仓。' };
+  }
+
+  // 兜底
+  if (ma_align === 'bear' && ind.close_vs_MA20 === 'below') {
+    return { stage: 4, stage_name: '下跌趋势', sub_type: '疑似下跌', confidence: 'low', reasons: ['均线偏空'], alert: '观望。' };
+  }
+  return { stage: 1, stage_name: '底部蓄势', sub_type: '疑似筑底', confidence: 'low', reasons: ['趋势转换阶段'], alert: '关注。' };
+}
+
+// ==================== SKILL 精选池（盘后静态JSON） ====================
+
+let _selectionCache = null;
+async function fetchSelectionPools() {
+  if (_selectionCache) return _selectionCache;
+  try {
+    let url = 'https://raw.githubusercontent.com/Ronie-Liu/stock-pwa/main/data/selection_pools.json';
+    let resp = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    _selectionCache = await resp.json();
+    return _selectionCache;
+  } catch (e) { console.log('精选池加载失败:', e.message); return null; }
+}
+
+function matchSelectionPool(boardName, pools) {
+  if (!pools) return null;
+  for (let key of ['gold', 'silver', 'watch', 'blacklist']) {
+    let list = pools[key] || [];
+    let found = list.find(b => b.name === boardName);
+    if (found) return { pool: key, ...found };
+  }
+  return null;
+}
+
+function poolLabel(pool) {
+  let map = { gold: '🥇金牌', silver: '🥈银牌', watch: '👀观察', blacklist: '🚫黑名单' };
+  return map[pool] || pool;
+}
+
+// ==================== 宏观：大盘分析（同v3，加入四维技术面） ====================
+let INDEX_CODES = { sh: 'sh000001', cyb: 'sz399006', hs300: 'sh000300' };
+async function fetchIndexData() {
+  let keys = ['sh', 'cyb', 'hs300'];
+  let promises = keys.map(k => fetchKLineRaw(INDEX_CODES[k], 120));
+  let results = await Promise.all(promises);
+  let data = {};
+  keys.forEach((k, i) => { data[k] = { info: { name: { sh: '上证指数', cyb: '创业板指', hs300: '沪深300' }[k], code: INDEX_CODES[k] }, candles: results[i] || [] }; });
+  return data;
+}
+
+async function fetchNorthboundFlow() {
+  let detail = ''; let trending = '--'; let signal = 'neutral';
+  try {
+    let url = 'https://push2.eastmoney.com/api/qt/kamt.kline/get?fields1=f1,f2,f3,f4&fields2=f51,f52&klt=101&lmt=5';
+    let resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    let d = await resp.json();
+    let kls = d.data && d.data.klines ? d.data.klines : [];
+    let totalNet = 0, dates = [];
+    for (let l of kls.slice(-5)) { let p = l.split(','); dates.push(p[0]); totalNet += safeNum(p[1]); }
+    detail = '近5日净流入: ' + totalNet.toFixed(0) + '亿 | ' + dates[0] + '~' + dates[dates.length - 1];
+    if (totalNet > 50) { signal = 'green'; trending = '持续流入'; }
+    else if (totalNet > 0) { signal = 'yellow'; trending = '小幅流入'; }
+    else { signal = 'red'; trending = '净流出'; }
+  } catch (e) { detail = '(暂不可用)'; }
+  return { detail, trending, signal };
+}
+
+async function fetchMarketBreadth() {
+  try {
+    let url = 'https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&invt=2&fields=f2,f3,f8,f9,f12,f14&secids=1.000001,0.399001,0.399006';
+    let resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    let d = await resp.json(); let diffs = d.data && d.data.diff ? d.data.diff : [];
+    let totalUp = 0, totalDown = 0;
+    for (let item of diffs) { totalUp += safeNum(item.f8); totalDown += safeNum(item.f9); }
+    let upRatio = totalUp + totalDown > 0 ? parseFloat((totalUp / (totalUp + totalDown) * 100).toFixed(1)) : 50;
+    let signal = upRatio > 55 ? 'green' : upRatio > 45 ? 'yellow' : 'red';
+    let trending = upRatio > 55 ? '普涨' : upRatio > 45 ? '分化' : '普跌';
+    return { signal, trending, upRatio, detail: '涨' + totalUp + '/跌' + totalDown + ' (' + upRatio + '%上涨)' };
+  } catch (e) { return { signal: 'neutral', trending: '--', upRatio: 0, detail: '(暂不可用)' }; }
 }
 
 function analyzeMacro(indexData) {
@@ -110,13 +411,11 @@ function analyzeMacro(indexData) {
       else bbSignal = '中轨附近';
     }
 
-    // === 指数也要用个股同样的技术面四维 ===
-    // 1. 底背离/顶背离 (MACD+RSI)
+    // 指数四维技术面
     let macdData = calcMACDDataSeries(closes);
     let difArr = macdData.diff, rsiArr = calcRSISeries(closes, 14);
     let lookback = Math.min(60, closes.length);
     let segCloses = closes.slice(-lookback), segDifs = difArr.slice(-lookback), segRSIs = rsiArr.slice(-lookback);
-    let segment = cs.slice(-lookback);
     let lows = findLocalLows(segCloses, 5), highs = findLocalHighs(segCloses, 5);
     let macdDiv = false, rsiDiv = false, macdTopDiv = false, rsiTopDiv = false;
     if (lows.length >= 2) {
@@ -129,14 +428,10 @@ function analyzeMacro(indexData) {
       let p1 = segCloses[h1], p2 = segCloses[h2], d1 = segDifs[h1] || 0, d2 = segDifs[h2] || 0, r1 = segRSIs[h1] || 50, r2 = segRSIs[h2] || 50;
       if (p1 > p2) { if (d1 < d2) macdTopDiv = true; if (r1 < r2) rsiTopDiv = true; }
     }
-
-    // 2. 下跌/上涨结构
     function slope(data, p) { if (data.length < p * 2) return 0; let r = safeAvg(data.slice(-p)), o = safeAvg(data.slice(-p * 2, -p)); return o ? ((r - o) / o * 100) / p : 0; }
     let s10 = slope(closes, 10), s20 = slope(closes, 20);
     let flattening = s10 < 0 && s20 < 0 && Math.abs(s10) < Math.abs(s20) * 0.7;
     let steepUp = s10 > 0.5 && s20 > 0.3;
-
-    // 3. 支撑位 (斐波那契)
     let lookback120 = Math.min(120, cs.length);
     let segH = closes.slice(-lookback120), segL = closes.slice(-lookback120);
     let swingHigh = Math.max(...segH), swingLow = Math.min(...segL);
@@ -144,8 +439,6 @@ function analyzeMacro(indexData) {
     let fib618 = range > 0 ? swingHigh - range * 0.618 : close;
     let nearFib618 = Math.abs(close - fib618) / close < 0.03;
     let belowFib618 = close < fib618;
-
-    // 4. 量价关系
     let redVol = 0, greenVol = 0, redDays = 0, greenDays = 0;
     for (let c of cs.slice(-10)) {
       let v = safeNum(c.volume, 0);
@@ -155,46 +448,22 @@ function analyzeMacro(indexData) {
     let redFat = redRatio >= 55 && redDays >= greenDays;
     let priceChg10 = cs.length > 10 ? pct(cs[cs.length - 1].close, cs[cs.length - 10].close) : 0;
 
-    // 综合打分 (指数版)
     let idxBullish = 0, idxBearish = 0;
-    // 均线
-    if (aboveMA20 && aboveMA60 && slope20 > 0) { idxBullish += 2; }
-    else if (!aboveMA20 && slope20 < -0.1) { idxBearish += 2; }
-    else { idxBullish += 1; idxBearish += 1; }
-    // 背离
-    if (macdDiv && rsiDiv) { idxBullish += 2; }
-    else if (macdTopDiv && rsiTopDiv) { idxBearish += 2; }
-    else if (macdDiv || rsiDiv) { idxBullish += 1; }
-    else if (macdTopDiv || rsiTopDiv) { idxBearish += 1; }
-    // 结构
-    if (steepUp) { idxBullish += 1; }
-    else if (s10 < 0 && !flattening) { idxBearish += 1; }
-    // 支撑
-    if (nearFib618 && !belowFib618) { idxBullish += 1; }
-    else if (belowFib618) { idxBearish += 1; }
-    // 量价
-    if (redFat && volTrend === '放量' && priceChg10 > 0) { idxBullish += 1; }
-    else if (!redFat && volTrend === '放量' && priceChg10 < 0) { idxBearish += 1; }
-    // BB
-    if (bbPos !== null) {
-      if (bbPos < 10) idxBullish += 1;
-      else if (bbPos > 90) idxBearish += 1;
-    }
-
+    if (aboveMA20 && aboveMA60 && slope20 > 0) { idxBullish += 2; } else if (!aboveMA20 && slope20 < -0.1) { idxBearish += 2; } else { idxBullish += 1; idxBearish += 1; }
+    if (macdDiv && rsiDiv) { idxBullish += 2; } else if (macdTopDiv && rsiTopDiv) { idxBearish += 2; } else if (macdDiv || rsiDiv) { idxBullish += 1; } else if (macdTopDiv || rsiTopDiv) { idxBearish += 1; }
+    if (steepUp) { idxBullish += 1; } else if (s10 < 0 && !flattening) { idxBearish += 1; }
+    if (nearFib618 && !belowFib618) { idxBullish += 1; } else if (belowFib618) { idxBearish += 1; }
+    if (redFat && volTrend === '放量' && priceChg10 > 0) { idxBullish += 1; } else if (!redFat && volTrend === '放量' && priceChg10 < 0) { idxBearish += 1; }
+    if (bbPos !== null) { if (bbPos < 10) idxBullish += 1; else if (bbPos > 90) idxBearish += 1; }
     bullish += idxBullish; bearish += idxBearish;
 
-    let trendSignal = '';
-    if (aboveMA20 && aboveMA60 && slope20 > 0) { trendSignal = '多头排列'; }
-    else if (!aboveMA20 && slope20 < -0.1) { trendSignal = '空头排列'; }
-    else { trendSignal = '震荡'; }
-
+    let trendSignal = aboveMA20 && aboveMA60 && slope20 > 0 ? '多头排列' : (!aboveMA20 && slope20 < -0.1 ? '空头排列' : '震荡');
     let divSignal = macdDiv && rsiDiv ? '底背离✅' : macdTopDiv && rsiTopDiv ? '顶背离⚠️' : macdDiv ? 'MACD底背离' : macdTopDiv ? 'MACD顶背离' : '无背离';
     let structSignal = steepUp ? '加速上涨' : flattening ? '跌速放缓' : s10 < 0 ? '短期下跌' : '短期企稳';
-    let supportSignal = nearFib618 ? (belowFib618 ? '跌破61.8%支撑' : '考验61.8%支撑') : '远离关键位';
-    let vpSignal = redFat && volTrend === '放量' && priceChg10 > 0 ? '放量上涨' : !redFat && volTrend === '放量' && priceChg10 < 0 ? '放量下跌' : volTrend === '缩量' ? '缩量' : '持平';
+    let supportSignal = nearFib618 ? (belowFib618 ? '跌破61.8%' : '考验61.8%') : '远离关键位';
+    let vpSignal = redFat && volTrend === '放量' && priceChg10 > 0 ? '放量上涨' : !redFat && volTrend === '放量' && priceChg10 < 0 ? '放量下跌' : volTrend;
 
     rows.push({ name: info.name, code: info.code, close: close.toFixed(2),
-      ma20: (ma20[idx]||'--'), ma60: (ma60[idx]||'--'), ma250: (ma250[idx]||'--'),
       dma20, dma60, dma250, bbPos, bbWidth, bbSignal,
       slope20: slope20.toFixed(2), volRatio, volTrend, trendSignal,
       divSignal, structSignal, supportSignal, vpSignal,
@@ -203,129 +472,84 @@ function analyzeMacro(indexData) {
   }
   let net = bullish - bearish;
   let signal, resultText, positionAdvice;
-  if (net >= 6) { signal = 'green'; resultText = '🟢 强势市场'; positionAdvice = '建议仓位 7-9成。多维度确认强势。'; }
-  else if (net >= 2) { signal = 'yellow'; resultText = '🟡 震荡市场'; positionAdvice = '建议仓位 5成左右。信号交织，精选个股。'; }
-  else { signal = 'red'; resultText = '🔴 弱势市场'; positionAdvice = '建议仓位 ≤3成。多维度偏空，谨慎操作。'; }
+  if (net >= 6) { signal = 'green'; resultText = '🟢 强势市场'; positionAdvice = '建议仓位 7-9成。'; }
+  else if (net >= 2) { signal = 'yellow'; resultText = '🟡 震荡市场'; positionAdvice = '建议仓位 5成左右。'; }
+  else { signal = 'red'; resultText = '🔴 弱势市场'; positionAdvice = '建议仓位 ≤3成。'; }
   return { signal, resultText, positionAdvice, rows, details: details.join('\n'), bullish, bearish, net, dataDate: rows.length ? rows[0].dataDate : '--' };
 }
 
-// ==================== 宏观：资金面 ====================
+// ==================== 中观：板块四阶段诊断 + 精选池 ====================
 
-async function fetchNorthboundFlow() {
-  let results = { daily: [], signal: 'neutral', trending: '--', last5Net: 0, detail: '' };
-  try {
-    // 东方财富北向资金日线API
-    let url = 'https://push2.eastmoney.com/api/qt/kamt.kline/get?secid=1.000001&fields1=f1,f2,f3,f4&fields2=f51,f52,f53,f54,f55,f56&klt=101&lmt=10';
-    let resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    let d = await resp.json();
-    let kls = d.data && d.data.klines ? d.data.klines : [];
-    if (kls.length < 3) throw new Error('数据不足');
-    let total = 0;
-    for (let l of kls.slice(-5)) {
-      let parts = l.split(',');
-      let date = parts[0], netFlow = safeNum(parts[4] || parts[3]) / 10000; // 万元→亿
-      results.daily.push({ date, netFlow: parseFloat(netFlow.toFixed(2)) });
-      total += netFlow;
+async function analyzeMeso(stock, stockCandles, indexData) {
+  // 1. 获取个股所属行业/概念板块
+  let boards = await fetchSectorBoards(stock.code);
+  let topIndustries = boards.industries.slice(0, 2); // 前2个行业板块
+  let topConcepts = boards.concepts.slice(0, 5);     // 前5个概念板块（按rank排序）
+
+  // 2. 获取精选池
+  let pools = await fetchSelectionPools();
+
+  // 3. 取板块K线并诊断
+  let diagResults = [];
+  let allDiag = [...topIndustries, ...topConcepts];
+  let klinePromises = allDiag.map(b => fetchSectorKLine(b.code, 120));
+  let klines = await Promise.all(klinePromises);
+
+  for (let i = 0; i < allDiag.length; i++) {
+    let board = allDiag[i], kl = klines[i];
+    if (!kl || !kl.candles || kl.candles.length < 10) {
+      diagResults.push({ name: board.name, code: board.code, category: i < topIndustries.length ? '行业' : '概念', diagnosis: null });
+      continue;
     }
-    results.last5Net = parseFloat(total.toFixed(1));
-    if (total > 50) { results.signal = 'green'; results.trending = '持续大幅流入'; }
-    else if (total > 0) { results.signal = 'yellow'; results.trending = '小幅流入'; }
-    else { results.signal = 'red'; results.trending = '持续流出'; }
-    results.detail = results.daily.map(d => d.date + ': ' + (d.netFlow > 0 ? '+' : '') + d.netFlow + '亿').join(' | ');
-  } catch (e) {
-    console.log('北向资金获取失败:', e.message);
-    results.detail = '(暂不可用)';
+    let indicators = computeSectorIndicators(kl.candles);
+    let diagnosis = diagnoseSectorStage(board.name, indicators);
+    let sel = matchSelectionPool(board.name, pools);
+    diagResults.push({
+      name: board.name, code: board.code,
+      category: i < topIndustries.length ? '行业' : '概念',
+      diagnosis, indicators,
+      lastClose: kl.candles[kl.candles.length - 1].close,
+      lastPct: kl.candles.length > 1 ? parseFloat(pct(kl.candles[kl.candles.length - 1].close, kl.candles[kl.candles.length - 2].close).toFixed(2)) : 0,
+      selection: sel
+    });
   }
-  return results;
-}
 
-async function fetchMarketBreadth() {
-  let results = { data: [], signal: 'neutral', upRatio: 0, detail: '' };
-  try {
-    // 涨跌家数比（上证+深证+创业板）
-    let url = 'https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&invt=2&fields=f2,f3,f8,f9,f12,f14&secids=1.000001,0.399001,0.399006';
-    let resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    let d = await resp.json();
-    let diffs = d.data && d.data.diff ? d.data.diff : [];
-    let totalUp = 0, totalDown = 0;
-    for (let item of diffs) {
-      let up = safeNum(item.f8), down = safeNum(item.f9);
-      totalUp += up; totalDown += down;
-    }
-    let upRatio = totalUp + totalDown > 0 ? parseFloat((totalUp / (totalUp + totalDown) * 100).toFixed(1)) : 50;
-    results.upRatio = upRatio;
-    if (upRatio > 55) { results.signal = 'green'; results.trending = '普涨'; }
-    else if (upRatio > 45) { results.signal = 'yellow'; results.trending = '分化'; }
-    else { results.signal = 'red'; results.trending = '普跌'; }
-    results.detail = '涨' + totalUp + '/跌' + totalDown + ' (' + upRatio + '%上涨)';
-  } catch (e) {
-    console.log('涨跌家数获取失败:', e.message);
-    results.detail = '(暂不可用)';
+  // 4. 综合打分：行业权重 > 概念权重
+  let bullish = 0, bearish = 0, stageNames = [];
+  for (let d of diagResults) {
+    if (!d.diagnosis) continue;
+    let s = d.diagnosis.stage, w = d.category === '行业' ? 1.5 : 1;
+    if (s === 1) bullish += 1 * w;
+    else if (s === 2) bullish += 2 * w;
+    else if (s === 3) bearish += 2 * w;
+    else if (s === 4) bearish += 1 * w;
   }
-  return results;
-}
 
-// ==================== 中观：板块分析 ====================
-
-function analyzeMeso(stock, stockCandles, indexData) {
-  if (!stockCandles.length) return { signal: 'neutral', resultText: '数据不足' };
-  let code = (stock.code || '').replace(/\D/g, '');
-  let cs = stockCandles, closes = cs.map(c => c.close).filter(v => v > 0), idx = cs.length - 1;
-  let board;
-  if (/^60[013]/.test(code)) board = '上海主板';
-  else if (/^688/.test(code)) board = '科创板';
-  else if (/^300|^301/.test(code)) board = '创业板';
-  else if (/^002|^003|^001/.test(code)) board = '深圳主板/中小板';
-  else if (/^000/.test(code) && code !== '000001' && code !== '000300') board = '深圳主板';
-  else if (/^920|^83|^87/.test(code)) board = '北交所';
-  else board = '其他';
-
-  let benchmarkKey = (board === '创业板' || board === '科创板') ? 'cyb' : 'sh';
-  let benchmark = indexData[benchmarkKey] || indexData['sh'];
-  if (!benchmark || !benchmark.candles.length) return { signal: 'neutral', resultText: '无法获取对标指数' };
-
-  let bmCloses = benchmark.candles.map(c => c.close).filter(v => v > 0);
-  function calcRS(period) {
-    if (closes.length < period || bmCloses.length < period) return null;
-    let sChg = pct(closes[closes.length - 1], closes[closes.length - 1 - period]);
-    let bChg = pct(bmCloses[bmCloses.length - 1], bmCloses[bmCloses.length - 1 - period]);
-    return parseFloat((sChg - bChg).toFixed(2));
-  }
-  let rs10 = calcRS(10), rs20 = calcRS(20), rs60 = calcRS(60);
-  let sVols = cs.map(c => c.volume).filter(v => v > 0);
-  let bVols = benchmark.candles.map(c => c.volume).filter(v => v > 0);
-  let sVolTrend = safeAvg(sVols.slice(-5)) / Math.max(safeAvg(sVols.slice(-20)), 1);
-  let bVolTrend = safeAvg(bVols.slice(-5)) / Math.max(safeAvg(bVols.slice(-20)), 1);
-
-  let details = [];
-  details.push('对标: ' + benchmark.info.name + '(' + benchmark.info.code + ') | 板块: ' + board);
-  if (rs10 !== null) details.push('RS 10日: ' + (rs10 > 0 ? '+' : '') + rs10 + '%');
-  if (rs20 !== null) details.push('RS 20日: ' + (rs20 > 0 ? '+' : '') + rs20 + '%');
-  if (rs60 !== null) details.push('RS 60日: ' + (rs60 > 0 ? '+' : '') + rs60 + '%');
-  details.push('个股量比: ' + sVolTrend.toFixed(2) + ' | 指数量比: ' + bVolTrend.toFixed(2));
-
-  let bullish = 0, bearish = 0;
-  if (rs20 !== null) { if (rs20 > 2) bullish += 3; else if (rs20 > 0) bullish += 1; else if (rs20 < -3) bearish += 3; else if (rs20 < 0) bearish += 1; }
-  if (rs60 !== null) { if (rs60 > 5) bullish += 2; else if (rs60 < -5) bearish += 2; }
-  if (sVolTrend > bVolTrend * 1.2) bullish += 1; else if (sVolTrend < bVolTrend * 0.7) bearish += 1;
+  // 同时保留原有的相对强度分析作为参考
+  let closes = stockCandles.map(c => c.close).filter(v => v > 0);
+  let benchmark = indexData['sh'];
+  let bmCloses = benchmark && benchmark.candles.length ? benchmark.candles.map(c => c.close).filter(v => v > 0) : [];
+  let rs20 = closes.length >= 20 && bmCloses.length >= 20 ? parseFloat((pct(closes[closes.length - 1], closes[closes.length - 20]) - pct(bmCloses[bmCloses.length - 1], bmCloses[bmCloses.length - 20])).toFixed(2)) : null;
 
   let net = bullish - bearish;
   let signal, resultText;
-  if (net >= 3) { signal = 'green'; resultText = '🟢 领先大盘 —— 资金关注度高，左侧等待时间短'; }
-  else if (net >= 0) { signal = 'yellow'; resultText = '🟡 同步大盘 —— 按计划分批执行'; }
-  else { signal = 'red'; resultText = '🔴 弱于大盘 —— 资金流出，磨底时间长'; }
+  if (net >= 4) { signal = 'green'; resultText = '🟢 板块共振偏多 —— 所属板块多在S1/S2阶段'; }
+  else if (net >= 0) { signal = 'yellow'; resultText = '🟡 板块信号交织 —— 择强避弱'; }
+  else { signal = 'red'; resultText = '🔴 板块整体偏空 —— 观望等待板块企稳'; }
 
-  return { signal, resultText, board, benchmarkName: benchmark.info.name, rs10, rs20, rs60,
-    sVolTrend: parseFloat(sVolTrend.toFixed(2)), bVolTrend: parseFloat(bVolTrend.toFixed(2)),
-    details: details.join('\n'), bullish, bearish, net, dataDate: cs[idx].date };
+  return {
+    signal, resultText, bullish: Math.round(bullish), bearish: Math.round(bearish), net,
+    diagResults, rs20,
+    board: topIndustries.length ? topIndustries.map(b => b.name).join('、') : '--',
+    benchmarkName: benchmark ? benchmark.info.name : '--',
+    dataDate: stockCandles.length ? stockCandles[stockCandles.length - 1].date : '--'
+  };
 }
 
-// ==================== 微观：资金面（个股北向+主力） ====================
+// ==================== 微观：资金面 + 四维技术（同v3） ====================
 
 async function fetchStockFlow(code) {
-  let results = { northbound: [], fundFlow: [], northboundSignal: 'neutral', northboundDetail: '', fundFlowDetail: '' };
+  let results = { fundFlow: [], northboundSignal: 'neutral', northboundDetail: '', fundFlowDetail: '', stockFlowType: '' };
   try {
     let extCode = code.startsWith('6') ? '1.' + code : '0.' + code;
     let url = 'https://push2.eastmoney.com/api/qt/stock/fflow/daykline/get?lmt=10&secid=' + extCode + '&fields1=f1,f2,f3,f7&fields2=f51,f52,f53,f54';
@@ -336,22 +560,19 @@ async function fetchStockFlow(code) {
     let totalNet = 0;
     for (let l of kls.slice(-5)) {
       let parts = l.split(',');
-      let date = parts[0], mainNet = safeNum(parts[1]) + safeNum(parts[2]); // 主力+超大单
-      results.fundFlow.push({ date, mainNet: parseFloat((mainNet / 1e8).toFixed(2)) });
+      let mainNet = safeNum(parts[1]) + safeNum(parts[2]);
+      results.fundFlow.push({ date: parts[0], mainNet: parseFloat((mainNet / 1e8).toFixed(2)) });
       totalNet += mainNet;
     }
     if (totalNet > 1e8) { results.northboundSignal = 'green'; results.northboundDetail = '近5日主力资金持续流入'; }
     else if (totalNet > 0) { results.northboundSignal = 'yellow'; results.northboundDetail = '近5日主力资金小幅净流入'; }
     else { results.northboundSignal = 'red'; results.northboundDetail = '近5日主力资金净流出'; }
     results.fundFlowDetail = results.fundFlow.map(f => f.date + ': ' + (f.mainNet > 0 ? '+' : '') + f.mainNet + '亿').join(' | ');
-  } catch (e) {
-    console.log('个股资金流获取失败:', e.message);
-    results.fundFlowDetail = '(暂不可用)';
-  }
+  } catch (e) { results.fundFlowDetail = '(暂不可用)'; }
   return results;
 }
 
-// ==================== 微观：技术面四维（同v2） ====================
+// ==================== 微观技术面四维（保持v3） ====================
 
 function analyzeDivergence(candles) {
   if (candles.length < 30) return { signal: 'insufficient', resultText: '数据不足' };
@@ -427,16 +648,16 @@ function analyzeDowntrend(candles) {
   let sOld = segSlope(closes, idx - 15, 10), sRecent = segSlope(closes, idx - 5, 10);
   let flattening = sRecent < 0 && sOld < 0 && Math.abs(sRecent) < Math.abs(sOld) * 0.7;
   let db = detectDoubleBottom(candles.slice(-60));
-  let tl = calcDowntrendLine(candles);
+  let ddStr = db.found ? '双底: 左底' + db.left + '(' + candles[db.leftIdx].date + ') 右底' + db.right + '(' + candles[db.rightIdx].date + ')' : '';
+  let tl = calcDowntrendLine(candles.slice(-60));
+  let tlStr = tl ? '下降趋势线: ' + tl.startDate + '(' + tl.start + ') → ' + tl.endDate + '(' + tl.end + ')' : '';
   let signal, resultText, bullish = 0, bearish = 0;
-  if (s10 > 0) { signal = 'stabilizing'; resultText = '🟢 短期企稳'; bullish = 3; }
-  else if (flattening) { signal = 'flattening'; resultText = '🟡 跌速放缓'; bullish = 2; }
-  else if (Math.abs(s10) < 0.3) { signal = 'mild_decline'; resultText = '🟡 温和下跌'; bullish = 1; }
-  else { signal = 'steep_decline'; resultText = '🔴 急跌'; bearish = 3; }
-  let ddStr = ''; if (db.found) ddStr = '双底: 左' + db.leftDate + ' ' + db.leftPrice + '→右' + db.rightDate + ' ' + db.rightPrice + (db.rightHigher ? '(右高✅)' : '');
-  let tlStr = ''; if (tl.valid) tlStr = '下降趋势线: ' + tl.startDate + '起,突破价≈' + tl.breakPrice;
-  return { signal, resultText, slope10: parseFloat(s10.toFixed(2)), slope20: parseFloat(s20.toFixed(2)),
-    slopeFlattening: flattening, doubleBottom: db, trendline: tl,
+  if (flattening && db.found) { signal = 'stabilizing'; resultText = '✅ 跌速放缓+双底雏形'; bullish = 3; }
+  else if (flattening) { signal = 'flattening'; resultText = '🟢 跌速明显放缓'; bullish = 2; }
+  else if (s10 < 0 && Math.abs(s10) < 0.3) { signal = 'mild_decline'; resultText = '🟡 温和下跌'; bearish = 1; }
+  else { signal = 'steep_decline'; resultText = '🔴 下跌结构完整'; bearish = 3; }
+  return { signal, resultText, slope10: parseFloat(s10.toFixed(3)), slope20: parseFloat(s20.toFixed(3)),
+    flattening, doubleBottom: db, downtrendLine: tl,
     detail: [ddStr, tlStr].filter(Boolean).join('\n'), dataDate: candles[idx].date, bullish, bearish };
 }
 
@@ -446,8 +667,7 @@ function analyzeVolumePrice(candles) {
   let redVol = 0, greenVol = 0, redDays = 0, greenDays = 0;
   for (let c of recent10) {
     let v = safeNum(c.volume, 0);
-    if (c.close >= c.open) { redVol += v; redDays++; }
-    else { greenVol += v; greenDays++; }
+    if (c.close >= c.open) { redVol += v; redDays++; } else { greenVol += v; greenDays++; }
   }
   let totalVol = redVol + greenVol, redRatio = totalVol ? parseFloat((redVol / totalVol * 100).toFixed(1)) : 50;
   let volumes = candles.map(c => safeNum(c.volume, 0));
@@ -480,7 +700,7 @@ function analyzeVolumePrice(candles) {
     panicDay, redFatGreenThin: redFat, details: details.join('\n'), dataDate: candles[idx].date, bullish, bearish };
 }
 
-// ==================== 综合共振决策 ====================
+// ==================== 综合共振决策（保持+中观板块评分增强） ====================
 
 function analyzeMicroComprehensive(candles, weeklyCandles, quote) {
   let divergence = analyzeDivergence(candles);
@@ -500,30 +720,25 @@ function analyzeMicroComprehensive(candles, weeklyCandles, quote) {
 function generateResonanceDecision(macro, meso, micro, northbound, breadth, stockFlow, stock, quote) {
   let buyPrice = stock.buy_price || 0, currentPrice = quote ? quote.last_px : 0;
 
-  // 加权评分体系：宏观40% | 中观25% | 微观资金15% | 微观技术20%
-  let wMacro = 0.40, wMeso = 0.25, wMicroFlow = 0.15, wMicroTech = 0.20;
+  let wMacro = 0.35, wMeso = 0.30, wMicroFlow = 0.15, wMicroTech = 0.20;
 
-  // 宏观评分(0-10)：大盘趋势 + 资金面
   let macroScore = 5;
   if (macro.signal === 'green') macroScore += 2; else if (macro.signal === 'red') macroScore -= 2;
   if (northbound.signal === 'green') macroScore += 1.5; else if (northbound.signal === 'red') macroScore -= 1.5; else if (northbound.signal === 'yellow') macroScore += 0.5;
   if (breadth.signal === 'green') macroScore += 1; else if (breadth.signal === 'red') macroScore -= 1;
   macroScore = Math.max(0, Math.min(10, macroScore));
 
-  // 中观评分(0-10)：板块相对强度
   let mesoScore = 5;
   if (meso.signal === 'green') mesoScore += 2.5; else if (meso.signal === 'red') mesoScore -= 2.5; else if (meso.signal === 'yellow') mesoScore += 0.5;
   if (meso.rs20 !== null) {
-    if (meso.rs20 > 3) mesoScore += 2; else if (meso.rs20 > 0) mesoScore += 1; else if (meso.rs20 < -3) mesoScore -= 2; else mesoScore -= 0.5;
+    if (meso.rs20 > 3) mesoScore += 2; else if (meso.rs20 > 0) mesoScore += 1; else if (meso.rs20 < -3) mesoScore -= 2;
   }
   mesoScore = Math.max(0, Math.min(10, mesoScore));
 
-  // 微观资金评分(0-10)：个股主力流向
   let flowScore = 5;
   if (stockFlow.northboundSignal === 'green') flowScore += 3; else if (stockFlow.northboundSignal === 'red') flowScore -= 2.5; else flowScore += 0.5;
   flowScore = Math.max(0, Math.min(10, flowScore));
 
-  // 微观技术评分(0-10)：四维归一化
   let techScore = 5;
   let div = micro.divergence, sup = micro.support, dtr = micro.downtrend, vp = micro.volumePrice;
   if (div.signal === 'strong_bullish') techScore += 2; else if (div.signal === 'bullish') techScore += 1.5; else if (div.signal === 'mild_bullish') techScore += 0.5;
@@ -534,59 +749,49 @@ function generateResonanceDecision(macro, meso, micro, northbound, breadth, stoc
 
   let weightedTotal = parseFloat((macroScore * wMacro + mesoScore * wMeso + flowScore * wMicroFlow + techScore * wMicroTech).toFixed(1));
 
-  // 信心度 (0-100)
   let confidence = 50;
   let dataAvailable = [northbound.detail, breadth.detail, stockFlow.fundFlowDetail].filter(d => d && !d.includes('暂不可用')).length;
   confidence += dataAvailable * 10;
   if (macro.rows.length >= 3) confidence += 10;
-  if (meso.rs20 !== null) confidence += 10;
+  if (meso.rs20 !== null) confidence += 5;
+  if (meso.diagResults && meso.diagResults.length >= 3) confidence += 10;
   if (div.signal !== 'insufficient') confidence += 5;
   confidence = Math.min(100, confidence);
 
-  // 原有简单打分（用于信号灯）
-  let macroBullish = macro.bullish + (northbound.signal === 'green' ? 2 : northbound.signal === 'red' ? 0 : 1) + (breadth.signal === 'green' ? 1 : breadth.signal === 'red' ? -1 : 0);
-  let macroBearish = macro.bearish + (northbound.signal === 'red' ? 2 : northbound.signal === 'green' ? 0 : 1) + (breadth.signal === 'red' ? 1 : 0);
+  let macroBullish = macro.bullish + (northbound.signal === 'green' ? 2 : northbound.signal === 'red' ? 0 : 1) + (breadth.signal === 'green' ? 1 : 0);
+  let macroBearish = macro.bearish + (northbound.signal === 'red' ? 2 : 0) + (breadth.signal === 'red' ? 1 : 0);
 
   let levels = [
-    { dim: '宏观(大盘+资金)', signal: macro.signal, score: macroScore.toFixed(1), weight: '40%', resultText: macro.resultText, subdetail: '北向: ' + northbound.trending + ' | 涨跌比: ' + breadth.trending + ' | ' + macro.positionAdvice, bullish: macroBullish, bearish: macroBearish },
-    { dim: '中观(板块方向)', signal: meso.signal, score: mesoScore.toFixed(1), weight: '25%', resultText: meso.resultText, subdetail: meso.board + ' | 对标: ' + meso.benchmarkName + ' | RS20: ' + (meso.rs20 !== null ? (meso.rs20 > 0 ? '+' : '') + meso.rs20 + '%' : '--'), bullish: meso.bullish || 0, bearish: meso.bearish || 0 },
-    { dim: '微观资金面', signal: stockFlow.northboundSignal, score: flowScore.toFixed(1), weight: '15%', resultText: stockFlow.northboundDetail, subdetail: '', bullish: stockFlow.northboundSignal === 'green' ? 2 : stockFlow.northboundSignal === 'yellow' ? 1 : 0, bearish: stockFlow.northboundSignal === 'red' ? 2 : 0 },
-    { dim: '微观技术面', signal: micro.signal, score: techScore.toFixed(1), weight: '20%', resultText: micro.resultText, subdetail: '四维净分: ' + micro.net + ' (偏多' + micro.bullish + '/偏空' + micro.bearish + ')', bullish: micro.bullish || 0, bearish: micro.bearish || 0 }
+    { dim: '宏观(大盘+资金)', signal: macro.signal, score: macroScore.toFixed(1), weight: '35%', resultText: macro.resultText, subdetail: '北向: ' + northbound.trending + ' | ' + macro.positionAdvice, bullish: macroBullish, bearish: macroBearish },
+    { dim: '中观(板块诊断)', signal: meso.signal, score: mesoScore.toFixed(1), weight: '30%', resultText: meso.resultText, subdetail: meso.board + ' | 净分: ' + meso.net, bullish: meso.bullish || 0, bearish: meso.bearish || 0 },
+    { dim: '微观资金面', signal: stockFlow.northboundSignal, score: flowScore.toFixed(1), weight: '15%', resultText: stockFlow.northboundDetail, subdetail: '', bullish: stockFlow.northboundSignal === 'green' ? 2 : 0, bearish: stockFlow.northboundSignal === 'red' ? 2 : 0 },
+    { dim: '微观技术面', signal: micro.signal, score: techScore.toFixed(1), weight: '20%', resultText: micro.resultText, subdetail: '四维净分: ' + micro.net, bullish: micro.bullish || 0, bearish: micro.bearish || 0 }
   ];
 
-  let totalBullish = levels.reduce((a, l) => a + l.bullish, 0);
-  let totalBearish = levels.reduce((a, l) => a + l.bearish, 0);
-  let netScore = totalBullish - totalBearish;
-  let greenCount = levels.filter(l => l.signal === 'green' || l.signal === 'strong_bullish' || l.signal === 'bullish' || l.signal === 'strong_support' || l.signal === 'stabilizing' || l.signal === 'accumulation' || l.signal === 'panic_cleared').length;
-  let redCount = levels.filter(l => l.signal === 'red' || l.signal === 'steep_decline' || l.signal === 'panic_selling' || l.signal === 'far').length;
-
+  let greenCount = levels.filter(l => ['green', 'strong_bullish', 'bullish', 'strong_support', 'stabilizing', 'accumulation'].includes(l.signal)).length;
   let overallSignal, suggestion, suggestionDetail, positionAdvice;
   if (weightedTotal >= 7.0 && greenCount >= 3) {
     overallSignal = 'green'; suggestion = '🟢 三维共振 —— 可积极买入';
-    suggestionDetail = '加权评分' + weightedTotal + '/10 | 信心度' + confidence + '% | 宏观向好+资金流入+微观底部确认。可将买入动作提前，右侧放量突破即可加仓。';
+    suggestionDetail = '加权' + weightedTotal + '/10 | 信心' + confidence + '%';
     positionAdvice = macro.positionAdvice;
   } else if (weightedTotal >= 5.5 && greenCount >= 2) {
-    overallSignal = 'yellow'; suggestion = '🟡 信号偏多 —— 按计划分批执行';
-    suggestionDetail = '加权评分' + weightedTotal + '/10 | 信心度' + confidence + '% | 多数维度偏多但未全维共振。建议维持原定分批买入计划。';
+    overallSignal = 'yellow'; suggestion = '🟡 信号偏多 —— 按计划分批';
+    suggestionDetail = '加权' + weightedTotal + '/10 | 信心' + confidence + '%';
     positionAdvice = macro.positionAdvice;
   } else if (weightedTotal >= 4.0) {
-    overallSignal = 'yellow'; suggestion = '🟡 中性偏弱 —— 缩小仓位，严格纪律';
-    suggestionDetail = '加权评分' + weightedTotal + '/10 | 信心度' + confidence + '% | 信号互相矛盾，建议拉大买入间距，缩小单笔仓位。';
+    overallSignal = 'yellow'; suggestion = '🟡 中性偏弱 —— 缩小仓位';
+    suggestionDetail = '加权' + weightedTotal + '/10 | 信心' + confidence + '%';
     positionAdvice = macro.positionAdvice;
   } else {
-    overallSignal = 'red'; suggestion = '🔴 多维度偏空 —— 暂停买入，等待信号';
-    suggestionDetail = '加权评分' + weightedTotal + '/10 | 信心度' + confidence + '% | 宏观/资金/技术多维度发出谨慎信号。拉大买入间距(如跌10%→15%)，降低单笔仓位。';
+    overallSignal = 'red'; suggestion = '🔴 多维度偏空 —— 暂停买入';
+    suggestionDetail = '加权' + weightedTotal + '/10 | 信心' + confidence + '%';
     positionAdvice = macro.positionAdvice;
   }
 
   let suggestedPrice = buyPrice;
-  if (buyPrice > 0) {
-    if (overallSignal === 'green') suggestedPrice = buyPrice * 1.05;
-    else if (overallSignal === 'red') suggestedPrice = buyPrice * 0.92;
-  }
+  if (buyPrice > 0) { if (overallSignal === 'green') suggestedPrice = buyPrice * 1.05; else if (overallSignal === 'red') suggestedPrice = buyPrice * 0.92; }
 
-  return { levels, totalBullish, totalBearish, netScore, greenCount, redCount,
-    overallSignal, suggestion, suggestionDetail, positionAdvice,
+  return { levels, overallSignal, suggestion, suggestionDetail, positionAdvice,
     weightedTotal, confidence, macroScore, mesoScore, flowScore, techScore,
     originalBuyPrice: buyPrice, suggestedBuyPrice: parseFloat(suggestedPrice.toFixed(2)), currentPrice, northbound, breadth, stockFlow };
 }
@@ -594,79 +799,71 @@ function generateResonanceDecision(macro, meso, micro, northbound, breadth, stoc
 // ==================== 主入口 ====================
 
 async function runAnalysisAndRender(stock, quote) {
-  let loadingEl = document.getElementById('analysis-loading');
-  let resultEl = document.getElementById('analysis-result');
-  let btnEl = document.getElementById('btn-analysis');
+  let loadingEl = document.getElementById('analysis-loading'), resultEl = document.getElementById('analysis-result'), btnEl = document.getElementById('btn-analysis');
   if (loadingEl) loadingEl.style.display = 'block';
-  if (resultEl) resultEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted)">三维共振分析中：获取指数K线→北向资金→涨跌比→板块对标→个股资金→四维技术...请稍候</div>';
+  if (resultEl) resultEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted)">三维共振分析中：大盘→北向→板块诊断→个股资金→四维技术...请稍候</div>';
   if (btnEl) btnEl.style.display = 'none';
-
   try {
     let [indexData, dailyData, weeklyData, northbound, breadth, stockFlow] = await Promise.all([
-      fetchIndexData(),
-      fetchDailyRaw(stock.code, 120),
-      fetchWeeklyRaw(stock.code, 120),
-      fetchNorthboundFlow(),
-      fetchMarketBreadth(),
-      fetchStockFlow(stock.code)
+      fetchIndexData(), fetchDailyRaw(stock.code, 120), fetchWeeklyRaw(stock.code, 120), fetchNorthboundFlow(), fetchMarketBreadth(), fetchStockFlow(stock.code)
     ]);
-
-    if (!dailyData.length) {
-      if (resultEl) resultEl.innerHTML = '<span class="error-text">K线数据获取失败，请检查网络后重试</span>';
-      if (loadingEl) loadingEl.style.display = 'none';
-      if (btnEl) btnEl.style.display = 'inline-block';
-      return;
-    }
-
+    if (!dailyData.length) { if (resultEl) resultEl.innerHTML = '<span class="error-text">K线获取失败</span>'; if (loadingEl) loadingEl.style.display = 'none'; if (btnEl) btnEl.style.display = 'inline-block'; return; }
     let macro = analyzeMacro(indexData);
-    let meso = analyzeMeso(stock, dailyData, indexData);
+    let meso = await analyzeMeso(stock, dailyData, indexData);
     let micro = analyzeMicroComprehensive(dailyData, weeklyData, quote);
     let resonance = generateResonanceDecision(macro, meso, micro, northbound, breadth, stockFlow, stock, quote);
-
     if (resultEl) resultEl.innerHTML = renderResonanceHTML(stock, quote, macro, meso, micro, resonance);
-  } catch (e) {
-    console.error('三维分析失败:', e);
-    if (resultEl) resultEl.innerHTML = '<span class="error-text">分析失败: ' + escapeHtml(e.message) + '</span>';
-  } finally {
-    if (loadingEl) loadingEl.style.display = 'none';
-    if (btnEl) btnEl.style.display = 'inline-block';
-  }
+  } catch (e) { console.error('分析失败:', e); if (resultEl) resultEl.innerHTML = '<span class="error-text">分析失败: ' + escapeHtml(e.message) + '</span>'; }
+  finally { if (loadingEl) loadingEl.style.display = 'none'; if (btnEl) btnEl.style.display = 'inline-block'; }
 }
 
 // ==================== 渲染 ====================
 
+function stageEmoji(s) { let m = { 1: '🟢S1', 2: '🚀S2', 3: '⚠️S3', 4: '🔴S4' }; return m[s] || '❓'; }
+
 function renderResonanceHTML(stock, quote, macro, meso, micro, resonance) {
   let div = micro.divergence, sup = micro.support, dtr = micro.downtrend, vp = micro.volumePrice;
-  let lvl = resonance.levels;
-  let nb = resonance.northbound, br = resonance.breadth, sf = resonance.stockFlow;
+  let lvl = resonance.levels, nb = resonance.northbound, br = resonance.breadth, sf = resonance.stockFlow;
   let lightColor = resonance.overallSignal === 'green' ? '#10b981' : resonance.overallSignal === 'yellow' ? '#f59e0b' : '#ef4444';
   let lightEmoji = resonance.overallSignal === 'green' ? '🟢' : resonance.overallSignal === 'yellow' ? '🟡' : '🔴';
+
+  // 构建板块诊断HTML
+  let diagHTML = '';
+  if (meso.diagResults && meso.diagResults.length) {
+    let industryDiags = meso.diagResults.filter(d => d.category === '行业');
+    let conceptDiags = meso.diagResults.filter(d => d.category === '概念');
+    let buildDiagTable = (title, items) => {
+      if (!items.length) return '';
+      let rows = items.map(d => {
+        let diag = d.diagnosis;
+        if (!diag) return '<tr><td>' + d.name + '</td><td colspan="3" style="color:var(--text-muted)">数据不足</td></tr>';
+        let sel = d.selection ? ' ' + poolLabel(d.selection.pool) : '';
+        return '<tr><td>' + d.name + sel + '</td><td>' + stageEmoji(diag.stage) + ' ' + diag.stage_name + '</td><td>' + (diag.sub_type || '--') + '</td><td style="font-size:10px;">' + (diag.reasons ? diag.reasons.slice(0, 2).join('; ') : '--') + '</td></tr>';
+      }).join('');
+      return '<div class="dim-section-label">' + title + '</div><table class="res-table"><tr><th>板块</th><th>阶段</th><th>子类型</th><th>理由</th></tr>' + rows + '</table>';
+    };
+    diagHTML = buildDiagTable('🏭 行业板块', industryDiags) + buildDiagTable('💡 概念板块', conceptDiags);
+  }
 
   return `
 <div class="resonance-card">
   <h4 style="margin:0 0 4px;font-size:17px;">📋 ${escapeHtml(stock.name)} 三维共振分析</h4>
-  <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">
-    数据日期: ${macro.dataDate} | 现价: ${quote.last_px.toFixed(2)} | 原定买入价: ${resonance.originalBuyPrice.toFixed(2)}
-  </div>
+  <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">数据: ${macro.dataDate} | 现价: ${quote.last_px.toFixed(2)} | 买入价: ${resonance.originalBuyPrice.toFixed(2)}</div>
 
-  <!-- 信号灯条 -->
   <div class="traffic-bar" style="background:var(--bg-input);border-radius:8px;padding:10px 14px;margin-bottom:12px;">
-    <div class="traffic-row" style="display:flex;justify-content:space-around;text-align:center;gap:8px;">
+    <div style="display:flex;justify-content:space-around;text-align:center;gap:8px;">
       ${lvl.map(l => {
-        let e = l.signal === 'green' || l.signal === 'strong_bullish' || l.signal === 'bullish' || l.signal === 'strong_support' || l.signal === 'stabilizing' || l.signal === 'accumulation' || l.signal === 'panic_cleared' ? '🟢' : (l.signal === 'red' || l.signal === 'steep_decline' || l.signal === 'panic_selling' || l.signal === 'far' ? '🔴' : '🟡');
-        let scoreColor = parseFloat(l.score) >= 7 ? 'var(--up-color)' : parseFloat(l.score) <= 4 ? 'var(--down-color)' : 'var(--warning)';
-        return '<div style="flex:1;min-width:0"><div style="font-size:22px;">' + e + '</div><div style="font-size:10px;font-weight:600;">' + l.dim + '</div><div style="font-size:13px;font-weight:700;color:' + scoreColor + ';">' + l.score + '<span style="font-size:9px;color:var(--text-muted);font-weight:400;">/' + l.weight + '</span></div></div>';
+        let e = ['green','strong_bullish','bullish','strong_support','stabilizing','accumulation'].includes(l.signal) ? '🟢' : ['red','steep_decline','panic_selling'].includes(l.signal) ? '🔴' : '🟡';
+        let sc = parseFloat(l.score) >= 7 ? 'var(--up-color)' : parseFloat(l.score) <= 4 ? 'var(--down-color)' : 'var(--warning)';
+        return '<div style="flex:1;min-width:0"><div style="font-size:22px;">' + e + '</div><div style="font-size:9px;font-weight:600;">' + l.dim + '</div><div style="font-size:13px;font-weight:700;color:' + sc + ';">' + l.score + '<span style="font-size:8px;color:var(--text-muted);font-weight:400;">/' + l.weight + '</span></div></div>';
       }).join('')}
     </div>
     <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">
-      <span style="font-size:11px;color:var(--text-muted);">综合加权</span>
-      <span style="font-size:16px;font-weight:700;color:${lightColor};">${resonance.weightedTotal}/10</span>
-      <span style="font-size:11px;color:var(--text-muted);">信心度</span>
-      <span style="font-size:14px;font-weight:700;color:${lightColor};">${resonance.confidence}%</span>
+      <span style="font-size:11px;color:var(--text-muted);">综合</span><span style="font-size:16px;font-weight:700;color:${lightColor};">${resonance.weightedTotal}/10</span>
+      <span style="font-size:11px;color:var(--text-muted);">信心</span><span style="font-size:14px;font-weight:700;color:${lightColor};">${resonance.confidence}%</span>
     </div>
   </div>
 
-  <!-- 综合决策 -->
   <div class="decision-card" style="background:${lightColor}15;border-radius:8px;padding:12px;margin-bottom:12px;border-left:3px solid ${lightColor};">
     <div style="font-size:15px;font-weight:700;margin-bottom:4px;">${resonance.suggestion}</div>
     <div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;">${resonance.suggestionDetail}</div>
@@ -674,122 +871,58 @@ function renderResonanceHTML(stock, quote, macro, meso, micro, resonance) {
     <div style="display:flex;gap:16px;font-size:12px;flex-wrap:wrap;">
       <span>📌 原买入价: <strong>${resonance.originalBuyPrice.toFixed(2)}</strong></span>
       <span>🎯 建议: <strong>${resonance.suggestedBuyPrice.toFixed(2)}</strong></span>
-      <span>📊 偏多 ${resonance.totalBullish} vs 偏空 ${resonance.totalBearish} (净${resonance.netScore})</span>
     </div>
   </div>
 
-  <!-- 维度一：宏观 -->
   <details class="resonance-dim" open>
-    <summary class="dim-summary"><span style="font-size:16px;margin-right:4px;">🌍</span> <strong>宏观 · 大盘定仓位</strong> <span style="font-size:11px;color:var(--text-muted)">—— ${macro.resultText} | 北向: ${nb.trending} | 涨跌: ${br.trending}</span></summary>
+    <summary><span style="font-size:16px;margin-right:4px;">🌍</span> <strong>宏观</strong> <span style="font-size:11px;color:var(--text-muted)">${macro.resultText} | 北向:${nb.trending}</span></summary>
     <div class="dim-body">
-      <!-- 市场面 -->
-      <div class="dim-section-label">📊 市场面（均线+量能）</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">数据日: ${macro.dataDate} | 净分: ${macro.net}</div>
-      <table class="res-table">
-        <tr><th>指数</th><th>收盘</th><th>DMA20</th><th>DMA60</th><th>背离</th><th>结构</th><th>支撑</th><th>量价</th></tr>
-        ${macro.rows.map(r => '<tr><td>' + r.name + '</td><td>' + r.close + '</td><td style="color:' + (r.dma20 > 0 ? 'var(--up-color)' : 'var(--down-color)') + '">' + (r.dma20 > 0 ? '+' : '') + r.dma20 + '%</td><td style="color:' + (r.dma60 > 0 ? 'var(--up-color)' : 'var(--down-color)') + '">' + (r.dma60 > 0 ? '+' : '') + r.dma60 + '%</td><td>' + r.divSignal + '</td><td>' + r.structSignal + '</td><td>' + r.supportSignal + '</td><td>' + r.vpSignal + '</td></tr>').join('')}
-      </table>
-      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">📐 指数四维：均线排列+背离信号+涨跌结构+关键支撑+量价关系，同个股分析标准</div>
-
-      <!-- 资金面 -->
-      <div class="dim-section-label">💰 资金面（北向+涨跌比）</div>
-      <div class="dim-detail-text" style="font-size:11px;">
-        北向资金近5日: ${nb.detail}<br>
-        涨跌家数比: ${br.detail}<br>
-        ${nb.signal === 'green' ? '🟢 资金面积极：北向流入+涨多跌少，系统性风险小' : nb.signal === 'red' ? '🔴 资金面谨慎：北向流出+普跌，降低仓位' : '🟡 资金面中性'}
-      </div>
-      <div class="dim-note">📌 ${macro.positionAdvice}</div>
+      <table class="res-table"><tr><th>指数</th><th>收盘</th><th>DMA20</th><th>DMA60</th><th>背离</th><th>结构</th><th>支撑</th><th>量价</th></tr>
+      ${macro.rows.map(r => '<tr><td>'+r.name+'</td><td>'+r.close+'</td><td style="color:'+(r.dma20>0?'var(--up-color)':'var(--down-color)')+'">'+(r.dma20>0?'+':'')+r.dma20+'%</td><td style="color:'+(r.dma60>0?'var(--up-color)':'var(--down-color)')+'">'+(r.dma60>0?'+':'')+r.dma60+'%</td><td>'+r.divSignal+'</td><td>'+r.structSignal+'</td><td>'+r.supportSignal+'</td><td>'+r.vpSignal+'</td></tr>').join('')}</table>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">📐 指数四维同个股标准</div>
+      <div class="dim-detail-text" style="font-size:11px;margin-top:6px;">💰 北向近5日: ${nb.detail}<br>📊 涨跌比: ${br.detail}</div>
     </div>
   </details>
 
-  <!-- 维度二：中观 -->
+  <details class="resonance-dim" open>
+    <summary><span style="font-size:16px;margin-right:4px;">🏢</span> <strong>中观 · 板块四阶段诊断</strong> <span style="font-size:11px;color:var(--text-muted)">${meso.resultText}</span></summary>
+    <div class="dim-body">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">所属: ${meso.board} | 净分: ${meso.net}</div>
+      ${diagHTML || '<div style="color:var(--text-muted);font-size:11px;">板块诊断中...</div>'}
+      <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">S1底部蓄势 S2主升浪 S3加速赶顶 S4下跌趋势 | 🥇精选池标注来自盘后全量分析</div>
+    </div>
+  </details>
+
   <details class="resonance-dim">
-    <summary class="dim-summary"><span style="font-size:16px;margin-right:4px;">🏢</span> <strong>中观 · 板块定方向</strong> <span style="font-size:11px;color:var(--text-muted)">—— ${meso.resultText}</span></summary>
+    <summary><span style="font-size:16px;margin-right:4px;">🔬</span> <strong>微观 · 四维技术</strong> <span style="font-size:11px;color:var(--text-muted)">${micro.resultText}</span></summary>
     <div class="dim-body">
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">数据日: ${meso.dataDate} | 板块: ${meso.board} | 对标: ${meso.benchmarkName}</div>
-      <table class="res-table">
-        <tr><th>周期</th><th>相对强度</th><th>含义</th></tr>
-        ${meso.rs10 !== null ? '<tr><td>10日</td><td>' + (meso.rs10 > 0 ? '+' : '') + meso.rs10 + '%</td><td>' + (meso.rs10 > 2 ? '🟢 显著强于大盘' : meso.rs10 > 0 ? '🟡 略强' : '🔴 弱于大盘') + '</td></tr>' : ''}
-        ${meso.rs20 !== null ? '<tr><td>20日</td><td>' + (meso.rs20 > 0 ? '+' : '') + meso.rs20 + '%</td><td>' + (meso.rs20 > 2 ? '🟢 显著强于大盘' : meso.rs20 > 0 ? '🟡 略强' : '🔴 弱于大盘') + '</td></tr>' : ''}
-        ${meso.rs60 !== null ? '<tr><td>60日</td><td>' + (meso.rs60 > 0 ? '+' : '') + meso.rs60 + '%</td><td>' + (meso.rs60 > 5 ? '🟢 长期领先，龙头效应' : meso.rs60 > 0 ? '🟡 长期持平' : '🔴 长期跑输') + '</td></tr>' : ''}
-      </table>
-      <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">个股量比: ${meso.sVolTrend} | 指数量比: ${meso.bVolTrend} | ${meso.sVolTrend > meso.bVolTrend * 1.2 ? '🟢 个股放量强于指数' : meso.sVolTrend > meso.bVolTrend ? '🟡 个股放量略强' : '🔴 个股缩量弱于指数'}</div>
-      <div class="dim-note" style="margin-top:4px;">${meso.resultText}</div>
+      <div class="dim-section-label">💰 个股主力资金</div>
+      <div style="font-size:11px;margin-bottom:6px;">${sf.fundFlowDetail}<br><span style="color:${sf.northboundSignal==='green'?'#10b981':sf.northboundSignal==='red'?'#ef4444':'#d97706'};">${sf.northboundDetail}</span></div>
+
+      <div class="dim-section-label">📐 技术四维</div>
+      <div class="micro-sub"><div class="micro-sub-header"><span class="signal-tag ${div.signal}">${div.signal==='strong_bullish'?'✅✅':div.signal==='bullish'?'✅':div.signal==='mild_bullish'?'🟡':'🔴'}</span> 底背离</div><div class="micro-sub-result">${div.resultText}</div><div class="micro-sub-data">RSI(14):${(div.currentRSI||50).toFixed(1)} | DIF:${(div.currentDIF||0).toFixed(4)}</div>${div.detail?'<div class="micro-sub-detail">'+div.detail.replace(/\\n/g,'<br>')+'</div>':''}</div>
+
+      <div class="micro-sub"><div class="micro-sub-header"><span class="signal-tag ${sup.signal}">${sup.signal==='strong_support'?'✅':sup.signal==='approaching'?'🟡':'🔴'}</span> 支撑位</div><div class="micro-sub-result">${sup.resultText}</div>${sup.fibTable.length?'<table class="res-table" style="margin-top:4px;"><tr><th>位置</th><th>价格</th><th>距现价</th></tr>'+sup.fibTable.map(f=>'<tr class="'+(f.label==='61.8%'?'fib-golden':'')+'"><td>'+f.label+(f.label==='61.8%'?' 🥇':'')+'</td><td>'+f.price+'</td><td>'+(f.dist>0?'+':'')+f.dist+'</td></tr>').join('')+'</table>':''}</div>
+
+      <div class="micro-sub"><div class="micro-sub-header"><span class="signal-tag ${dtr.signal}">${dtr.signal==='stabilizing'?'✅':dtr.signal==='flattening'?'🟢':dtr.signal==='mild_decline'?'🟡':'🔴'}</span> 下跌结构</div><div class="micro-sub-result">${dtr.resultText}</div><div class="micro-sub-data">10日:${dtr.slope10}%/日 | 20日:${dtr.slope20}%/日</div>${dtr.detail?'<div class="micro-sub-detail">'+dtr.detail.replace(/\\n/g,'<br>')+'</div>':''}</div>
+
+      <div class="micro-sub"><div class="micro-sub-header"><span class="signal-tag ${vp.signal}">${['accumulation','panic_cleared'].includes(vp.signal)?'✅':vp.signal==='mild_bullish'?'🟡':['panic_selling','grinding_down'].includes(vp.signal)?'🔴':'🟡'}</span> 量价</div><div class="micro-sub-result">${vp.resultText}</div><div class="micro-sub-data">阳量:${vp.redRatio}% | ${vp.volTrend}(MA5/MA20=${vp.volRatio})</div><div class="micro-sub-detail">${vp.details.replace(/\\n/g,'<br>')}</div></div>
     </div>
   </details>
 
-  <!-- 维度三：微观 -->
-  <details class="resonance-dim">
-    <summary class="dim-summary"><span style="font-size:16px;margin-right:4px;">🔬</span> <strong>微观 · 个股定击球点</strong> <span style="font-size:11px;color:var(--text-muted)">—— ${micro.resultText}</span></summary>
-    <div class="dim-body">
-      <!-- 资金面 -->
-      <div class="dim-section-label">💰 资金面（个股主力流向）</div>
-      <div class="dim-detail-text" style="font-size:11px;margin-bottom:6px;">
-        ${sf.fundFlowDetail}<br>
-        <span style="color:${sf.northboundSignal === 'green' ? '#10b981' : sf.northboundSignal === 'red' ? '#ef4444' : '#d97706'};">${sf.northboundDetail}</span>
-        ${sf.northboundSignal === 'green' ? ' → 🟢 底部反复出现放量阳线+缩量阴线组合，主力建仓特征' : sf.northboundSignal === 'red' ? ' → 🔴 无主力关注，技术形态再好也要谨慎' : ''}
-      </div>
-
-      <!-- 技术面四维 -->
-      <div class="dim-section-label">📐 技术面四维</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">数据日: ${micro.dataDate} | 四维净分: ${micro.net} (偏多${micro.bullish}/偏空${micro.bearish})</div>
-
-      <div class="micro-sub">
-        <div class="micro-sub-header"><span class="signal-tag ${div.signal}">${div.signal === 'strong_bullish' ? '✅✅' : div.signal === 'bullish' ? '✅' : div.signal === 'mild_bullish' ? '🟡' : '🔴'}</span> 底背离</div>
-        <div class="micro-sub-result">${div.resultText}</div>
-        <div class="micro-sub-data">RSI(14): ${(div.currentRSI||50).toFixed(1)} | MACD DIF: ${(div.currentDIF||0).toFixed(4)} | ${div.dataDate}</div>
-        ${div.detail ? '<div class="micro-sub-detail">' + div.detail.replace(/\n/g, '<br>') + '</div>' : ''}
-      </div>
-
-      <div class="micro-sub">
-        <div class="micro-sub-header"><span class="signal-tag ${sup.signal}">${sup.signal === 'strong_support' ? '✅' : sup.signal === 'approaching' ? '🟡' : '🔴'}</span> 支撑位</div>
-        <div class="micro-sub-result">${sup.resultText}</div>
-        <div class="micro-sub-data">波段高: ${sup.fibLevels.shDate||'--'} ${sup.fibLevels.swingHigh||'--'} | 波段低: ${sup.fibLevels.slDate||'--'} ${sup.fibLevels.swingLow||'--'}</div>
-        ${sup.fibTable.length ? '<table class="res-table" style="margin-top:4px;"><tr><th>斐波那契位</th><th>价格</th><th>距现价</th></tr>' + sup.fibTable.map(f => '<tr class="' + (f.label === '61.8%' ? 'fib-golden' : '') + '"><td>' + f.label + (f.label === '61.8%' ? ' 🥇' : '') + '</td><td>' + f.price + '</td><td>' + (f.dist > 0 ? '+' : '') + f.dist + '</td></tr>').join('') + '</table>' : ''}
-        ${sup.denseZones.length ? '<div class="micro-sub-detail">📌 历史密集区(周线 ' + sup.weeklyRange + '): ' + sup.denseStr + '</div>' : ''}
-      </div>
-
-      <div class="micro-sub">
-        <div class="micro-sub-header"><span class="signal-tag ${dtr.signal}">${dtr.signal === 'stabilizing' ? '✅' : dtr.signal === 'flattening' ? '🟢' : dtr.signal === 'mild_decline' ? '🟡' : '🔴'}</span> 下跌结构</div>
-        <div class="micro-sub-result">${dtr.resultText}</div>
-        <div class="micro-sub-data">10日斜率: ${dtr.slope10}%/日 | 20日: ${dtr.slope20}%/日 | ${dtr.dataDate}</div>
-        ${dtr.detail ? '<div class="micro-sub-detail">' + dtr.detail.replace(/\n/g, '<br>') + '</div>' : ''}
-      </div>
-
-      <div class="micro-sub">
-        <div class="micro-sub-header"><span class="signal-tag ${vp.signal}">${vp.signal === 'accumulation' || vp.signal === 'panic_cleared' ? '✅' : vp.signal === 'mild_bullish' ? '🟡' : vp.signal === 'panic_selling' || vp.signal === 'grinding_down' ? '🔴' : '🟡'}</span> 量价关系</div>
-        <div class="micro-sub-result">${vp.resultText}</div>
-        <div class="micro-sub-data">阳量: ${vp.redRatio}% | 量能趋势: ${vp.volTrend} (MA5/MA20=${vp.volRatio}) | ${vp.dataDate}</div>
-        <div class="micro-sub-detail">${vp.details.replace(/\n/g, '<br>')}</div>
-      </div>
-    </div>
-  </details>
-
-  <!-- 决策矩阵 -->
   <div style="font-size:13px;margin-top:12px;padding:10px;background:var(--bg-input);border-radius:8px;">
     <div style="font-weight:700;margin-bottom:6px;">📊 综合决策矩阵</div>
     <table class="res-table">
       <tr><th>维度</th><th>评分</th><th>信号</th><th>判断</th><th>行动</th></tr>
-      ${resonance.levels.map(l => {
-        let state = l.signal === 'green' || l.signal === 'strong_bullish' || l.signal === 'bullish' ? '🟢 绿灯' : (l.signal === 'red' || l.signal === 'steep_decline' || l.signal === 'panic_selling' ? '🔴 红灯' : '🟡 黄灯');
-        let act = l.signal === 'green' ? '可积极' : l.signal === 'red' ? '等待' : '按计划';
-        let scColor = parseFloat(l.score) >= 7 ? 'var(--up-color)' : parseFloat(l.score) <= 4 ? 'var(--down-color)' : 'var(--warning)';
-        return '<tr><td>' + l.dim + '</td><td style="color:' + scColor + ';font-weight:600;">' + l.score + '<span style="font-size:9px;color:var(--text-muted);font-weight:400;">/' + l.weight + '</span></td><td>' + state + '</td><td style="font-size:11px;">' + l.resultText.slice(0, 40) + '</td><td style="font-size:11px;">' + act + '</td></tr>';
-      }).join('')}
-      <tr style="font-weight:700;background:${lightColor}10;">
-        <td>综合</td><td style="color:${lightColor};">${resonance.weightedTotal}/10</td><td>${lightEmoji} ${resonance.overallSignal === 'green' ? '绿灯' : resonance.overallSignal === 'yellow' ? '黄灯' : '红灯'}</td>
-        <td colspan="2">${resonance.suggestion}</td>
-      </tr>
+      ${resonance.levels.map(l => { let st=['green','strong_bullish','bullish'].includes(l.signal)?'🟢 绿灯':['red','steep_decline'].includes(l.signal)?'🔴 红灯':'🟡 黄灯'; let sc=parseFloat(l.score)>=7?'var(--up-color)':parseFloat(l.score)<=4?'var(--down-color)':'var(--warning)'; return '<tr><td>'+l.dim+'</td><td style="color:'+sc+';font-weight:600;">'+l.score+'<span style="font-size:8px;color:var(--text-muted);font-weight:400;">/'+l.weight+'</span></td><td>'+st+'</td><td style="font-size:11px;">'+l.resultText.slice(0,30)+'</td><td style="font-size:11px;">'+(l.signal==='green'?'可积极':'按计划')+'</td></tr>'; }).join('')}
+      <tr style="font-weight:700;background:${lightColor}10;"><td>综合</td><td style="color:${lightColor};">${resonance.weightedTotal}/10</td><td>${lightEmoji} ${resonance.overallSignal==='green'?'绿灯':resonance.overallSignal==='yellow'?'黄灯':'红灯'}</td><td colspan="2">${resonance.suggestion}</td></tr>
     </table>
-  </div>
-
-  <div style="font-size:10px;color:var(--text-muted);margin-top:8px;text-align:center;">
-    ⚠️ 以上基于公开数据的指标运算，不构成投资建议。数据来源：腾讯行情+东方财富。
   </div>
 </div>`;
 }
 
 // ==================== 辅助函数 ====================
+
 function findLocalLows(data, period) {
   let lows = [];
   for (let i = period; i < data.length - period; i++) {
@@ -825,53 +958,47 @@ function calcMACDDataSeries(closes) {
   return { diff, dea };
 }
 
-// 覆盖旧定义
-function findLocalLows(data, period) {
-  let lows = [];
-  for (let i = period; i < data.length - period; i++) {
-    let isLow = true;
-    for (let j = i - period; j <= i + period; j++) { if (j === i) continue; if (data[j] <= data[i]) { isLow = false; break; } }
-    if (isLow) lows.push(i);
-  }
-  return lows;
-}
-
 function calcRSISeries(closes, period = 14) {
-  if (closes.length < period + 1) return new Array(closes.length).fill(50);
-  let gains = new Array(closes.length).fill(0), losses = new Array(closes.length).fill(0);
-  for (let i = 1; i < closes.length; i++) { let ch = closes[i] - closes[i - 1]; if (ch > 0) gains[i] = ch; else if (ch < 0) losses[i] = Math.abs(ch); }
-  let rsiArr = new Array(closes.length).fill(null);
-  let avgG = gains.slice(1, period + 1).reduce((a, b) => a + b, 0) / period;
-  let avgL = losses.slice(1, period + 1).reduce((a, b) => a + b, 0) / period;
-  rsiArr[period] = avgL === 0 ? 100 : parseFloat((100 - 100 / (1 + avgG / avgL)).toFixed(1));
-  for (let i = period + 1; i < closes.length; i++) {
-    avgG = (avgG * (period - 1) + gains[i]) / period;
-    avgL = (avgL * (period - 1) + losses[i]) / period;
-    rsiArr[i] = avgL === 0 ? 100 : parseFloat((100 - 100 / (1 + avgG / avgL)).toFixed(1));
-  }
-  return rsiArr;
+  if (closes.length < period + 1) { let r = []; for (let i = 0; i < closes.length; i++) r.push(50); return r; }
+  let rsi = new Array(closes.length).fill(50);
+  let gains = 0, losses = 0;
+  for (let i = 1; i <= period; i++) { let chg = closes[i] - closes[i-1]; if (chg > 0) gains += chg; else losses -= chg; }
+  let avgGain = gains / period, avgLoss = losses / period;
+  rsi[period] = avgLoss === 0 ? 100 : parseFloat((100 - 100 / (1 + avgGain / avgLoss)).toFixed(1));
+  for (let i = period + 1; i < closes.length; i++) { let chg = closes[i] - closes[i-1]; avgGain = (avgGain * 13 + (chg > 0 ? chg : 0)) / 14; avgLoss = (avgLoss * 13 + (chg < 0 ? -chg : 0)) / 14; rsi[i] = avgLoss === 0 ? 100 : parseFloat((100 - 100 / (1 + avgGain / avgLoss)).toFixed(1)); }
+  return rsi;
 }
 
 function detectDoubleBottom(candles) {
-  if (candles.length < 20) return { found: false };
-  let lowVals = candles.map(c => c.low);
-  let locLows = findLocalLows(lowVals, 3);
-  if (locLows.length < 2) return { found: false };
-  let l1 = locLows[locLows.length - 1], l2 = locLows[locLows.length - 2];
-  if (Math.abs(l1 - l2) < 5) return { found: false };
-  let lp1 = lowVals[l1], lp2 = lowVals[l2], diffPct = pct(lp1, lp2);
-  if (Math.abs(diffPct) > 5) return { found: false };
-  return { found: true, leftDate: candles[l2].date, leftPrice: parseFloat(lp2.toFixed(2)), rightDate: candles[l1].date, rightPrice: parseFloat(lp1.toFixed(2)), rightHigher: lp1 > lp2, diffPct: parseFloat(diffPct.toFixed(1)) };
+  if (candles.length < 30) return { found: false };
+  let closes = candles.map(c => c.close).filter(v => v > 0);
+  let lows = findLocalLows(closes, 4);
+  if (lows.length < 2) return { found: false };
+  let l1 = lows[lows.length - 1], l2 = lows[lows.length - 2];
+  let p1 = closes[l1], p2 = closes[l2];
+  if (Math.abs(p1 - p2) / Math.max(p1, p2) < 0.05 && l1 - l2 >= 5) {
+    return { found: true, left: p2.toFixed(2), right: p1.toFixed(2), leftIdx: l2, rightIdx: l1 };
+  }
+  return { found: false };
 }
 
 function calcDowntrendLine(candles) {
-  if (candles.length < 30) return { valid: false };
-  let highs = candles.map(c => c.high), lookback = Math.min(90, candles.length);
-  let seg = candles.slice(-lookback), segH = highs.slice(-lookback);
-  let maxIdx = segH.indexOf(Math.max(...segH));
-  let startDate = seg[maxIdx].date, startHigh = segH[maxIdx], s2 = -Infinity, s2Idx = -1;
-  for (let i = maxIdx + 10; i < seg.length - 5; i++) { if (segH[i] > s2 && segH[i] < startHigh) { s2 = segH[i]; s2Idx = i; } }
-  if (s2Idx < 0) return { valid: false, startDate };
-  let slp = (startHigh - s2) / (maxIdx - s2Idx);
-  return { valid: slp < 0, startDate, slope: parseFloat(slp.toFixed(4)), breakPrice: parseFloat((startHigh + slp * (seg.length - 1 - maxIdx)).toFixed(2)) };
+  if (candles.length < 20) return null;
+  let highs = candles.map(c => c.high).filter(v => v > 0);
+  let highIdxs = findLocalHighs(highs, 3);
+  if (highIdxs.length < 2) return null;
+  let h1 = highIdxs[highIdxs.length - 2], h2 = highIdxs[highIdxs.length - 1];
+  let slope = (highs[h2] - highs[h1]) / (h2 - h1), intercept = highs[h1] - slope * h1;
+  let startIdx = highIdxs[0], endIdx = highIdxs[highIdxs.length - 1];
+  return {
+    start: parseFloat(highs[startIdx].toFixed(2)), end: parseFloat(highs[endIdx].toFixed(2)),
+    startDate: candles[startIdx] ? candles[startIdx].date : '',
+    endDate: candles[endIdx] ? candles[endIdx].date : '',
+    slope: parseFloat(slope.toFixed(3))
+  };
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
