@@ -1,249 +1,1222 @@
 {
-  "updated": "2026-06-07 22:08:54",
-  "gold": [],
-  "silver": [
+  "updated": "2026-06-07 22:11:05",
+  "gold": [
     {
-      "name": "AI眼镜",
-      "stage": 2,
-      "confidence": "high",
-      "sub_type": "标准主升浪",
-      "score": 0,
-      "reasons": []
+      "name": "MLCC",
+      "category": "概念",
+      "stage": 1,
+      "stage_name": "底部蓄势",
+      "sub_type": "标准底部",
+      "score_space": 2,
+      "score_time": 2,
+      "score_capital": 3,
+      "score_total": 7,
+      "reason_space": [
+        "距60日低点51天(充分磨底)"
+      ],
+      "reason_time": [
+        "均线偏多",
+        "MACD金叉零轴上(强势)"
+      ],
+      "reason_capital": [
+        "周线倍量(量比3.2x,资金蜂拥)"
+      ],
+      "indicators": {
+        "ma_alignment": "partial_bull",
+        "macd_state": "golden",
+        "DIF_above_zero": true,
+        "days_from_60d_low": 51,
+        "days_from_60d_high": 2,
+        "week_amp": 15.41,
+        "week_pct": 12.86,
+        "vol_ratio_5w": 3.22,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 3750.33,
+        "MA60_current": 2793.61
+      },
+      "data_warning": null,
+      "pool": "gold"
     },
     {
-      "name": "AI芯片",
-      "stage": 2,
-      "confidence": "high",
-      "sub_type": "标准主升浪",
-      "score": 0,
-      "reasons": []
+      "name": "MicroLED",
+      "category": "概念",
+      "stage": 1,
+      "stage_name": "底部蓄势",
+      "sub_type": "标准底部",
+      "score_space": 2,
+      "score_time": 2,
+      "score_capital": 3,
+      "score_total": 7,
+      "reason_space": [
+        "距60日低点51天(充分磨底)"
+      ],
+      "reason_time": [
+        "均线偏多",
+        "MACD金叉零轴上(强势)"
+      ],
+      "reason_capital": [
+        "周线倍量(量比2.3x,资金蜂拥)"
+      ],
+      "indicators": {
+        "ma_alignment": "partial_bull",
+        "macd_state": "golden",
+        "DIF_above_zero": true,
+        "days_from_60d_low": 51,
+        "days_from_60d_high": 7,
+        "week_amp": 9.13,
+        "week_pct": 4.41,
+        "vol_ratio_5w": 2.34,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 1406.17,
+        "MA60_current": 1183.02
+      },
+      "data_warning": null,
+      "pool": "gold"
     },
     {
-      "name": "BC电池",
-      "stage": 2,
-      "confidence": "high",
-      "sub_type": "标准主升浪",
-      "score": 0,
-      "reasons": []
+      "name": "光学光电子",
+      "category": "行业",
+      "stage": 1,
+      "stage_name": "底部蓄势",
+      "sub_type": "标准底部",
+      "score_space": 2,
+      "score_time": 2,
+      "score_capital": 3,
+      "score_total": 7,
+      "reason_space": [
+        "距60日低点50天(充分磨底)"
+      ],
+      "reason_time": [
+        "均线偏多",
+        "MACD金叉零轴上(强势)"
+      ],
+      "reason_capital": [
+        "周线倍量(量比2.1x,资金蜂拥)"
+      ],
+      "indicators": {
+        "ma_alignment": "partial_bull",
+        "macd_state": "golden",
+        "DIF_above_zero": true,
+        "days_from_60d_low": 50,
+        "days_from_60d_high": 10,
+        "week_amp": 8.26,
+        "week_pct": 4.65,
+        "vol_ratio_5w": 2.06,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 2134.88,
+        "MA60_current": 1846.12
+      },
+      "data_warning": null,
+      "pool": "gold"
     },
     {
-      "name": "F5G概念",
-      "stage": 2,
-      "confidence": "high",
-      "sub_type": "标准主升浪",
-      "score": 0,
-      "reasons": []
+      "name": "智能穿戴",
+      "category": "概念",
+      "stage": 1,
+      "stage_name": "底部蓄势",
+      "sub_type": "标准底部",
+      "score_space": 2,
+      "score_time": 2,
+      "score_capital": 3,
+      "score_total": 7,
+      "reason_space": [
+        "距60日低点51天(充分磨底)"
+      ],
+      "reason_time": [
+        "均线偏多",
+        "MACD金叉零轴上(强势)"
+      ],
+      "reason_capital": [
+        "周线倍量(量比2.1x,资金蜂拥)"
+      ],
+      "indicators": {
+        "ma_alignment": "partial_bull",
+        "macd_state": "golden",
+        "DIF_above_zero": true,
+        "days_from_60d_low": 51,
+        "days_from_60d_high": 10,
+        "week_amp": 5.41,
+        "week_pct": 2.56,
+        "vol_ratio_5w": 2.09,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 4141.41,
+        "MA60_current": 3627.5
+      },
+      "data_warning": null,
+      "pool": "gold"
     },
     {
-      "name": "WiFi",
-      "stage": 2,
-      "confidence": "high",
-      "sub_type": "标准主升浪",
-      "score": 0,
-      "reasons": []
-    },
-    {
-      "name": "刀片电池",
-      "stage": 2,
-      "confidence": "high",
-      "sub_type": "标准主升浪",
-      "score": 0,
-      "reasons": []
-    },
-    {
-      "name": "半导体",
-      "stage": 2,
-      "confidence": "high",
-      "sub_type": "标准主升浪",
-      "score": 0,
-      "reasons": []
-    },
-    {
-      "name": "华为海思",
-      "stage": 2,
-      "confidence": "high",
-      "sub_type": "标准主升浪",
-      "score": 0,
-      "reasons": []
-    },
-    {
-      "name": "噪声防治",
-      "stage": 2,
-      "confidence": "high",
-      "sub_type": "标准主升浪",
-      "score": 0,
-      "reasons": []
-    },
-    {
-      "name": "固态电池",
-      "stage": 2,
-      "confidence": "high",
-      "sub_type": "标准主升浪",
-      "score": 0,
-      "reasons": []
+      "name": "柔性屏(折叠屏)",
+      "category": "概念",
+      "stage": 1,
+      "stage_name": "底部蓄势",
+      "sub_type": "标准底部",
+      "score_space": 2,
+      "score_time": 2,
+      "score_capital": 3,
+      "score_total": 7,
+      "reason_space": [
+        "距60日低点51天(充分磨底)"
+      ],
+      "reason_time": [
+        "均线偏多",
+        "MACD金叉零轴上(强势)"
+      ],
+      "reason_capital": [
+        "周线倍量(量比2.4x,资金蜂拥)"
+      ],
+      "indicators": {
+        "ma_alignment": "partial_bull",
+        "macd_state": "golden",
+        "DIF_above_zero": true,
+        "days_from_60d_low": 51,
+        "days_from_60d_high": 10,
+        "week_amp": 8.93,
+        "week_pct": 5.97,
+        "vol_ratio_5w": 2.36,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 2128.0,
+        "MA60_current": 1757.26
+      },
+      "data_warning": null,
+      "pool": "gold"
     }
   ],
-  "watch": [],
+  "silver": [],
+  "watch": [
+    {
+      "name": "LED概念",
+      "category": "概念",
+      "stage": 1,
+      "stage_name": "底部蓄势",
+      "sub_type": "标准底部",
+      "score_space": 2,
+      "score_time": 1,
+      "score_capital": 3,
+      "score_total": 6,
+      "reason_space": [
+        "距60日低点51天(充分磨底)"
+      ],
+      "reason_time": [
+        "均线偏多"
+      ],
+      "reason_capital": [
+        "周线倍量(量比2.0x,资金蜂拥)"
+      ],
+      "indicators": {
+        "ma_alignment": "partial_bull",
+        "macd_state": null,
+        "DIF_above_zero": null,
+        "days_from_60d_low": 51,
+        "days_from_60d_high": 10,
+        "week_amp": 6.79,
+        "week_pct": 1.27,
+        "vol_ratio_5w": 2.01,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 4839.15,
+        "MA60_current": null
+      },
+      "data_warning": "⚠ 数据不足: 数据仅101天(21周); 缺失均线: MA60,MA120; MACD不可用(需≥35周)",
+      "pool": "watch"
+    },
+    {
+      "name": "先进封装",
+      "category": "概念",
+      "stage": 1,
+      "stage_name": "底部蓄势",
+      "sub_type": "标准底部",
+      "score_space": 2,
+      "score_time": 1,
+      "score_capital": 3,
+      "score_total": 6,
+      "reason_space": [
+        "距60日低点45天(充分磨底)"
+      ],
+      "reason_time": [
+        "均线偏多"
+      ],
+      "reason_capital": [
+        "周线倍量(量比2.0x,资金蜂拥)"
+      ],
+      "indicators": {
+        "ma_alignment": "partial_bull",
+        "macd_state": null,
+        "DIF_above_zero": null,
+        "days_from_60d_low": 45,
+        "days_from_60d_high": 7,
+        "week_amp": 9.16,
+        "week_pct": 1.71,
+        "vol_ratio_5w": 2.05,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 2767.06,
+        "MA60_current": null
+      },
+      "data_warning": "⚠ 数据不足: 数据仅101天(21周); 缺失均线: MA60,MA120; MACD不可用(需≥35周)",
+      "pool": "watch"
+    },
+    {
+      "name": "医美概念",
+      "category": "概念",
+      "stage": 1,
+      "stage_name": "底部蓄势",
+      "sub_type": "标准底部",
+      "score_space": 3,
+      "score_time": 0,
+      "score_capital": 3,
+      "score_total": 6,
+      "reason_space": [
+        "距60日低点51天(充分磨底)",
+        "本周温和回调-2.6%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [
+        "周线倍量(量比2.3x,资金蜂拥)"
+      ],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": null,
+        "DIF_above_zero": null,
+        "days_from_60d_low": 51,
+        "days_from_60d_high": 20,
+        "week_amp": 4.76,
+        "week_pct": -2.58,
+        "vol_ratio_5w": 2.27,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 1869.44,
+        "MA60_current": null
+      },
+      "data_warning": "⚠ 数据不足: 数据仅101天(21周); 缺失均线: MA60,MA120; MACD不可用(需≥35周)",
+      "pool": "watch"
+    },
+    {
+      "name": "园林工程",
+      "category": "行业",
+      "stage": 1,
+      "stage_name": "底部蓄势",
+      "sub_type": "疑似筑底",
+      "score_space": 3,
+      "score_time": 0,
+      "score_capital": 3,
+      "score_total": 6,
+      "reason_space": [
+        "距60日低点42天(充分磨底)",
+        "距60日高点59天(上涨空间充足)"
+      ],
+      "reason_time": [],
+      "reason_capital": [
+        "周线倍量(量比2.5x,资金蜂拥)"
+      ],
+      "indicators": {
+        "ma_alignment": null,
+        "macd_state": null,
+        "DIF_above_zero": null,
+        "days_from_60d_low": 42,
+        "days_from_60d_high": 59,
+        "week_amp": 6.24,
+        "week_pct": 5.4,
+        "vol_ratio_5w": 2.47,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": null,
+        "MA60_current": null
+      },
+      "data_warning": "⚠ 数据不足: 数据仅70天(15周); 缺失均线: MA20,MA60,MA120; MACD不可用(需≥35周)",
+      "pool": "watch"
+    },
+    {
+      "name": "火力发电",
+      "category": "行业",
+      "stage": 1,
+      "stage_name": "底部蓄势",
+      "sub_type": "标准底部",
+      "score_space": 3,
+      "score_time": 0,
+      "score_capital": 3,
+      "score_total": 6,
+      "reason_space": [
+        "距60日低点42天(充分磨底)",
+        "本周温和回调-4.8%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [
+        "周线倍量(量比2.0x,资金蜂拥)"
+      ],
+      "indicators": {
+        "ma_alignment": null,
+        "macd_state": null,
+        "DIF_above_zero": null,
+        "days_from_60d_low": 42,
+        "days_from_60d_high": 3,
+        "week_amp": 9.29,
+        "week_pct": -4.77,
+        "vol_ratio_5w": 2.04,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": null,
+        "MA60_current": null
+      },
+      "data_warning": "⚠ 数据不足: 数据仅70天(15周); 缺失均线: MA20,MA60,MA120; MACD不可用(需≥35周)",
+      "pool": "watch"
+    },
+    {
+      "name": "熔盐储能",
+      "category": "概念",
+      "stage": 1,
+      "stage_name": "底部蓄势",
+      "sub_type": "标准底部",
+      "score_space": 3,
+      "score_time": 0,
+      "score_capital": 3,
+      "score_total": 6,
+      "reason_space": [
+        "距60日低点42天(充分磨底)",
+        "距60日高点59天(上涨空间充足)"
+      ],
+      "reason_time": [],
+      "reason_capital": [
+        "周线倍量(量比2.1x,资金蜂拥)"
+      ],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": true,
+        "days_from_60d_low": 42,
+        "days_from_60d_high": 59,
+        "week_amp": 4.84,
+        "week_pct": 0.24,
+        "vol_ratio_5w": 2.08,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 1192.37,
+        "MA60_current": 1088.94
+      },
+      "data_warning": null,
+      "pool": "watch"
+    },
+    {
+      "name": "玻璃制造",
+      "category": "行业",
+      "stage": 1,
+      "stage_name": "底部蓄势",
+      "sub_type": "标准底部",
+      "score_space": 3,
+      "score_time": 0,
+      "score_capital": 3,
+      "score_total": 6,
+      "reason_space": [
+        "距60日低点42天(充分磨底)",
+        "距60日高点58天(上涨空间充足)"
+      ],
+      "reason_time": [],
+      "reason_capital": [
+        "周线倍量(量比2.0x,资金蜂拥)"
+      ],
+      "indicators": {
+        "ma_alignment": null,
+        "macd_state": null,
+        "DIF_above_zero": null,
+        "days_from_60d_low": 42,
+        "days_from_60d_high": 58,
+        "week_amp": 10.29,
+        "week_pct": 6.7,
+        "vol_ratio_5w": 2.02,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": null,
+        "MA60_current": null
+      },
+      "data_warning": "⚠ 数据不足: 数据仅70天(15周); 缺失均线: MA20,MA60,MA120; MACD不可用(需≥35周)",
+      "pool": "watch"
+    },
+    {
+      "name": "纺织服装",
+      "category": "行业",
+      "stage": 1,
+      "stage_name": "底部蓄势",
+      "sub_type": "底部初现",
+      "score_space": 3,
+      "score_time": 3,
+      "score_capital": 0,
+      "score_total": 6,
+      "reason_space": [
+        "距60日低点41天(充分磨底)",
+        "本周温和回调-1.8%(回踩中)"
+      ],
+      "reason_time": [
+        "均线完全多头排列",
+        "MACD金叉零轴上(强势)"
+      ],
+      "reason_capital": [],
+      "indicators": {
+        "ma_alignment": "full_bull",
+        "macd_state": "golden",
+        "DIF_above_zero": true,
+        "days_from_60d_low": 41,
+        "days_from_60d_high": 3,
+        "week_amp": 3.04,
+        "week_pct": -1.75,
+        "vol_ratio_5w": 0.83,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 14235.99,
+        "MA60_current": 13332.88
+      },
+      "data_warning": "⚠ 数据不足: 数据仅273天(59周); 已降级: MA60→MA40, MA120→MA50",
+      "pool": "watch"
+    },
+    {
+      "name": "被动元件概念",
+      "category": "概念",
+      "stage": 1,
+      "stage_name": "底部蓄势",
+      "sub_type": "标准底部",
+      "score_space": 2,
+      "score_time": 1,
+      "score_capital": 3,
+      "score_total": 6,
+      "reason_space": [
+        "距60日低点51天(充分磨底)"
+      ],
+      "reason_time": [
+        "均线偏多"
+      ],
+      "reason_capital": [
+        "周线倍量(量比2.2x,资金蜂拥)"
+      ],
+      "indicators": {
+        "ma_alignment": "partial_bull",
+        "macd_state": null,
+        "DIF_above_zero": null,
+        "days_from_60d_low": 51,
+        "days_from_60d_high": 2,
+        "week_amp": 13.18,
+        "week_pct": 9.02,
+        "vol_ratio_5w": 2.16,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 2082.16,
+        "MA60_current": null
+      },
+      "data_warning": "⚠ 数据不足: 数据仅101天(21周); 缺失均线: MA60,MA120; MACD不可用(需≥35周)",
+      "pool": "watch"
+    },
+    {
+      "name": "6G概念",
+      "category": "概念",
+      "stage": 1,
+      "stage_name": "底部蓄势",
+      "sub_type": "底部初现",
+      "score_space": 2,
+      "score_time": 1,
+      "score_capital": 2,
+      "score_total": 5,
+      "reason_space": [
+        "距60日低点51天(充分磨底)"
+      ],
+      "reason_time": [
+        "均线偏多"
+      ],
+      "reason_capital": [
+        "周线放量(量比1.6x,资金介入)"
+      ],
+      "indicators": {
+        "ma_alignment": "partial_bull",
+        "macd_state": "dead",
+        "DIF_above_zero": true,
+        "days_from_60d_low": 51,
+        "days_from_60d_high": 18,
+        "week_amp": 10.08,
+        "week_pct": 5.17,
+        "vol_ratio_5w": 1.55,
+        "divergence_top": true,
+        "divergence_bottom": false,
+        "MA20_current": 2409.73,
+        "MA60_current": 1871.83
+      },
+      "data_warning": null,
+      "pool": "watch"
+    }
+  ],
   "blacklist": [
     {
-      "name": "AB股",
-      "stage": 4,
-      "confidence": "high",
-      "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
-    },
-    {
-      "name": "AIGC概念",
-      "stage": 4,
-      "confidence": "high",
-      "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
-    },
-    {
-      "name": "AI制药（医疗）",
-      "stage": 4,
-      "confidence": "high",
-      "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
-    },
-    {
-      "name": "AI智能体",
-      "stage": 4,
-      "confidence": "high",
-      "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
-    },
-    {
-      "name": "AI语料",
-      "stage": 4,
-      "confidence": "high",
-      "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
-    },
-    {
-      "name": "B股",
-      "stage": 4,
-      "confidence": "high",
-      "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
-    },
-    {
-      "name": "CAR-T细胞疗法",
-      "stage": 4,
-      "confidence": "high",
-      "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
-    },
-    {
-      "name": "CRO",
-      "stage": 4,
-      "confidence": "high",
-      "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
-    },
-    {
-      "name": "ChatGPT概念",
-      "stage": 4,
-      "confidence": "high",
-      "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
-    },
-    {
-      "name": "DRG/DIP",
-      "stage": 4,
-      "confidence": "high",
-      "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
-    },
-    {
-      "name": "DeepSeek概念",
-      "stage": 4,
-      "confidence": "high",
-      "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
-    },
-    {
-      "name": "ETC",
-      "stage": 4,
-      "confidence": "high",
-      "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
-    },
-    {
       "name": "GDR",
+      "category": "概念",
       "stage": 4,
-      "confidence": "high",
+      "stage_name": "下跌趋势",
       "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
+      "score_space": 1,
+      "score_time": 0,
+      "score_capital": 0,
+      "score_total": 1,
+      "reason_space": [
+        "距60日高点58天(上涨空间充足)"
+      ],
+      "reason_time": [],
+      "reason_capital": [],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": false,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 58,
+        "week_amp": 6.85,
+        "week_pct": -5.32,
+        "vol_ratio_5w": 1.12,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 1182.06,
+        "MA60_current": 1087.68
+      },
+      "data_warning": null,
+      "pool": "blacklist"
     },
     {
       "name": "IPO受益",
+      "category": "概念",
       "stage": 4,
-      "confidence": "high",
+      "stage_name": "下跌趋势",
       "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
-    },
-    {
-      "name": "IPv6",
-      "stage": 4,
-      "confidence": "high",
-      "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
+      "score_space": 2,
+      "score_time": 0,
+      "score_capital": 0,
+      "score_total": 2,
+      "reason_space": [
+        "距60日高点59天(上涨空间充足)",
+        "本周温和回调-2.5%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": false,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 59,
+        "week_amp": 4.72,
+        "week_pct": -2.54,
+        "vol_ratio_5w": 1.14,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 3533.1,
+        "MA60_current": 3366.29
+      },
+      "data_warning": null,
+      "pool": "blacklist"
     },
     {
       "name": "Kimi概念",
+      "category": "概念",
       "stage": 4,
-      "confidence": "high",
+      "stage_name": "下跌趋势",
       "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
-    },
-    {
-      "name": "MLOps概念",
-      "stage": 4,
-      "confidence": "high",
-      "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
-    },
-    {
-      "name": "PPP模式",
-      "stage": 4,
-      "confidence": "high",
-      "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
+      "score_space": 2,
+      "score_time": 0,
+      "score_capital": 0,
+      "score_total": 2,
+      "reason_space": [
+        "距60日高点59天(上涨空间充足)",
+        "本周温和回调-4.5%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": false,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 59,
+        "week_amp": 12.4,
+        "week_pct": -4.55,
+        "vol_ratio_5w": 1.09,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 1324.5,
+        "MA60_current": 1189.29
+      },
+      "data_warning": null,
+      "pool": "blacklist"
     },
     {
       "name": "REITs概念",
+      "category": "概念",
       "stage": 4,
-      "confidence": "high",
+      "stage_name": "下跌趋势",
       "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
+      "score_space": 2,
+      "score_time": 0,
+      "score_capital": 2,
+      "score_total": 4,
+      "reason_space": [
+        "距60日高点55天(上涨空间充足)",
+        "本周温和回调-2.6%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [
+        "周线放量(量比1.9x,资金介入)"
+      ],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": false,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 55,
+        "week_amp": 5.23,
+        "week_pct": -2.65,
+        "vol_ratio_5w": 1.87,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 835.18,
+        "MA60_current": 844.56
+      },
+      "data_warning": null,
+      "pool": "blacklist"
     },
     {
-      "name": "SPD概念",
+      "name": "VPN",
+      "category": "概念",
       "stage": 4,
-      "confidence": "high",
+      "stage_name": "下跌趋势",
       "sub_type": "标准下跌",
-      "score": 0,
-      "reasons": []
+      "score_space": 2,
+      "score_time": 0,
+      "score_capital": -1,
+      "score_total": 1,
+      "reason_space": [
+        "距60日高点59天(上涨空间充足)",
+        "本周温和回调-2.5%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [
+        "缩量(量比0.8x)"
+      ],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": false,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 59,
+        "week_amp": 7.63,
+        "week_pct": -2.48,
+        "vol_ratio_5w": 0.75,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 1326.93,
+        "MA60_current": 1251.52
+      },
+      "data_warning": null,
+      "pool": "blacklist"
+    },
+    {
+      "name": "上海自贸",
+      "category": "概念",
+      "stage": 4,
+      "stage_name": "下跌趋势",
+      "sub_type": "标准下跌",
+      "score_space": 2,
+      "score_time": 0,
+      "score_capital": 0,
+      "score_total": 2,
+      "reason_space": [
+        "距60日高点59天(上涨空间充足)",
+        "本周温和回调-3.4%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": false,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 59,
+        "week_amp": 5.8,
+        "week_pct": -3.38,
+        "vol_ratio_5w": 1.03,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 3726.9,
+        "MA60_current": 3546.79
+      },
+      "data_warning": null,
+      "pool": "blacklist"
+    },
+    {
+      "name": "中字头",
+      "category": "概念",
+      "stage": 4,
+      "stage_name": "下跌趋势",
+      "sub_type": "标准下跌",
+      "score_space": 2,
+      "score_time": 0,
+      "score_capital": 0,
+      "score_total": 2,
+      "reason_space": [
+        "距60日高点59天(上涨空间充足)",
+        "本周温和回调-1.3%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": true,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 59,
+        "week_amp": 2.99,
+        "week_pct": -1.3,
+        "vol_ratio_5w": 1.17,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 9754.93,
+        "MA60_current": 9017.07
+      },
+      "data_warning": null,
+      "pool": "blacklist"
+    },
+    {
+      "name": "中特估",
+      "category": "概念",
+      "stage": 4,
+      "stage_name": "下跌趋势",
+      "sub_type": "标准下跌",
+      "score_space": 2,
+      "score_time": 0,
+      "score_capital": 1,
+      "score_total": 3,
+      "reason_space": [
+        "距60日高点58天(上涨空间充足)",
+        "本周温和回调-1.0%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [
+        "周线温和放量(量比1.3x)"
+      ],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": true,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 58,
+        "week_amp": 2.36,
+        "week_pct": -1.0,
+        "vol_ratio_5w": 1.31,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 1254.52,
+        "MA60_current": 1178.15
+      },
+      "data_warning": null,
+      "pool": "blacklist"
+    },
+    {
+      "name": "乡村振兴",
+      "category": "概念",
+      "stage": 4,
+      "stage_name": "下跌趋势",
+      "sub_type": "标准下跌",
+      "score_space": 2,
+      "score_time": 0,
+      "score_capital": 1,
+      "score_total": 3,
+      "reason_space": [
+        "距60日高点59天(上涨空间充足)",
+        "本周温和回调-0.6%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [
+        "周线温和放量(量比1.3x)"
+      ],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": false,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 59,
+        "week_amp": 4.83,
+        "week_pct": -0.62,
+        "vol_ratio_5w": 1.26,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 1715.21,
+        "MA60_current": 1635.55
+      },
+      "data_warning": null,
+      "pool": "blacklist"
+    },
+    {
+      "name": "代糖概念",
+      "category": "概念",
+      "stage": 4,
+      "stage_name": "下跌趋势",
+      "sub_type": "标准下跌",
+      "score_space": 2,
+      "score_time": 0,
+      "score_capital": 1,
+      "score_total": 3,
+      "reason_space": [
+        "距60日高点59天(上涨空间充足)",
+        "本周温和回调-4.5%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [
+        "周线温和放量(量比1.3x)"
+      ],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": true,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 59,
+        "week_amp": 7.72,
+        "week_pct": -4.55,
+        "vol_ratio_5w": 1.32,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 1161.01,
+        "MA60_current": 1090.13
+      },
+      "data_warning": null,
+      "pool": "blacklist"
+    },
+    {
+      "name": "光伏设备",
+      "category": "行业",
+      "stage": 4,
+      "stage_name": "下跌趋势",
+      "sub_type": "标准下跌",
+      "score_space": 2,
+      "score_time": 0,
+      "score_capital": 0,
+      "score_total": 2,
+      "reason_space": [
+        "距60日高点58天(上涨空间充足)",
+        "本周温和回调-2.6%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": true,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 58,
+        "week_amp": 7.35,
+        "week_pct": -2.64,
+        "vol_ratio_5w": 1.06,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 1563.09,
+        "MA60_current": 1304.42
+      },
+      "data_warning": null,
+      "pool": "blacklist"
+    },
+    {
+      "name": "减肥药",
+      "category": "概念",
+      "stage": 4,
+      "stage_name": "下跌趋势",
+      "sub_type": "标准下跌",
+      "score_space": 2,
+      "score_time": 0,
+      "score_capital": 0,
+      "score_total": 2,
+      "reason_space": [
+        "距60日高点35天(上涨空间充足)",
+        "本周温和回调-4.5%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": false,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 35,
+        "week_amp": 6.53,
+        "week_pct": -4.52,
+        "vol_ratio_5w": 0.96,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 1272.34,
+        "MA60_current": 1235.79
+      },
+      "data_warning": null,
+      "pool": "blacklist"
+    },
+    {
+      "name": "券商概念",
+      "category": "概念",
+      "stage": 4,
+      "stage_name": "下跌趋势",
+      "sub_type": "标准下跌",
+      "score_space": 2,
+      "score_time": 0,
+      "score_capital": 0,
+      "score_total": 2,
+      "reason_space": [
+        "距60日高点58天(上涨空间充足)",
+        "本周温和回调-3.4%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": false,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 58,
+        "week_amp": 4.32,
+        "week_pct": -3.41,
+        "vol_ratio_5w": 1.14,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 1126.06,
+        "MA60_current": 1160.79
+      },
+      "data_warning": null,
+      "pool": "blacklist"
+    },
+    {
+      "name": "化债(AMC)概念",
+      "category": "概念",
+      "stage": 4,
+      "stage_name": "下跌趋势",
+      "sub_type": "标准下跌",
+      "score_space": 2,
+      "score_time": 0,
+      "score_capital": 0,
+      "score_total": 2,
+      "reason_space": [
+        "距60日高点59天(上涨空间充足)",
+        "本周温和回调-2.1%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": false,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 59,
+        "week_amp": 4.75,
+        "week_pct": -2.09,
+        "vol_ratio_5w": 1.17,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 1201.41,
+        "MA60_current": 1163.87
+      },
+      "data_warning": null,
+      "pool": "blacklist"
+    },
+    {
+      "name": "医疗服务",
+      "category": "行业",
+      "stage": 4,
+      "stage_name": "下跌趋势",
+      "sub_type": "标准下跌",
+      "score_space": 2,
+      "score_time": 0,
+      "score_capital": 0,
+      "score_total": 2,
+      "reason_space": [
+        "距60日高点44天(上涨空间充足)",
+        "本周温和回调-4.8%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": false,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 44,
+        "week_amp": 6.34,
+        "week_pct": -4.76,
+        "vol_ratio_5w": 0.95,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 1351.04,
+        "MA60_current": 1246.14
+      },
+      "data_warning": null,
+      "pool": "blacklist"
+    },
+    {
+      "name": "参股保险",
+      "category": "概念",
+      "stage": 4,
+      "stage_name": "下跌趋势",
+      "sub_type": "标准下跌",
+      "score_space": 2,
+      "score_time": 0,
+      "score_capital": 1,
+      "score_total": 3,
+      "reason_space": [
+        "距60日高点58天(上涨空间充足)",
+        "本周温和回调-1.7%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [
+        "周线温和放量(量比1.2x)"
+      ],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": false,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 58,
+        "week_amp": 4.54,
+        "week_pct": -1.7,
+        "vol_ratio_5w": 1.25,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 2870.0,
+        "MA60_current": 2690.3
+      },
+      "data_warning": null,
+      "pool": "blacklist"
+    },
+    {
+      "name": "参股券商",
+      "category": "概念",
+      "stage": 4,
+      "stage_name": "下跌趋势",
+      "sub_type": "标准下跌",
+      "score_space": 2,
+      "score_time": 0,
+      "score_capital": 1,
+      "score_total": 3,
+      "reason_space": [
+        "距60日高点58天(上涨空间充足)",
+        "本周温和回调-2.5%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [
+        "周线温和放量(量比1.3x)"
+      ],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": false,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 58,
+        "week_amp": 4.4,
+        "week_pct": -2.46,
+        "vol_ratio_5w": 1.3,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 15612.91,
+        "MA60_current": 14962.84
+      },
+      "data_warning": null,
+      "pool": "blacklist"
+    },
+    {
+      "name": "参股期货",
+      "category": "概念",
+      "stage": 4,
+      "stage_name": "下跌趋势",
+      "sub_type": "标准下跌",
+      "score_space": 2,
+      "score_time": 0,
+      "score_capital": 0,
+      "score_total": 2,
+      "reason_space": [
+        "距60日高点58天(上涨空间充足)",
+        "本周温和回调-2.6%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": false,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 58,
+        "week_amp": 4.62,
+        "week_pct": -2.64,
+        "vol_ratio_5w": 1.12,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 33345.58,
+        "MA60_current": 31799.8
+      },
+      "data_warning": null,
+      "pool": "blacklist"
+    },
+    {
+      "name": "可燃冰",
+      "category": "概念",
+      "stage": 4,
+      "stage_name": "下跌趋势",
+      "sub_type": "标准下跌",
+      "score_space": 2,
+      "score_time": 0,
+      "score_capital": 0,
+      "score_total": 2,
+      "reason_space": [
+        "距60日高点59天(上涨空间充足)",
+        "本周温和回调-2.6%(回踩中)"
+      ],
+      "reason_time": [],
+      "reason_capital": [],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": true,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 59,
+        "week_amp": 4.57,
+        "week_pct": -2.61,
+        "vol_ratio_5w": 1.19,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 1775.57,
+        "MA60_current": 1528.9
+      },
+      "data_warning": null,
+      "pool": "blacklist"
+    },
+    {
+      "name": "啤酒概念",
+      "category": "概念",
+      "stage": 4,
+      "stage_name": "下跌趋势",
+      "sub_type": "标准下跌",
+      "score_space": 1,
+      "score_time": 0,
+      "score_capital": 0,
+      "score_total": 1,
+      "reason_space": [
+        "距60日高点56天(上涨空间充足)"
+      ],
+      "reason_time": [],
+      "reason_capital": [],
+      "indicators": {
+        "ma_alignment": "bear",
+        "macd_state": "dead",
+        "DIF_above_zero": true,
+        "days_from_60d_low": 1,
+        "days_from_60d_high": 56,
+        "week_amp": 6.89,
+        "week_pct": -5.08,
+        "vol_ratio_5w": 1.17,
+        "divergence_top": false,
+        "divergence_bottom": false,
+        "MA20_current": 1342.97,
+        "MA60_current": 1206.21
+      },
+      "data_warning": null,
+      "pool": "blacklist"
     }
   ]
 }
