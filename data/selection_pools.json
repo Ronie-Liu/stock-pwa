@@ -1,0 +1,249 @@
+{
+  "updated": "2026-06-07 22:08:54",
+  "gold": [],
+  "silver": [
+    {
+      "name": "AI眼镜",
+      "stage": 2,
+      "confidence": "high",
+      "sub_type": "标准主升浪",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "AI芯片",
+      "stage": 2,
+      "confidence": "high",
+      "sub_type": "标准主升浪",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "BC电池",
+      "stage": 2,
+      "confidence": "high",
+      "sub_type": "标准主升浪",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "F5G概念",
+      "stage": 2,
+      "confidence": "high",
+      "sub_type": "标准主升浪",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "WiFi",
+      "stage": 2,
+      "confidence": "high",
+      "sub_type": "标准主升浪",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "刀片电池",
+      "stage": 2,
+      "confidence": "high",
+      "sub_type": "标准主升浪",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "半导体",
+      "stage": 2,
+      "confidence": "high",
+      "sub_type": "标准主升浪",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "华为海思",
+      "stage": 2,
+      "confidence": "high",
+      "sub_type": "标准主升浪",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "噪声防治",
+      "stage": 2,
+      "confidence": "high",
+      "sub_type": "标准主升浪",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "固态电池",
+      "stage": 2,
+      "confidence": "high",
+      "sub_type": "标准主升浪",
+      "score": 0,
+      "reasons": []
+    }
+  ],
+  "watch": [],
+  "blacklist": [
+    {
+      "name": "AB股",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "AIGC概念",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "AI制药（医疗）",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "AI智能体",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "AI语料",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "B股",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "CAR-T细胞疗法",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "CRO",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "ChatGPT概念",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "DRG/DIP",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "DeepSeek概念",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "ETC",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "GDR",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "IPO受益",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "IPv6",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "Kimi概念",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "MLOps概念",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "PPP模式",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "REITs概念",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    },
+    {
+      "name": "SPD概念",
+      "stage": 4,
+      "confidence": "high",
+      "sub_type": "标准下跌",
+      "score": 0,
+      "reasons": []
+    }
+  ]
+}
