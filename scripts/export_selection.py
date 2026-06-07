@@ -29,63 +29,31 @@ def main():
     if not run_cmd('py -m ashare_sectors diagnose -o ./output/daily', cwd=SKILL_DIR):
         print('诊断失败，但尝试继续...')
 
-    # 2. 找到最新诊断JSON
-    diag_dir = os.path.join(SKILL_DIR, 'output', 'diagnosis')
-    if not os.path.isdir(diag_dir):
-        print('诊断目录不存在: ' + diag_dir)
+    # 2. 找到SKILL自己生成的精选池JSON（格式完美，直接用）
+    sel_dir = os.path.join(SKILL_DIR, 'output', 'diagnosis')
+    if not os.path.isdir(sel_dir):
+        print('目录不存在: ' + sel_dir)
         return
-    diag_files = sorted([f for f in os.listdir(diag_dir) if f.startswith('diagnosis_') and f.endswith('.json')], reverse=True)
-    if not diag_files:
-        print('无诊断结果文件')
+    sel_files = sorted([f for f in os.listdir(sel_dir) if f.startswith('selection_') and f.endswith('.json')], reverse=True)
+    if not sel_files:
+        print('无精选池文件')
         return
-    latest_diag = os.path.join(diag_dir, diag_files[0])
-    print(f'  最新诊断: {latest_diag}')
+    latest_sel = os.path.join(sel_dir, sel_files[0])
+    print(f'  最新精选池: {latest_sel}')
 
-    # 3. 加载诊断结果，提取精选池
-    print('\n--- Step 2: 提取精选池 ---')
-    with open(latest_diag, 'r', encoding='utf-8') as f:
-        diag_data = json.load(f)
+    with open(latest_sel, 'r', encoding='utf-8') as f:
+        sel_data = json.load(f)
     
-    all_results = diag_data.get('results', [])
-    print(f'  板块总数: {len(all_results)}')
-
-    gold, silver, watch, blacklist = [], [], [], []
-
-    for r in all_results:
-        name = r.get('name', '')
-        stage = r.get('stage', 0)
-        confidence = r.get('confidence', 'low')
-        sub_type = r.get('sub_type', '')
-        score = r.get('score', 0)
-        reasons = r.get('reasons', [])
-
-        entry = {
-            'name': name,
-            'stage': stage,
-            'confidence': confidence,
-            'sub_type': sub_type,
-            'score': score,
-            'reasons': reasons[:3]
-        }
-
-        if stage == 2 and confidence == 'high' and '洗盘' in sub_type:
-            gold.append(entry)
-        elif stage == 2 and confidence == 'high':
-            silver.append(entry)
-        elif stage == 1 and confidence == 'high' and any('背离' in r or '金叉' in r for r in reasons):
-            watch.append(entry)
-        elif stage == 4 and confidence == 'high':
-            blacklist.append(entry)
-
+    pools_raw = sel_data.get('pools', {})
     pools = {
         'updated': now.strftime('%Y-%m-%d %H:%M:%S'),
-        'gold': gold[:10],
-        'silver': silver[:10],
-        'watch': watch[:20],
-        'blacklist': blacklist[:20]
+        'gold': pools_raw.get('gold', [])[:10],
+        'silver': pools_raw.get('silver', [])[:10],
+        'watch': pools_raw.get('watch', [])[:20],
+        'blacklist': pools_raw.get('blacklist', [])[:20]
     }
 
-    print(f'  金牌: {len(gold)} | 银牌: {len(silver)} | 观察: {len(watch)} | 黑名单: {len(blacklist)}')
+    print(f'  🥇金牌: {len(pools["gold"])} | 🥈银牌: {len(pools["silver"])} | 👀观察: {len(pools["watch"])} | 🚫黑名单: {len(pools["blacklist"])}')
 
     # 4. 写入stock-pwa仓库
     output_path = os.path.join(GIT_DIR, OUTPUT_FILE)
