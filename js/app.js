@@ -34,6 +34,9 @@ async function initApp() {
 
   // 启动定时检查（每分钟检查一次）
   startScheduledCheck();
+
+  // 后台初始化大盘数据（不阻塞UI）
+  initMarketData().catch(e => console.log('大盘数据初始化失败:', e));
 }
 
 // ===== 定时检查 =====
@@ -179,6 +182,8 @@ async function switchTab(tabId) {
     await renderWatchlistPage();
   } else if (tabId === 'holdings') {
     await renderHoldingsPage();
+  } else if (tabId === 'market') {
+    await renderMarketTab();
   } else if (tabId === 'upload') {
     renderUploadPage();
   } else if (tabId === 'settings') {
@@ -818,6 +823,82 @@ async function renderLogsSection() {
   logsContainer.innerHTML = renderLogs(logs);
 }
 
+// ===== Tab: 大盘 =====
+
+async function renderMarketTab() {
+  let container = document.getElementById('page-market');
+  if (!container) return;
+
+  // 先显示loading
+  container.innerHTML = renderMarketPage(null, null, true);
+
+  try {
+    let records = await getMarketRecords(20);
+    let realtimeQuote = null;
+
+    // 如果是交易日盘中，获取实时数据
+    let now = new Date();
+    let dayOfWeek = now.getDay();
+    let hour = now.getHours();
+    let minute = now.getMinutes();
+    if (dayOfWeek >= 1 && dayOfWeek <= 5 &&
+        (hour > 9 || (hour === 9 && minute >= 30)) &&
+        (hour < 15 || (hour === 15 && minute === 0))) {
+      realtimeQuote = await fetchTodayIndexQuote();
+    }
+
+    container.innerHTML = renderMarketPage(records, realtimeQuote, false);
+
+    // 绑定事件
+    let refreshBtn = container.querySelector('#btn-refresh-market');
+    let exportBtn = container.querySelector('#btn-export-csv');
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', async () => {
+        container.innerHTML = renderMarketPage(null, null, true);
+        try {
+          await initMarketData();
+          let d = new Date(), dw = d.getDay(), dh = d.getHours(), dm = d.getMinutes();
+          let newRt = null;
+          if (dw >= 1 && dw <= 5 && (dh > 9 || (dh === 9 && dm >= 30)) && (dh < 15 || (dh === 15 && dm === 0))) {
+            newRt = await fetchTodayIndexQuote();
+          }
+          let newRecords = await getMarketRecords(20);
+          container.innerHTML = renderMarketPage(newRecords, newRt, false);
+          // 重新绑定事件
+          await renderMarketTab();
+        } catch (e) {
+          container.innerHTML = '<div class="empty-state">刷新失败: ' + escapeHtml(e.message) + '</div>';
+        }
+      });
+    }
+
+    if (exportBtn) {
+      exportBtn.addEventListener('click', async () => {
+        try {
+          showToast('正在导出CSV...');
+          let csv = await exportMarketCSV();
+          let blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+          let url = URL.createObjectURL(blob);
+          let a = document.createElement('a');
+          a.href = url;
+          a.download = '上证指数大盘数据_' + new Date().toISOString().slice(0, 10) + '.csv';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          let rowCount = csv.split('\n').filter(l => l.trim()).length - 1;
+          showToast('CSV导出成功！共 ' + rowCount + ' 条数据');
+        } catch (e) {
+          showToast('CSV导出失败: ' + e.message, 'error');
+        }
+      });
+    }
+  } catch (e) {
+    container.innerHTML = '<div class="empty-state">加载大盘数据失败: ' + escapeHtml(e.message) + '<br><button class="btn btn-sm" onclick="switchTab(\'market\')">重试</button></div>';
+  }
+}
+
 // ===== 全局回调（给模态弹窗用） =====
 
 async function onAddStock(stock) {
@@ -864,7 +945,7 @@ function setupGlobalEvents() {
   document.addEventListener('touchmove', (e) => {
     if (!isPulling) return;
     let deltaY = e.touches[0].clientY - touchStartY;
-    if (deltaY > 60 && (currentTab === 'watchlist' || currentTab === 'holdings')) {
+    if (deltaY > 60 && (currentTab === 'watchlist' || currentTab === 'holdings' || currentTab === 'market')) {
       isPulling = false;
       if (currentTab === 'watchlist') {
         (async () => {
@@ -875,6 +956,10 @@ function setupGlobalEvents() {
         (async () => {
           await loadAllData();
           await refreshHoldingsQuotes();
+        })();
+      } else if (currentTab === 'market') {
+        (async () => {
+          await renderMarketTab();
         })();
       }
     }
@@ -892,7 +977,7 @@ function registerSW() {
   navigator.serviceWorker.getRegistrations().then((regs) => {
     return Promise.all(regs.map(r => r.unregister()));
   }).then(() => {
-    return navigator.serviceWorker.register('/sw.js?v=20260602');
+    return navigator.serviceWorker.register('/sw.js?v=20260607b');
   }).then((reg) => {
     console.log('SW 注册成功:', reg.scope);
 

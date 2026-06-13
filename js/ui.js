@@ -458,7 +458,83 @@ function showDetailPage(stock, quote) {
   }
 }
 
-// ===== Tab 3: CSV 上传页 =====
+// ===== Tab 3: 大盘 =====
+
+function renderMarketPage(records, realtimeQuote, loading) {
+  let html = renderPageHeader('上证指数 · 大盘数据', 
+    records && records.length ? `共 ${records.length} 条（显示最近20条）` : '加载中...',
+    `<button class="btn btn-sm" id="btn-refresh-market">🔄 刷新</button>
+     <button class="btn btn-sm btn-primary" id="btn-export-csv">📥 导出CSV</button>`
+  );
+
+  html += '<div class="page-content" style="padding-top:4px" id="market-content">';
+
+  if (loading) {
+    html += '<div class="loading-indicator"><span class="spinner"></span> 正在加载大盘数据（首次需从网络获取3年历史K线并计算衍生指标，约需1-2分钟）...</div>';
+  } else if (!records || records.length === 0) {
+    html += '<div class="empty-state">暂无大盘数据，点击刷新获取</div>';
+  } else {
+    // 盘中实时数据行
+    if (realtimeQuote) {
+      let rtColor = realtimeQuote.change_pct >= 0 ? 'var(--up-color)' : 'var(--down-color)';
+      let rtSign = realtimeQuote.change_pct >= 0 ? '+' : '';
+      html += `
+        <div class="realtime-bar" style="background:var(--bg-card);border:1px solid var(--accent);border-radius:8px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+          <div>
+            <span style="font-weight:700;font-size:15px;">🔴 盘中实时</span>
+            <span style="font-size:11px;color:var(--text-muted);margin-left:8px;">${realtimeQuote.name || '上证指数'}</span>
+          </div>
+          <div style="text-align:right;">
+            <span style="font-weight:700;font-size:18px;color:${rtColor};">${formatPrice(realtimeQuote.last_px)}</span>
+            <span style="font-size:13px;color:${rtColor};margin-left:6px;">${rtSign}${realtimeQuote.change_pct.toFixed(2)}%</span>
+          </div>
+          <div style="width:100%;display:flex;gap:10px;font-size:11px;color:var(--text-secondary);">
+            <span>开 ${formatPrice(realtimeQuote.open_px)}</span>
+            <span>高 ${formatPrice(realtimeQuote.high_px)}</span>
+            <span>低 ${formatPrice(realtimeQuote.low_px)}</span>
+            <span>昨收 ${formatPrice(realtimeQuote.prev_close)}</span>
+            <span>额 ${(realtimeQuote.amount / 1e8).toFixed(1)}亿</span>
+          </div>
+        </div>`;
+    }
+
+    // 历史数据表格
+    html += '<div class="market-table-wrap" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">';
+    html += '<table class="market-table" style="width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap;">';
+    html += '<thead><tr style="background:var(--bg-input);">';
+    let headers = ['日期', '收盘', '开盘', '最高', '最低', '换手%', 'MA20乖离', 'MA60乖离', 'MA20趋势%', 'MA120趋势%', '筹码0-10%', '成本倍数', '40%获利', '150%获利', '300%获利'];
+    headers.forEach(h => html += `<th style="padding:6px 8px;text-align:right;position:sticky;top:0;background:var(--bg-input);z-index:1;">${h}</th>`);
+    html += '</tr></thead><tbody>';
+
+    for (let r of records) {
+      let isToday = r.date === new Date().toISOString().slice(0, 10);
+      let rowStyle = isToday ? 'background:rgba(0,196,140,0.08);' : '';
+      html += `<tr style="${rowStyle}">`;
+      html += `<td style="padding:5px 8px;font-weight:${isToday?'700':'400'};color:${isToday?'var(--accent)':'var(--text)'};">${r.date.slice(5)}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;">${formatPrice(r.close)}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;">${formatPrice(r.open)}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;">${formatPrice(r.high)}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;">${formatPrice(r.low)}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;">${r.turnover_rate ? r.turnover_rate.toFixed(2) : '--'}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;${r.ma20_deviation ? (r.ma20_deviation < 0.95 ? 'color:var(--up-color)' : r.ma20_deviation > 1.05 ? 'color:var(--down-color)' : '') : ''}">${r.ma20_deviation != null ? r.ma20_deviation.toFixed(4) : '--'}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;${r.ma60_deviation ? (r.ma60_deviation < 0.95 ? 'color:var(--up-color)' : r.ma60_deviation > 1.05 ? 'color:var(--down-color)' : '') : ''}">${r.ma60_deviation != null ? r.ma60_deviation.toFixed(4) : '--'}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;${r.ma20_trend_chg ? (r.ma20_trend_chg > 0 ? 'color:var(--up-color)' : 'color:var(--down-color)') : ''}">${r.ma20_trend_chg != null ? r.ma20_trend_chg.toFixed(2) : '--'}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;${r.ma120_trend_chg ? (r.ma120_trend_chg > 0 ? 'color:var(--up-color)' : 'color:var(--down-color)') : ''}">${r.ma120_trend_chg != null ? r.ma120_trend_chg.toFixed(2) : '--'}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;">${r.cheapest_10_cost != null ? formatPrice(r.cheapest_10_cost) : '--'}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;">${r.cheapest_10_multiple != null ? r.cheapest_10_multiple.toFixed(4) : '--'}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;${r.profit_ratio_40 != null ? (r.profit_ratio_40 >= 50 ? 'color:var(--up-color)' : 'color:var(--down-color)') : ''}">${r.profit_ratio_40 != null ? r.profit_ratio_40 + '%' : '--'}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;${r.profit_ratio_150 != null ? (r.profit_ratio_150 >= 50 ? 'color:var(--up-color)' : 'color:var(--down-color)') : ''}">${r.profit_ratio_150 != null ? r.profit_ratio_150 + '%' : '--'}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;${r.profit_ratio_300 != null ? (r.profit_ratio_300 >= 50 ? 'color:var(--up-color)' : 'color:var(--down-color)') : ''}">${r.profit_ratio_300 != null ? r.profit_ratio_300 + '%' : '--'}</td>`;
+      html += '</tr>';
+    }
+    html += '</tbody></table></div>';
+  }
+
+  html += '</div>'; // market-content
+  return html;
+}
+
+// ===== Tab 4: CSV 上传页 =====
 
 function renderCSVPage(watchlistCount, holdingsCount) {
   return `

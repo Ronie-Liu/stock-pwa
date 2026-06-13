@@ -2,10 +2,11 @@
 // 本地存储：stocks表、app_settings表、task_logs表
 
 const DB_NAME = 'StockMonitorDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STOCKS_STORE = 'stocks';
 const SETTINGS_STORE = 'app_settings';
 const LOGS_STORE = 'task_logs';
+const MARKET_STORE = 'market_data';
 
 let db = null;
 
@@ -29,6 +30,11 @@ function openDB() {
       if (!database.objectStoreNames.contains(LOGS_STORE)) {
         let logStore = database.createObjectStore(LOGS_STORE, { keyPath: 'id', autoIncrement: true });
         logStore.createIndex('triggered_at', 'triggered_at', { unique: false });
+      }
+      // market_data 表（上证指数历史K线+衍生字段）
+      if (!database.objectStoreNames.contains(MARKET_STORE)) {
+        let mktStore = database.createObjectStore(MARKET_STORE, { keyPath: 'date' });
+        mktStore.createIndex('date_idx', 'date', { unique: true });
       }
     };
     request.onsuccess = (e) => {
@@ -209,5 +215,78 @@ async function clearAllLogs() {
     let req = store.clear();
     req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error);
+  });
+}
+
+// ===== Market Data (上证指数历史K线+衍生字段) =====
+
+async function getMarketCount() {
+  await openDB();
+  return new Promise((resolve, reject) => {
+    let store = getStore(MARKET_STORE);
+    let req = store.count();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => resolve(0);
+  });
+}
+
+async function getLatestMarketDate() {
+  await openDB();
+  return new Promise((resolve, reject) => {
+    let store = getStore(MARKET_STORE);
+    let req = store.index('date_idx').openCursor(null, 'prev');
+    req.onsuccess = (e) => {
+      let cursor = e.target.result;
+      resolve(cursor ? cursor.value.date : null);
+    };
+    req.onerror = () => resolve(null);
+  });
+}
+
+async function saveMarketRecords(rows) {
+  await openDB();
+  return new Promise((resolve, reject) => {
+    let store = getStore(MARKET_STORE, 'readwrite');
+    let count = 0, total = rows.length;
+    if (total === 0) { resolve(0); return; }
+    for (let r of rows) {
+      let req = store.put(r);
+      req.onsuccess = () => { count++; if (count >= total) resolve(total); };
+      req.onerror = () => reject(req.error);
+    }
+  });
+}
+
+async function getMarketRecords(limit = 20) {
+  await openDB();
+  return new Promise((resolve, reject) => {
+    let store = getStore(MARKET_STORE);
+    let results = [];
+    let req = store.index('date_idx').openCursor(null, 'prev');
+    req.onsuccess = (e) => {
+      let cursor = e.target.result;
+      if (cursor && results.length < limit) {
+        results.push(cursor.value);
+        cursor.continue();
+      } else {
+        resolve(results.reverse());
+      }
+    };
+    req.onerror = () => resolve([]);
+  });
+}
+
+async function getAllMarketRecords() {
+  await openDB();
+  return new Promise((resolve, reject) => {
+    let store = getStore(MARKET_STORE);
+    let results = [];
+    let req = store.index('date_idx').openCursor();
+    req.onsuccess = (e) => {
+      let cursor = e.target.result;
+      if (cursor) { results.push(cursor.value); cursor.continue(); }
+      else { resolve(results.sort((a, b) => a.date < b.date ? -1 : 1)); }
+    };
+    req.onerror = () => resolve([]);
   });
 }
