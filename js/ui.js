@@ -567,7 +567,7 @@ function renderMarketCustomSection(custom, latestRecord, realtimeQuote) {
     html += `
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;">
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">📝 周期阶段描述</div>
-        <div style="font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap;">${descHtml}</div>
+        <div style="font-size:13px;line-height:1.7;color:var(--up-color);white-space:pre-wrap;">${descHtml}</div>
       </div>`;
   }
 
