@@ -290,3 +290,13 @@ async function getAllMarketRecords() {
     req.onerror = () => resolve([]);
   });
 }
+
+async function clearMarketData() {
+  await openDB();
+  return new Promise((resolve, reject) => {
+    let store = getStore(MARKET_STORE, 'readwrite');
+    let req = store.clear();
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}

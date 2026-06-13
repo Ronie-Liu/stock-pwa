@@ -1,6 +1,6 @@
 // ===== 上证指数历史数据库 + 衍生计算字段 =====
 // 存储: IndexedDB (market_data store, 由 db.js 管理)
-// 数据源: 腾讯K线API + 东方财富换手率
+// 数据源: 腾讯K线API → 换手率 = 成交量(手) / 流通股本(手)
 // 字段: 10项衍生指标
 
 const SH_INDEX_CODE = 'sh000001';
@@ -26,41 +26,21 @@ async function fetchIndexKLineRaw(years = 3) {
   } catch (e) { console.error('指数K线获取失败:', e.message); return []; }
 }
 
-// 获取指数换手率（东方财富接口）
-async function fetchIndexTurnover() {
-  try {
-    let url = 'https://push2his.eastmoney.com/api/qt/stock/kline/get?' +
-      'secid=1.000001&fields1=f1,f2,f3,f4&fields2=f51,f52,f53,f54,f55,f56,f57&klt=101&fqt=0&lmt=750';
-    let resp = await fetch(url, { signal: AbortSignal.timeout(20000) });
-    let json = await resp.json();
-    let kls = json.data && json.data.klines ? json.data.klines : [];
-    let map = {};
-    for (let l of kls) {
-      let p = l.split(',');
-      map[p[0]] = parseFloat(p[6]) || 0;
-    }
-    return map;
-  } catch (e) { console.error('换手率获取失败:', e.message); return {}; }
-}
-
-// 填充换手率：优先用API数据，无数据则用 成交量/流通股本 兜底
-function fillTurnover(rawData, turnoverMap) {
-  let apiHits = 0, fallbackHits = 0;
+// 填充换手率 = 成交量(手) / 流通股本(手) × 100%
+function fillTurnover(rawData) {
+  let hit = 0;
   for (let r of rawData) {
-    let apiVal = turnoverMap[r.date];
-    if (apiVal && apiVal > 0) {
-      r._turnover = apiVal;
-      r.turnover_rate = apiVal;
-      apiHits++;
+    if (r.volume && SH_OS_LOTS) {
+      let to = parseFloat((r.volume / SH_OS_LOTS * 100).toFixed(4));
+      r._turnover = to;
+      r.turnover_rate = to;
+      hit++;
     } else {
-      // 兜底：换手率 = 成交量(手) / 流通股本(手) × 100%
-      let fallback = r.volume && SH_OS_LOTS ? parseFloat((r.volume / SH_OS_LOTS * 100).toFixed(4)) : 0;
-      r._turnover = fallback;
-      r.turnover_rate = fallback;
-      fallbackHits++;
+      r._turnover = 0;
+      r.turnover_rate = 0;
     }
   }
-  console.log('换手率: API命中', apiHits, '条, 兜底计算', fallbackHits, '条');
+  console.log('换手率兜底计算:', hit, '条 (成交量/482亿手)');
 }
 
 // MA计算
@@ -112,7 +92,7 @@ function computeCheapest10Cost(rawData, currentIdx) {
 }
 
 // 计算所有衍生字段
-function computeDerivedFields(rawData, turnoverMap) {
+function computeDerivedFields(rawData) {
   let len = rawData.length, result = [];
   let closes = rawData.map(r => r.close);
   let ma20All = [], ma60All = [], ma120All = [];
@@ -126,7 +106,6 @@ function computeDerivedFields(rawData, turnoverMap) {
   for (let i = 0; i < len; i++) {
     let row = { ...rawData[i] };
     let close = closes[i];
-    let date = row.date;
 
     // ① MA20乖离倍数
     let ma20 = ma20All[i];
@@ -175,6 +154,17 @@ async function initMarketData() {
   let count = await getMarketCount();
   console.log('大盘数据库已有:', count, '条');
 
+  // 数据质量检测：如果有数据但最新一条 turnover_rate 为 0（旧版坏数据），清空重拉
+  if (count > 0) {
+    let latestRecords = await getMarketRecords(1);
+    let latest = latestRecords[0];
+    if (latest && (!latest.turnover_rate || latest.turnover_rate <= 0) && latest.volume > 0) {
+      console.log('检测到旧版坏数据（turnover_rate=0），清空重新拉取...');
+      await clearMarketData();
+      count = 0;
+    }
+  }
+
   // 1. 全量加载（空库或数据太少）
   if (count < 500) {
     console.log('开始加载3年历史数据...');
@@ -183,9 +173,8 @@ async function initMarketData() {
       console.log('K线数据不足，跳过');
       return;
     }
-    let turnoverMap = await fetchIndexTurnover();
-    fillTurnover(rawData, turnoverMap);
-    let computed = computeDerivedFields(rawData, turnoverMap);
+    fillTurnover(rawData);
+    let computed = computeDerivedFields(rawData);
     let saved = await saveMarketRecords(computed);
     console.log('历史数据加载完成:', saved, '条');
     return;
@@ -203,8 +192,7 @@ async function initMarketData() {
   let rawNew = await fetchIndexKLineRaw(1);
   if (!rawNew.length) return;
 
-  let turnoverMap = await fetchIndexTurnover();
-  fillTurnover(rawNew, turnoverMap);
+  fillTurnover(rawNew);
 
   // 只处理新数据
   let newRows = latest ? rawNew.filter(r => r.date > latest) : rawNew.slice(-60);
@@ -214,11 +202,10 @@ async function initMarketData() {
   }
 
   // 需要对最后一段数据重新计算（MA和筹码依赖历史）
-  // 取最近250条+新数据作为计算窗口
   let recalcWindow = latest
     ? [...rawNew.filter(r => r.date <= latest).slice(-250), ...newRows]
     : rawNew;
-  let computed = computeDerivedFields(recalcWindow, turnoverMap);
+  let computed = computeDerivedFields(recalcWindow);
   // 只保存新增的行
   let toSave = computed.filter(r => latest ? r.date > latest : true);
   let saved = await saveMarketRecords(toSave);
