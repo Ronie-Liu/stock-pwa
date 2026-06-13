@@ -562,21 +562,22 @@ function renderMarketCustomSection(custom, latestRecord, realtimeQuote) {
   if (!indicators.length) return html;
 
   html += `
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:8px 6px;margin-bottom:10px;">
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;padding:0 4px;">📊 周期提示指标</div>
-      <table style="width:100%;border-collapse:collapse;font-size:10px;table-layout:fixed;">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--text-muted);padding:8px 10px 4px;">📊 周期提示指标</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;">
         <thead>
-          <tr style="border-bottom:1px solid var(--border);">
-            <th style="width:18%;padding:4px 2px;text-align:left;color:var(--text-secondary);">指标</th>
-            <th style="width:18%;padding:4px 2px;text-align:right;color:var(--text-secondary);">现值</th>
-            <th style="width:20%;padding:4px 2px;text-align:right;color:var(--text-secondary);">下限</th>
-            <th style="width:21%;padding:4px 2px;text-align:right;color:var(--text-secondary);">上限</th>
-            <th style="width:23%;padding:4px 2px;text-align:left;color:var(--text-secondary);">说明</th>
+          <tr style="background:var(--bg-input);">
+            <th style="width:18%;padding:6px 8px;text-align:left;font-weight:600;color:var(--text);border-bottom:2px solid var(--border);">指标</th>
+            <th style="width:18%;padding:6px 8px;text-align:left;font-weight:600;color:var(--text);border-bottom:2px solid var(--border);">现值</th>
+            <th style="width:20%;padding:6px 8px;text-align:left;font-weight:600;color:var(--text);border-bottom:2px solid var(--border);">下限</th>
+            <th style="width:21%;padding:6px 8px;text-align:left;font-weight:600;color:var(--text);border-bottom:2px solid var(--border);">上限</th>
+            <th style="width:23%;padding:6px 8px;text-align:left;font-weight:600;color:var(--text);border-bottom:2px solid var(--border);">说明</th>
           </tr>
         </thead>
         <tbody>`;
 
-  for (let item of indicators) {
+  for (let i = 0; i < indicators.length; i++) {
+    let item = indicators[i];
     let def = getIndicatorDef(item.field);
     if (!def) continue;
 
@@ -595,18 +596,18 @@ function renderMarketCustomSection(custom, latestRecord, realtimeQuote) {
       if (rawVal >= upperMin) color = 'color:var(--up-color);font-weight:700;';
     }
 
-    let lowerStr = (item.lower_min || '') + '~' + (item.lower_max || '');
-    let upperStr = (item.upper_min || '') + '~' + (item.upper_max || '');
-    // 说明文字 - 允许换行，字体缩小
+    let lowerStr = (item.lower_min || '') + ' ~ ' + (item.lower_max || '');
+    let upperStr = (item.upper_min || '') + ' ~ ' + (item.upper_max || '');
     let noteText = (item.note || '').replace(/\n/g, '<br>');
+    let rowBg = i % 2 === 0 ? '' : 'background:var(--bg-input);';
 
     html += `
-          <tr style="border-bottom:1px solid var(--border);">
-            <td style="padding:5px 2px;font-weight:600;">${escapeHtml(def.name)}</td>
-            <td style="padding:5px 2px;text-align:right;${color}">${display}</td>
-            <td style="padding:5px 2px;text-align:right;color:var(--text-secondary);">${lowerStr}</td>
-            <td style="padding:5px 2px;text-align:right;color:var(--text-secondary);">${upperStr}</td>
-            <td style="padding:5px 2px;font-size:9px;line-height:1.5;color:var(--text-secondary);word-break:break-all;">${noteText}</td>
+          <tr style="border-bottom:1px solid var(--border);${rowBg}">
+            <td style="padding:6px 8px;font-weight:600;font-size:11px;">${escapeHtml(def.name)}</td>
+            <td style="padding:6px 8px;font-size:11px;${color}">${display}</td>
+            <td style="padding:6px 8px;color:var(--text-secondary);font-size:11px;">${lowerStr || '-'}</td>
+            <td style="padding:6px 8px;color:var(--text-secondary);font-size:11px;">${upperStr || '-'}</td>
+            <td style="padding:6px 8px;font-size:10px;line-height:1.4;color:var(--text-muted);word-break:break-all;">${noteText || '-'}</td>
           </tr>`;
   }
   html += `</tbody></table></div>`;
