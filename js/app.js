@@ -839,18 +839,36 @@ async function renderMarketTab() {
   try {
     let records = await getMarketRecords(20);
     let latestRecord = records.length > 0 ? records[0] : null;
-    let realtimeQuote = null;
 
-    // 如果是交易日盘中，获取实时数据
+    // 始终获取实时行情（非交易时段返回最近收盘价）
+    let realtimeQuote = null;
+    try { realtimeQuote = await fetchTodayIndexQuote(); } catch(e) {}
+
+    // 判断是否在盘中交易时段
     let now = new Date();
     let dayOfWeek = now.getDay();
     let hour = now.getHours();
     let minute = now.getMinutes();
-    if (dayOfWeek >= 1 && dayOfWeek <= 5 &&
+    let isTrading = dayOfWeek >= 1 && dayOfWeek <= 5 &&
         (hour > 9 || (hour === 9 && minute >= 30)) &&
-        (hour < 15 || (hour === 15 && minute === 0))) {
-      realtimeQuote = await fetchTodayIndexQuote();
+        (hour < 15 || (hour === 15 && minute === 0));
+
+    // 非交易时段：如果实时接口没返回，用最新数据库记录构造行情
+    if (!realtimeQuote && latestRecord) {
+      realtimeQuote = {
+        name: '上证指数',
+        last_px: latestRecord.close,
+        open_px: latestRecord.open,
+        high_px: latestRecord.high,
+        low_px: latestRecord.low,
+        prev_close: latestRecord.open,
+        amount: latestRecord.amount,
+        volume: latestRecord.volume,
+        change_pct: latestRecord.open ? ((latestRecord.close - latestRecord.open) / latestRecord.open * 100) : 0,
+        is_realtime: false
+      };
     }
+    realtimeQuote._is_trading = isTrading;
 
     container.innerHTML = renderMarketPage(records, realtimeQuote, false, custom, latestRecord);
 
@@ -877,15 +895,24 @@ async function renderMarketTab() {
         container.innerHTML = renderMarketPage(null, null, true);
         try {
           await initMarketData();
-          let d = new Date(), dw = d.getDay(), dh = d.getHours(), dm = d.getMinutes();
           let newRt = null;
-          if (dw >= 1 && dw <= 5 && (dh > 9 || (dh === 9 && dm >= 30)) && (dh < 15 || (dh === 15 && dm === 0))) {
-            newRt = await fetchTodayIndexQuote();
-          }
+          try { newRt = await fetchTodayIndexQuote(); } catch(e) {}
           custom = await getMarketCustomSettings();
           if (!custom || !custom.indicators) custom = defaultMarketCustom();
           let newRecords = await getMarketRecords(20);
           let newLatest = newRecords.length > 0 ? newRecords[0] : null;
+          let d = new Date(), dw = d.getDay(), dh = d.getHours(), dm = d.getMinutes();
+          let isTrading = dw >= 1 && dw <= 5 && (dh > 9 || (dh === 9 && dm >= 30)) && (dh < 15 || (dh === 15 && dm === 0));
+          if (!newRt && newLatest) {
+            newRt = {
+              name: '上证指数', last_px: newLatest.close, open_px: newLatest.open,
+              high_px: newLatest.high, low_px: newLatest.low, prev_close: newLatest.open,
+              amount: newLatest.amount, volume: newLatest.volume,
+              change_pct: newLatest.open ? ((newLatest.close - newLatest.open) / newLatest.open * 100) : 0,
+              is_realtime: false
+            };
+          }
+          newRt._is_trading = isTrading;
           container.innerHTML = renderMarketPage(newRecords, newRt, false, custom, newLatest);
           await renderMarketTab();
         } catch (e) {

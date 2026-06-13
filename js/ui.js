@@ -490,16 +490,18 @@ function renderMarketPage(records, realtimeQuote, loading, custom, latestRecord)
   } else if (!records || records.length === 0) {
     html += '<div class="empty-state">暂无大盘数据，点击刷新获取</div>';
   } else {
-    // 盘中实时数据行
+    // 盘中实时数据行（始终显示）
     if (realtimeQuote) {
       let rtColor = realtimeQuote.change_pct >= 0 ? 'var(--up-color)' : 'var(--down-color)';
       let rtSign = realtimeQuote.change_pct >= 0 ? '+' : '';
+      let isTrading = realtimeQuote._is_trading;
       html += `
         <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           <div style="display:flex;align-items:center;gap:10px;">
-            <span style="width:8px;height:8px;border-radius:50%;background:var(--up-color);display:inline-block;animation:pulse 2s infinite;"></span>
+            <span style="width:8px;height:8px;border-radius:50%;background:${isTrading ? 'var(--up-color)' : 'var(--text-muted)'};display:inline-block;${isTrading ? 'animation:pulse 2s infinite;' : ''}"></span>
             <span style="font-weight:700;font-size:22px;color:${rtColor};">${formatPrice(realtimeQuote.last_px)}</span>
             <span style="font-size:13px;font-weight:600;color:${rtColor};">${rtSign}${realtimeQuote.change_pct.toFixed(2)}%</span>
+            <span style="font-size:10px;color:${isTrading ? 'var(--up-color)' : 'var(--text-muted)'};font-weight:500;">${isTrading ? '盘中' : '收盘'}</span>
           </div>
           <div style="display:flex;gap:12px;font-size:11px;color:var(--text-secondary);">
             <span>开 ${formatPrice(realtimeQuote.open_px)}</span>
