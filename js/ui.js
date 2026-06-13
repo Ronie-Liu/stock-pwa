@@ -461,14 +461,29 @@ function showDetailPage(stock, quote) {
 // ===== Tab 3: 大盘 =====
 
 function renderMarketPage(records, realtimeQuote, loading, custom, latestRecord) {
-  let html = renderPageHeader('上证指数 · 大盘数据', 
-    records && records.length ? `共 ${records.length} 条（显示最近20条）` : '加载中...',
-    `<button class="btn btn-sm" id="btn-edit-custom">✏️ 编辑</button>
-     <button class="btn btn-sm" id="btn-refresh-market">🔄 刷新</button>
-     <button class="btn btn-sm btn-primary" id="btn-export-csv">📥 导出CSV</button>`
-  );
+  let count = records ? records.length : 0;
+  let html = `
+    <div class="market-header" style="padding:14px 14px 0;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;">
+        <div>
+          <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px;line-height:1.2;">上证指数</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">大盘数据 · ${loading ? '加载中…' : count > 0 ? '共' + count + '条' : '暂无数据'}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="btn btn-sm" id="btn-edit-custom" title="编辑自定义内容" style="padding:5px 10px;font-size:12px;border-radius:7px;gap:3px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="btn btn-sm" id="btn-refresh-market" title="刷新数据" style="padding:5px 10px;font-size:12px;border-radius:7px;gap:3px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          </button>
+          <button class="btn btn-sm btn-primary" id="btn-export-csv" title="导出CSV" style="padding:5px 10px;font-size:12px;border-radius:7px;gap:3px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>`;
 
-  html += '<div class="page-content" style="padding-top:4px" id="market-content">';
+  html += '<div class="page-content" style="padding:0 14px 14px;" id="market-content">';
 
   if (loading) {
     html += '<div class="loading-indicator"><span class="spinner"></span> 正在加载大盘数据（首次需从网络获取3年历史K线并计算衍生指标，约需1-2分钟）...</div>';
@@ -480,16 +495,13 @@ function renderMarketPage(records, realtimeQuote, loading, custom, latestRecord)
       let rtColor = realtimeQuote.change_pct >= 0 ? 'var(--up-color)' : 'var(--down-color)';
       let rtSign = realtimeQuote.change_pct >= 0 ? '+' : '';
       html += `
-        <div class="realtime-bar" style="background:var(--bg-card);border:1px solid var(--accent);border-radius:8px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
-          <div>
-            <span style="font-weight:700;font-size:15px;">🔴 盘中实时</span>
-            <span style="font-size:11px;color:var(--text-muted);margin-left:8px;">${realtimeQuote.name || '上证指数'}</span>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--up-color);display:inline-block;animation:pulse 2s infinite;"></span>
+            <span style="font-weight:700;font-size:22px;color:${rtColor};">${formatPrice(realtimeQuote.last_px)}</span>
+            <span style="font-size:13px;font-weight:600;color:${rtColor};">${rtSign}${realtimeQuote.change_pct.toFixed(2)}%</span>
           </div>
-          <div style="text-align:right;">
-            <span style="font-weight:700;font-size:18px;color:${rtColor};">${formatPrice(realtimeQuote.last_px)}</span>
-            <span style="font-size:13px;color:${rtColor};margin-left:6px;">${rtSign}${realtimeQuote.change_pct.toFixed(2)}%</span>
-          </div>
-          <div style="width:100%;display:flex;gap:10px;font-size:11px;color:var(--text-secondary);">
+          <div style="display:flex;gap:12px;font-size:11px;color:var(--text-secondary);">
             <span>开 ${formatPrice(realtimeQuote.open_px)}</span>
             <span>高 ${formatPrice(realtimeQuote.high_px)}</span>
             <span>低 ${formatPrice(realtimeQuote.low_px)}</span>
