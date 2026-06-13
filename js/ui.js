@@ -567,11 +567,11 @@ function renderMarketCustomSection(custom, latestRecord, realtimeQuote) {
       <table style="width:100%;border-collapse:collapse;font-size:10px;table-layout:fixed;">
         <thead>
           <tr style="border-bottom:1px solid var(--border);">
-            <th style="width:16%;padding:4px 2px;text-align:left;color:var(--text-secondary);">指标</th>
-            <th style="width:15%;padding:4px 2px;text-align:right;color:var(--text-secondary);">现值</th>
-            <th style="width:10%;padding:4px 2px;text-align:right;color:var(--text-secondary);">下限</th>
-            <th style="width:10%;padding:4px 2px;text-align:right;color:var(--text-secondary);">上限</th>
-            <th style="width:49%;padding:4px 2px;text-align:left;color:var(--text-secondary);">说明</th>
+            <th style="width:15%;padding:4px 2px;text-align:left;color:var(--text-secondary);">指标</th>
+            <th style="width:14%;padding:4px 2px;text-align:right;color:var(--text-secondary);">现值</th>
+            <th style="width:14%;padding:4px 2px;text-align:right;color:var(--text-secondary);">下限</th>
+            <th style="width:14%;padding:4px 2px;text-align:right;color:var(--text-secondary);">上限</th>
+            <th style="width:43%;padding:4px 2px;text-align:left;color:var(--text-secondary);">说明</th>
           </tr>
         </thead>
         <tbody>`;
