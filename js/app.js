@@ -832,8 +832,13 @@ async function renderMarketTab() {
   // 先显示loading
   container.innerHTML = renderMarketPage(null, null, true);
 
+  // 加载自定义设置
+  let custom = await getMarketCustomSettings();
+  if (!custom || !custom.indicators) custom = defaultMarketCustom();
+
   try {
     let records = await getMarketRecords(20);
+    let latestRecord = records.length > 0 ? records[0] : null;
     let realtimeQuote = null;
 
     // 如果是交易日盘中，获取实时数据
@@ -847,11 +852,25 @@ async function renderMarketTab() {
       realtimeQuote = await fetchTodayIndexQuote();
     }
 
-    container.innerHTML = renderMarketPage(records, realtimeQuote, false);
+    container.innerHTML = renderMarketPage(records, realtimeQuote, false, custom, latestRecord);
 
     // 绑定事件
+    let editBtn = container.querySelector('#btn-edit-custom');
     let refreshBtn = container.querySelector('#btn-refresh-market');
     let exportBtn = container.querySelector('#btn-export-csv');
+
+    if (editBtn) {
+      editBtn.addEventListener('click', () => {
+        showMarketEditModal(custom, async (newCustom) => {
+          custom = newCustom;
+          // 重新渲染以显示最新自定义内容
+          let curRecords = await getMarketRecords(20);
+          let curLatest = curRecords.length > 0 ? curRecords[0] : null;
+          container.innerHTML = renderMarketPage(curRecords, realtimeQuote, false, custom, curLatest);
+          await renderMarketTab(); // 重新绑定事件
+        });
+      });
+    }
 
     if (refreshBtn) {
       refreshBtn.addEventListener('click', async () => {
@@ -863,9 +882,11 @@ async function renderMarketTab() {
           if (dw >= 1 && dw <= 5 && (dh > 9 || (dh === 9 && dm >= 30)) && (dh < 15 || (dh === 15 && dm === 0))) {
             newRt = await fetchTodayIndexQuote();
           }
+          custom = await getMarketCustomSettings();
+          if (!custom || !custom.indicators) custom = defaultMarketCustom();
           let newRecords = await getMarketRecords(20);
-          container.innerHTML = renderMarketPage(newRecords, newRt, false);
-          // 重新绑定事件
+          let newLatest = newRecords.length > 0 ? newRecords[0] : null;
+          container.innerHTML = renderMarketPage(newRecords, newRt, false, custom, newLatest);
           await renderMarketTab();
         } catch (e) {
           container.innerHTML = '<div class="empty-state">刷新失败: ' + escapeHtml(e.message) + '</div>';

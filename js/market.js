@@ -7,6 +7,88 @@ const SH_INDEX_CODE = 'sh000001';
 // 上证指数流通股本: 4.82万亿股 → 482亿手 (1手=100股)
 const SH_OS_LOTS = 4.82e12 / 100; // 48,200,000,000 手
 
+// ===== 可供用户自选的指标字段定义 =====
+const INDICATOR_DEFS = [
+  { field: 'ma20_deviation',   name: 'MA20乖离',     unit: '',   fmt: 4, desc:'收盘价/MA20均线值' },
+  { field: 'ma60_deviation',   name: 'MA60乖离',     unit: '',   fmt: 4, desc:'收盘价/MA60均线值' },
+  { field: 'ma20_trend_chg',   name: 'MA20趋势变化',  unit: '%', fmt: 4, desc:'MA20每日变化率' },
+  { field: 'ma120_trend_chg',  name: 'MA120趋势变化', unit: '%', fmt: 4, desc:'MA120每日变化率' },
+  { field: 'cheapest_10_cost', name: '筹码0-10%成本', unit: '',   fmt: 4, desc:'最低端10%筹码加权均价' },
+  { field: 'cheapest_10_multiple', name: '筹码成本倍数', unit: '', fmt: 4, desc:'收盘价/筹码0-10%成本' },
+  { field: 'profit_ratio_40',  name: '40%获利比例',  unit: '%', fmt: 4, desc:'40%换手区间获利比例' },
+  { field: 'profit_ratio_150', name: '150%获利比例', unit: '%', fmt: 4, desc:'150%换手区间获利比例' },
+  { field: 'profit_ratio_300', name: '300%获利比例', unit: '%', fmt: 4, desc:'300%换手区间获利比例' },
+  { field: 'turnover_rate',    name: '换手率',       unit: '%', fmt: 2, desc:'成交量/流通股本' },
+];
+
+function getIndicatorDef(field) {
+  return INDICATOR_DEFS.find(d => d.field === field);
+}
+
+// ===== 自定义配置存取（存于 app_settings.market_custom） =====
+
+async function getMarketCustomSettings() {
+  let s = await getSettings();
+  try {
+    return JSON.parse(s.market_custom || '{}');
+  } catch(e) { return {}; }
+}
+
+async function saveMarketCustomSettings(custom) {
+  await saveSettings({ market_custom: JSON.stringify(custom) });
+}
+
+function defaultMarketCustom() {
+  return {
+    stage_description: '',
+    indicators: [
+      { field: 'ma20_deviation', lower: '0.95', upper: '1.05', note: '低估/高估分界' },
+      { field: 'profit_ratio_40', lower: '20', upper: '80', note: '短期超卖/超买' },
+      { field: 'profit_ratio_300', lower: '30', upper: '70', note: '中长期超卖/超买' }
+    ]
+  };
+}
+
+// ===== 计算指标的盘中实时现值 =====
+// latestRecord: DB中最新一条计算记录
+// realtimeQuote: 盘中实时行情（非交易日为 null）
+function computeRealtimeIndicatorValue(field, latestRecord, realtimeQuote) {
+  if (!latestRecord) return null;
+  let val = latestRecord[field];
+  if (val == null || val === undefined) return null;
+
+  // 如果你的盘中实时数据，调整价格依赖型指标
+  if (realtimeQuote && realtimeQuote.last_px) {
+    let rt = realtimeQuote.last_px;
+    switch (field) {
+      case 'ma20_deviation':
+        if (latestRecord.ma20_deviation && latestRecord.close) {
+          let ma20 = latestRecord.close / latestRecord.ma20_deviation;
+          return parseFloat((rt / ma20).toFixed(4));
+        }
+        break;
+      case 'ma60_deviation':
+        if (latestRecord.ma60_deviation && latestRecord.close) {
+          let ma60 = latestRecord.close / latestRecord.ma60_deviation;
+          return parseFloat((rt / ma60).toFixed(4));
+        }
+        break;
+      case 'cheapest_10_multiple':
+        if (latestRecord.cheapest_10_cost) {
+          return parseFloat((rt / latestRecord.cheapest_10_cost).toFixed(4));
+        }
+        break;
+      case 'turnover_rate':
+        if (realtimeQuote.volume) {
+          return parseFloat((realtimeQuote.volume / SH_OS_LOTS * 100).toFixed(4));
+        }
+        break;
+      // 其它指标盘中不变
+    }
+  }
+  return val;
+}
+
 // 获取上证K线（3年）
 async function fetchIndexKLineRaw(years = 3) {
   let count = years * 250;
@@ -50,11 +132,9 @@ function maRange(arr, start, len) {
   return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
 }
 
-// ===== 筹码分布：按阈值累积换手率，计算获利比例 =====
-// 从 currentIdx 向前累加换手率直至 threshold(%)，返回该区间内成本<close的比例
+// 筹码分布——利润比例
 function computeProfitRatio(rawData, currentIdx, close, threshold) {
-  let cum = 0;
-  let profitWeight = 0, totalWeight = 0;
+  let cum = 0, profitWeight = 0, totalWeight = 0;
   for (let i = currentIdx; i >= 0 && cum < threshold; i--) {
     let to = rawData[i]._turnover || 0;
     if (to <= 0) continue;
@@ -66,10 +146,9 @@ function computeProfitRatio(rawData, currentIdx, close, threshold) {
   return totalWeight > 0 ? parseFloat((profitWeight / totalWeight * 100).toFixed(4)) : null;
 }
 
-// 计算筹码0~10%平均成本：累计300%换手率，按成本升序，取0-10%区间的加权均价
+// 筹码0~10%平均成本
 function computeCheapest10Cost(rawData, currentIdx) {
-  let chips = [];
-  let cum = 0;
+  let chips = [], cum = 0;
   for (let i = currentIdx; i >= 0 && cum < 300; i--) {
     let to = rawData[i]._turnover || 0;
     if (to <= 0) continue;
@@ -96,53 +175,25 @@ function computeDerivedFields(rawData) {
   let len = rawData.length, result = [];
   let closes = rawData.map(r => r.close);
   let ma20All = [], ma60All = [], ma120All = [];
-
   for (let i = 0; i < len; i++) {
     ma20All.push(maRange(closes, i, 20));
     ma60All.push(maRange(closes, i, 60));
     ma120All.push(maRange(closes, i, 120));
   }
-
   for (let i = 0; i < len; i++) {
-    let row = { ...rawData[i] };
-    let close = closes[i];
-
-    // ① MA20乖离倍数
-    let ma20 = ma20All[i];
+    let row = { ...rawData[i] }, close = closes[i];
+    let ma20 = ma20All[i], ma60 = ma60All[i], ma120 = ma120All[i];
     row.ma20_deviation = ma20 && ma20 > 0 ? parseFloat((close / ma20).toFixed(4)) : null;
-
-    // ② MA60乖离倍数
-    let ma60 = ma60All[i];
     row.ma60_deviation = ma60 && ma60 > 0 ? parseFloat((close / ma60).toFixed(4)) : null;
-
-    // ③ MA20趋势变化率(%)
-    row.ma20_trend_chg = null;
-    if (i > 0 && ma20 && ma20All[i - 1] && ma20All[i - 1] !== 0) {
-      row.ma20_trend_chg = parseFloat(((ma20 - ma20All[i - 1]) / ma20All[i - 1] * 100).toFixed(4));
-    }
-
-    // ④ MA120趋势变化率(%)
-    row.ma120_trend_chg = null;
-    let ma120 = ma120All[i];
-    if (i > 0 && ma120 && ma120All[i - 1] && ma120All[i - 1] !== 0) {
-      row.ma120_trend_chg = parseFloat(((ma120 - ma120All[i - 1]) / ma120All[i - 1] * 100).toFixed(4));
-    }
-
-    // 换手率（由 fillTurnover 统一填充）
+    row.ma20_trend_chg = (i > 0 && ma20 && ma20All[i-1] && ma20All[i-1]!==0) ? parseFloat(((ma20-ma20All[i-1])/ma20All[i-1]*100).toFixed(4)) : null;
+    row.ma120_trend_chg = (i > 0 && ma120 && ma120All[i-1] && ma120All[i-1]!==0) ? parseFloat(((ma120-ma120All[i-1])/ma120All[i-1]*100).toFixed(4)) : null;
     row.turnover_rate = row.turnover_rate || 0;
-
-    // ⑤ 筹码0~10%平均成本
     row.cheapest_10_cost = computeCheapest10Cost(rawData, i);
-    // ⑥ 筹码0~10%成本倍数
     row.cheapest_10_multiple = row.cheapest_10_cost ? parseFloat((close / row.cheapest_10_cost).toFixed(4)) : null;
-    // ⑦⑧⑨ 筹码获利比例
     row.profit_ratio_40 = computeProfitRatio(rawData, i, close, 40);
     row.profit_ratio_150 = computeProfitRatio(rawData, i, close, 150);
     row.profit_ratio_300 = computeProfitRatio(rawData, i, close, 300);
-
-    // 清理临时字段
     delete row._turnover;
-
     result.push(row);
   }
   return result;
@@ -153,8 +204,6 @@ function computeDerivedFields(rawData) {
 async function initMarketData() {
   let count = await getMarketCount();
   console.log('大盘数据库已有:', count, '条');
-
-  // 数据质量检测：如果有数据但最新一条 turnover_rate 为 0（旧版坏数据），清空重拉
   if (count > 0) {
     let latestRecords = await getMarketRecords(1);
     let latest = latestRecords[0];
@@ -164,49 +213,27 @@ async function initMarketData() {
       count = 0;
     }
   }
-
-  // 1. 全量加载（空库或数据太少）
   if (count < 500) {
     console.log('开始加载3年历史数据...');
     let rawData = await fetchIndexKLineRaw(3);
-    if (rawData.length < 100) {
-      console.log('K线数据不足，跳过');
-      return;
-    }
+    if (rawData.length < 100) { console.log('K线数据不足，跳过'); return; }
     fillTurnover(rawData);
     let computed = computeDerivedFields(rawData);
     let saved = await saveMarketRecords(computed);
     console.log('历史数据加载完成:', saved, '条');
     return;
   }
-
-  // 2. 增量更新
   let latest = await getLatestMarketDate();
   let today = new Date().toISOString().slice(0, 10);
-  if (latest && latest >= today) {
-    console.log('大盘数据已是最新(', latest, ')');
-    return;
-  }
-
+  if (latest && latest >= today) { console.log('大盘数据已是最新(', latest, ')'); return; }
   console.log('增量更新大盘数据，最新日期:', latest);
   let rawNew = await fetchIndexKLineRaw(1);
   if (!rawNew.length) return;
-
   fillTurnover(rawNew);
-
-  // 只处理新数据
   let newRows = latest ? rawNew.filter(r => r.date > latest) : rawNew.slice(-60);
-  if (!newRows.length) {
-    console.log('无新数据');
-    return;
-  }
-
-  // 需要对最后一段数据重新计算（MA和筹码依赖历史）
-  let recalcWindow = latest
-    ? [...rawNew.filter(r => r.date <= latest).slice(-250), ...newRows]
-    : rawNew;
+  if (!newRows.length) { console.log('无新数据'); return; }
+  let recalcWindow = latest ? [...rawNew.filter(r => r.date <= latest).slice(-250), ...newRows] : rawNew;
   let computed = computeDerivedFields(recalcWindow);
-  // 只保存新增的行
   let toSave = computed.filter(r => latest ? r.date > latest : true);
   let saved = await saveMarketRecords(toSave);
   console.log('增量更新完成:', saved, '条，新增日期:', toSave.map(r => r.date).join(', '));
@@ -216,13 +243,12 @@ async function initMarketData() {
 
 async function exportMarketCSV() {
   let results = await getAllMarketRecords();
-  let headers = ['日期', '开盘', '收盘', '最高', '最低', '成交量(手)', '成交额',
-    '换手率(%)', 'MA20乖离倍数', 'MA60乖离倍数', 'MA20趋势变化率(%)', 'MA120趋势变化率(%)',
-    '筹码0~10%平均成本', '筹码成本倍数', '40%获利比例', '150%获利比例', '300%获利比例'];
+  let headers = ['日期','开盘','收盘','最高','最低','成交量(手)','成交额','换手率(%)',
+    'MA20乖离倍数','MA60乖离倍数','MA20趋势变化率(%)','MA120趋势变化率(%)',
+    '筹码0~10%平均成本','筹码成本倍数','40%获利比例','150%获利比例','300%获利比例'];
   let csv = '\uFEFF' + headers.join(',') + '\n';
   for (let r of results) {
-    csv += [
-      r.date, r.open, r.close, r.high, r.low, r.volume, r.amount, r.turnover_rate,
+    csv += [r.date, r.open, r.close, r.high, r.low, r.volume, r.amount, r.turnover_rate,
       r.ma20_deviation, r.ma60_deviation, r.ma20_trend_chg, r.ma120_trend_chg,
       r.cheapest_10_cost, r.cheapest_10_multiple, r.profit_ratio_40, r.profit_ratio_150, r.profit_ratio_300
     ].map(v => v != null ? v : '').join(',') + '\n';
@@ -243,14 +269,10 @@ async function fetchTodayIndexQuote() {
     if (fields.length < 40) return null;
     return {
       name: fields[1], code: SH_INDEX_CODE,
-      last_px: parseFloat(fields[3]) || 0,
-      open_px: parseFloat(fields[5]) || 0,
-      high_px: parseFloat(fields[33]) || 0,
-      low_px: parseFloat(fields[34]) || 0,
-      prev_close: parseFloat(fields[4]) || 0,
-      volume: parseInt(fields[36]) || 0,
-      amount: parseFloat(fields[37]) || 0,
-      change_pct: parseFloat(fields[32]) || 0,
+      last_px: parseFloat(fields[3]) || 0, open_px: parseFloat(fields[5]) || 0,
+      high_px: parseFloat(fields[33]) || 0, low_px: parseFloat(fields[34]) || 0,
+      prev_close: parseFloat(fields[4]) || 0, volume: parseInt(fields[36]) || 0,
+      amount: parseFloat(fields[37]) || 0, change_pct: parseFloat(fields[32]) || 0,
       is_realtime: true
     };
   } catch (e) { return null; }

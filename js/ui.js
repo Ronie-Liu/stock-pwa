@@ -460,10 +460,11 @@ function showDetailPage(stock, quote) {
 
 // ===== Tab 3: 大盘 =====
 
-function renderMarketPage(records, realtimeQuote, loading) {
+function renderMarketPage(records, realtimeQuote, loading, custom, latestRecord) {
   let html = renderPageHeader('上证指数 · 大盘数据', 
     records && records.length ? `共 ${records.length} 条（显示最近20条）` : '加载中...',
-    `<button class="btn btn-sm" id="btn-refresh-market">🔄 刷新</button>
+    `<button class="btn btn-sm" id="btn-edit-custom">✏️ 编辑</button>
+     <button class="btn btn-sm" id="btn-refresh-market">🔄 刷新</button>
      <button class="btn btn-sm btn-primary" id="btn-export-csv">📥 导出CSV</button>`
   );
 
@@ -497,6 +498,9 @@ function renderMarketPage(records, realtimeQuote, loading) {
           </div>
         </div>`;
     }
+
+    // ===== 用户自定义区域 =====
+    html += renderMarketCustomSection(custom, latestRecord, realtimeQuote);
 
     // 历史数据表格
     html += '<div class="market-table-wrap" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">';
@@ -532,6 +536,166 @@ function renderMarketPage(records, realtimeQuote, loading) {
 
   html += '</div>'; // market-content
   return html;
+}
+
+// 渲染自定义区域：阶段描述 + 周期指标表格
+function renderMarketCustomSection(custom, latestRecord, realtimeQuote) {
+  if (!custom) custom = defaultMarketCustom();
+  if (!latestRecord) return '<div style="padding:8px;font-size:11px;color:var(--text-muted);">加载数据后显示自定义指标…</div>';
+
+  let html = '';
+
+  // --- 1) 周期阶段描述卡片 ---
+  let desc = (custom.stage_description || '').trim();
+  if (desc) {
+    // 把换行转成 <br>，支持简单格式
+    let descHtml = escapeHtml(desc).replace(/\n/g, '<br>');
+    html += `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">📝 周期阶段描述</div>
+        <div style="font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap;">${descHtml}</div>
+      </div>`;
+  }
+
+  // --- 2) 周期提示指标表格 ---
+  let indicators = custom.indicators || [];
+  if (!indicators.length) return html;
+
+  html += `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:8px 6px;margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;padding:0 4px;">📊 周期提示指标</div>
+      <table style="width:100%;border-collapse:collapse;font-size:10px;table-layout:fixed;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border);">
+            <th style="width:16%;padding:4px 2px;text-align:left;color:var(--text-secondary);">指标</th>
+            <th style="width:15%;padding:4px 2px;text-align:right;color:var(--text-secondary);">现值</th>
+            <th style="width:10%;padding:4px 2px;text-align:right;color:var(--text-secondary);">下限</th>
+            <th style="width:10%;padding:4px 2px;text-align:right;color:var(--text-secondary);">上限</th>
+            <th style="width:49%;padding:4px 2px;text-align:left;color:var(--text-secondary);">说明</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+  for (let item of indicators) {
+    let def = getIndicatorDef(item.field);
+    if (!def) continue;
+
+    let rawVal = computeRealtimeIndicatorValue(item.field, latestRecord, realtimeQuote);
+    let valStr = rawVal != null ? rawVal.toFixed(def.fmt) : '--';
+    let unit = def.unit;
+    let display = valStr === '--' ? '--' : valStr + (unit ? unit : '');
+
+    let lower = parseFloat(item.lower), upper = parseFloat(item.upper);
+    let color = '';
+    if (rawVal != null && !isNaN(lower) && !isNaN(upper)) {
+      if (rawVal <= lower) color = 'color:var(--down-color);font-weight:700;';
+      else if (rawVal >= upper) color = 'color:var(--up-color);font-weight:700;';
+    }
+
+    // 说明文字 - 允许换行，字体缩小
+    let noteText = (item.note || '').replace(/\n/g, '<br>');
+
+    html += `
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:5px 2px;font-weight:600;">${escapeHtml(def.name)}</td>
+            <td style="padding:5px 2px;text-align:right;${color}">${display}</td>
+            <td style="padding:5px 2px;text-align:right;color:var(--text-secondary);">${item.lower || '-'}</td>
+            <td style="padding:5px 2px;text-align:right;color:var(--text-secondary);">${item.upper || '-'}</td>
+            <td style="padding:5px 2px;font-size:9px;line-height:1.5;color:var(--text-secondary);word-break:break-all;">${noteText}</td>
+          </tr>`;
+  }
+  html += `</tbody></table></div>`;
+
+  return html;
+}
+
+// 编辑自定义内容弹窗
+function showMarketEditModal(custom, onSave) {
+  if (!custom) custom = defaultMarketCustom();
+  // 深拷贝防止意外修改
+  custom = JSON.parse(JSON.stringify(custom));
+  if (!custom.indicators) custom.indicators = [];
+
+  let indicatorRowsHtml = custom.indicators.map((item, idx) => {
+    let opts = INDICATOR_DEFS.map(d =>
+      `<option value="${d.field}" ${item.field === d.field ? 'selected' : ''}>${d.name}</option>`
+    ).join('');
+    return `
+      <div class="indicator-edit-row" data-idx="${idx}" style="display:flex;align-items:center;gap:4px;padding:6px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+        <select class="ind-field" style="flex:0 0 auto;width:110px;font-size:12px;padding:4px;">${opts}</select>
+        <input type="number" class="ind-lower" value="${item.lower || ''}" placeholder="下限" step="0.01" style="width:52px;font-size:12px;padding:4px;text-align:center;">
+        <span style="font-size:10px;color:var(--text-muted);">~</span>
+        <input type="number" class="ind-upper" value="${item.upper || ''}" placeholder="上限" step="0.01" style="width:52px;font-size:12px;padding:4px;text-align:center;">
+        <input type="text" class="ind-note" value="${escapeHtml(item.note || '')}" placeholder="说明" style="flex:1;min-width:80px;font-size:11px;padding:4px;">
+        <button class="btn btn-sm btn-danger ind-del" style="padding:2px 6px;font-size:11px;">×</button>
+      </div>`;
+  }).join('');
+
+  let html = renderModal('编辑自定义内容', `
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">📝 周期阶段描述</label>
+      <textarea id="edit-stage-desc" rows="3" placeholder="描述当前大盘所处的周期阶段…" style="width:100%;resize:none;font-size:13px;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text);">${escapeHtml(custom.stage_description || '')}</textarea>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">📊 周期提示指标</label>
+      <div id="indicator-list" style="max-height:280px;overflow-y:auto;">${indicatorRowsHtml}</div>
+      <button class="btn btn-sm" id="btn-add-indicator" style="margin-top:6px;">＋ 添加指标</button>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">现值 ≤ 下限显示绿色，现值 ≥ 上限显示红色</div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" id="btn-save-custom">保存</button>
+    </div>
+  `);
+  document.getElementById('app').insertAdjacentHTML('beforeend', html);
+
+  // 绑定添加指标
+  document.getElementById('btn-add-indicator').addEventListener('click', () => {
+    let list = document.getElementById('indicator-list');
+    let idx = list.querySelectorAll('.indicator-edit-row').length;
+    let opts = INDICATOR_DEFS.map(d => `<option value="${d.field}">${d.name}</option>`).join('');
+    let row = document.createElement('div');
+    row.className = 'indicator-edit-row';
+    row.setAttribute('data-idx', idx);
+    row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:6px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;';
+    row.innerHTML = `
+      <select class="ind-field" style="flex:0 0 auto;width:110px;font-size:12px;padding:4px;">${opts}</select>
+      <input type="number" class="ind-lower" placeholder="下限" step="0.01" style="width:52px;font-size:12px;padding:4px;text-align:center;">
+      <span style="font-size:10px;color:var(--text-muted);">~</span>
+      <input type="number" class="ind-upper" placeholder="上限" step="0.01" style="width:52px;font-size:12px;padding:4px;text-align:center;">
+      <input type="text" class="ind-note" placeholder="说明" style="flex:1;min-width:80px;font-size:11px;padding:4px;">
+      <button class="btn btn-sm btn-danger ind-del" style="padding:2px 6px;font-size:11px;">×</button>`;
+    list.appendChild(row);
+    bindDelBtn(row);
+  });
+
+  // 绑定删除
+  function bindDelBtn(row) {
+    let delBtn = row.querySelector('.ind-del');
+    if (delBtn) {
+      delBtn.addEventListener('click', () => row.remove());
+    }
+  }
+  document.querySelectorAll('#indicator-list .indicator-edit-row').forEach(r => bindDelBtn(r));
+
+  // 保存
+  document.getElementById('btn-save-custom').addEventListener('click', async () => {
+    let stageDesc = document.getElementById('edit-stage-desc').value.trim();
+    let rows = document.querySelectorAll('#indicator-list .indicator-edit-row');
+    let indicators = [];
+    rows.forEach(row => {
+      let field = row.querySelector('.ind-field').value;
+      let lower = row.querySelector('.ind-lower').value.trim();
+      let upper = row.querySelector('.ind-upper').value.trim();
+      let note = row.querySelector('.ind-note').value.trim();
+      if (field) indicators.push({ field, lower, upper, note });
+    });
+    let newCustom = { stage_description: stageDesc, indicators };
+    await saveMarketCustomSettings(newCustom);
+    closeModal();
+    if (typeof onSave === 'function') onSave(newCustom);
+    showToast('自定义内容已保存');
+  });
 }
 
 // ===== Tab 4: CSV 上传页 =====
