@@ -4,6 +4,8 @@
 // 字段: 10项衍生指标
 
 const SH_INDEX_CODE = 'sh000001';
+// 上证指数流通股本: 4.82万亿股 → 482亿手 (1手=100股)
+const SH_OS_LOTS = 4.82e12 / 100; // 48,200,000,000 手
 
 // 获取上证K线（3年）
 async function fetchIndexKLineRaw(years = 3) {
@@ -41,6 +43,26 @@ async function fetchIndexTurnover() {
   } catch (e) { console.error('换手率获取失败:', e.message); return {}; }
 }
 
+// 填充换手率：优先用API数据，无数据则用 成交量/流通股本 兜底
+function fillTurnover(rawData, turnoverMap) {
+  let apiHits = 0, fallbackHits = 0;
+  for (let r of rawData) {
+    let apiVal = turnoverMap[r.date];
+    if (apiVal && apiVal > 0) {
+      r._turnover = apiVal;
+      r.turnover_rate = apiVal;
+      apiHits++;
+    } else {
+      // 兜底：换手率 = 成交量(手) / 流通股本(手) × 100%
+      let fallback = r.volume && SH_OS_LOTS ? parseFloat((r.volume / SH_OS_LOTS * 100).toFixed(4)) : 0;
+      r._turnover = fallback;
+      r.turnover_rate = fallback;
+      fallbackHits++;
+    }
+  }
+  console.log('换手率: API命中', apiHits, '条, 兜底计算', fallbackHits, '条');
+}
+
 // MA计算
 function maRange(arr, start, len) {
   let seg = arr.slice(Math.max(0, start - len + 1), start + 1);
@@ -61,7 +83,7 @@ function computeProfitRatio(rawData, currentIdx, close, threshold) {
     if (rawData[i].close < close) profitWeight += take;
     cum += to;
   }
-  return totalWeight > 0 ? parseFloat((profitWeight / totalWeight * 100).toFixed(1)) : null;
+  return totalWeight > 0 ? parseFloat((profitWeight / totalWeight * 100).toFixed(4)) : null;
 }
 
 // 计算筹码0~10%平均成本：累计300%换手率，按成本升序，取0-10%区间的加权均价
@@ -86,7 +108,7 @@ function computeCheapest10Cost(rawData, currentIdx) {
     weightSum += take;
     acc += take;
   }
-  return weightSum > 0 ? parseFloat((costSum / weightSum).toFixed(2)) : null;
+  return weightSum > 0 ? parseFloat((costSum / weightSum).toFixed(4)) : null;
 }
 
 // 计算所有衍生字段
@@ -127,8 +149,8 @@ function computeDerivedFields(rawData, turnoverMap) {
       row.ma120_trend_chg = parseFloat(((ma120 - ma120All[i - 1]) / ma120All[i - 1] * 100).toFixed(4));
     }
 
-    // 换手率
-    row.turnover_rate = turnoverMap[date] || 0;
+    // 换手率（由 fillTurnover 统一填充）
+    row.turnover_rate = row.turnover_rate || 0;
 
     // ⑤ 筹码0~10%平均成本
     row.cheapest_10_cost = computeCheapest10Cost(rawData, i);
@@ -162,7 +184,7 @@ async function initMarketData() {
       return;
     }
     let turnoverMap = await fetchIndexTurnover();
-    rawData.forEach(r => { r._turnover = turnoverMap[r.date] || 0; });
+    fillTurnover(rawData, turnoverMap);
     let computed = computeDerivedFields(rawData, turnoverMap);
     let saved = await saveMarketRecords(computed);
     console.log('历史数据加载完成:', saved, '条');
@@ -182,7 +204,7 @@ async function initMarketData() {
   if (!rawNew.length) return;
 
   let turnoverMap = await fetchIndexTurnover();
-  rawNew.forEach(r => { r._turnover = turnoverMap[r.date] || 0; });
+  fillTurnover(rawNew, turnoverMap);
 
   // 只处理新数据
   let newRows = latest ? rawNew.filter(r => r.date > latest) : rawNew.slice(-60);

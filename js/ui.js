@@ -516,15 +516,15 @@ function renderMarketPage(records, realtimeQuote, loading) {
       html += `<td style="padding:5px 8px;text-align:right;">${formatPrice(r.high)}</td>`;
       html += `<td style="padding:5px 8px;text-align:right;">${formatPrice(r.low)}</td>`;
       html += `<td style="padding:5px 8px;text-align:right;">${r.turnover_rate ? r.turnover_rate.toFixed(2) : '--'}</td>`;
-      html += `<td style="padding:5px 8px;text-align:right;${r.ma20_deviation ? (r.ma20_deviation < 0.95 ? 'color:var(--up-color)' : r.ma20_deviation > 1.05 ? 'color:var(--down-color)' : '') : ''}">${r.ma20_deviation != null ? r.ma20_deviation.toFixed(4) : '--'}</td>`;
-      html += `<td style="padding:5px 8px;text-align:right;${r.ma60_deviation ? (r.ma60_deviation < 0.95 ? 'color:var(--up-color)' : r.ma60_deviation > 1.05 ? 'color:var(--down-color)' : '') : ''}">${r.ma60_deviation != null ? r.ma60_deviation.toFixed(4) : '--'}</td>`;
-      html += `<td style="padding:5px 8px;text-align:right;${r.ma20_trend_chg ? (r.ma20_trend_chg > 0 ? 'color:var(--up-color)' : 'color:var(--down-color)') : ''}">${r.ma20_trend_chg != null ? r.ma20_trend_chg.toFixed(2) : '--'}</td>`;
-      html += `<td style="padding:5px 8px;text-align:right;${r.ma120_trend_chg ? (r.ma120_trend_chg > 0 ? 'color:var(--up-color)' : 'color:var(--down-color)') : ''}">${r.ma120_trend_chg != null ? r.ma120_trend_chg.toFixed(2) : '--'}</td>`;
-      html += `<td style="padding:5px 8px;text-align:right;">${r.cheapest_10_cost != null ? formatPrice(r.cheapest_10_cost) : '--'}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;">${r.ma20_deviation != null ? r.ma20_deviation.toFixed(4) : '--'}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;">${r.ma60_deviation != null ? r.ma60_deviation.toFixed(4) : '--'}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;">${r.ma20_trend_chg != null ? r.ma20_trend_chg.toFixed(4) : '--'}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;">${r.ma120_trend_chg != null ? r.ma120_trend_chg.toFixed(4) : '--'}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;">${r.cheapest_10_cost != null ? r.cheapest_10_cost.toFixed(4) : '--'}</td>`;
       html += `<td style="padding:5px 8px;text-align:right;">${r.cheapest_10_multiple != null ? r.cheapest_10_multiple.toFixed(4) : '--'}</td>`;
-      html += `<td style="padding:5px 8px;text-align:right;${r.profit_ratio_40 != null ? (r.profit_ratio_40 >= 50 ? 'color:var(--up-color)' : 'color:var(--down-color)') : ''}">${r.profit_ratio_40 != null ? r.profit_ratio_40 + '%' : '--'}</td>`;
-      html += `<td style="padding:5px 8px;text-align:right;${r.profit_ratio_150 != null ? (r.profit_ratio_150 >= 50 ? 'color:var(--up-color)' : 'color:var(--down-color)') : ''}">${r.profit_ratio_150 != null ? r.profit_ratio_150 + '%' : '--'}</td>`;
-      html += `<td style="padding:5px 8px;text-align:right;${r.profit_ratio_300 != null ? (r.profit_ratio_300 >= 50 ? 'color:var(--up-color)' : 'color:var(--down-color)') : ''}">${r.profit_ratio_300 != null ? r.profit_ratio_300 + '%' : '--'}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;">${r.profit_ratio_40 != null ? r.profit_ratio_40.toFixed(4) : '--'}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;">${r.profit_ratio_150 != null ? r.profit_ratio_150.toFixed(4) : '--'}</td>`;
+      html += `<td style="padding:5px 8px;text-align:right;">${r.profit_ratio_300 != null ? r.profit_ratio_300.toFixed(4) : '--'}</td>`;
       html += '</tr>';
     }
     html += '</tbody></table></div>';

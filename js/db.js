@@ -269,7 +269,7 @@ async function getMarketRecords(limit = 20) {
         results.push(cursor.value);
         cursor.continue();
       } else {
-        resolve(results.reverse());
+        resolve(results);
       }
     };
     req.onerror = () => resolve([]);
