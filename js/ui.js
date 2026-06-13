@@ -585,13 +585,18 @@ function renderMarketCustomSection(custom, latestRecord, realtimeQuote) {
     let unit = def.unit;
     let display = valStr === '--' ? '--' : valStr + (unit ? unit : '');
 
-    let lower = parseFloat(item.lower), upper = parseFloat(item.upper);
+    let lowerMin = parseFloat(item.lower_min), lowerMax = parseFloat(item.lower_max);
+    let upperMin = parseFloat(item.upper_min), upperMax = parseFloat(item.upper_max);
     let color = '';
-    if (rawVal != null && !isNaN(lower) && !isNaN(upper)) {
-      if (rawVal <= lower) color = 'color:var(--down-color);font-weight:700;';
-      else if (rawVal >= upper) color = 'color:var(--up-color);font-weight:700;';
+    if (rawVal != null && !isNaN(lowerMax)) {
+      if (rawVal <= lowerMax) color = 'color:var(--down-color);font-weight:700;';
+    }
+    if (!color && rawVal != null && !isNaN(upperMin)) {
+      if (rawVal >= upperMin) color = 'color:var(--up-color);font-weight:700;';
     }
 
+    let lowerStr = (item.lower_min || '') + '~' + (item.lower_max || '');
+    let upperStr = (item.upper_min || '') + '~' + (item.upper_max || '');
     // 说明文字 - 允许换行，字体缩小
     let noteText = (item.note || '').replace(/\n/g, '<br>');
 
@@ -599,8 +604,8 @@ function renderMarketCustomSection(custom, latestRecord, realtimeQuote) {
           <tr style="border-bottom:1px solid var(--border);">
             <td style="padding:5px 2px;font-weight:600;">${escapeHtml(def.name)}</td>
             <td style="padding:5px 2px;text-align:right;${color}">${display}</td>
-            <td style="padding:5px 2px;text-align:right;color:var(--text-secondary);">${item.lower || '-'}</td>
-            <td style="padding:5px 2px;text-align:right;color:var(--text-secondary);">${item.upper || '-'}</td>
+            <td style="padding:5px 2px;text-align:right;color:var(--text-secondary);">${lowerStr}</td>
+            <td style="padding:5px 2px;text-align:right;color:var(--text-secondary);">${upperStr}</td>
             <td style="padding:5px 2px;font-size:9px;line-height:1.5;color:var(--text-secondary);word-break:break-all;">${noteText}</td>
           </tr>`;
   }
@@ -621,13 +626,16 @@ function showMarketEditModal(custom, onSave) {
       `<option value="${d.field}" ${item.field === d.field ? 'selected' : ''}>${d.name}</option>`
     ).join('');
     return `
-      <div class="indicator-edit-row" data-idx="${idx}" style="display:flex;align-items:center;gap:4px;padding:6px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
-        <select class="ind-field" style="flex:0 0 auto;width:110px;font-size:12px;padding:4px;">${opts}</select>
-        <input type="number" class="ind-lower" value="${item.lower || ''}" placeholder="下限" step="0.01" style="width:52px;font-size:12px;padding:4px;text-align:center;">
-        <span style="font-size:10px;color:var(--text-muted);">~</span>
-        <input type="number" class="ind-upper" value="${item.upper || ''}" placeholder="上限" step="0.01" style="width:52px;font-size:12px;padding:4px;text-align:center;">
-        <input type="text" class="ind-note" value="${escapeHtml(item.note || '')}" placeholder="说明" style="flex:1;min-width:80px;font-size:11px;padding:4px;">
-        <button class="btn btn-sm btn-danger ind-del" style="padding:2px 6px;font-size:11px;">×</button>
+      <div class="indicator-edit-row" data-idx="${idx}" style="display:flex;align-items:center;gap:3px;padding:6px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+        <select class="ind-field" style="flex:0 0 auto;width:105px;font-size:11px;padding:3px;">${opts}</select>
+        <input type="number" class="ind-lower-min" value="${item.lower_min || ''}" placeholder="下限起" step="0.01" style="width:44px;font-size:11px;padding:3px;text-align:center;">
+        <span style="font-size:9px;color:var(--text-muted);">~</span>
+        <input type="number" class="ind-lower-max" value="${item.lower_max || ''}" placeholder="下限止" step="0.01" style="width:44px;font-size:11px;padding:3px;text-align:center;">
+        <input type="number" class="ind-upper-min" value="${item.upper_min || ''}" placeholder="上限起" step="0.01" style="width:44px;font-size:11px;padding:3px;text-align:center;">
+        <span style="font-size:9px;color:var(--text-muted);">~</span>
+        <input type="number" class="ind-upper-max" value="${item.upper_max || ''}" placeholder="上限止" step="0.01" style="width:44px;font-size:11px;padding:3px;text-align:center;">
+        <input type="text" class="ind-note" value="${escapeHtml(item.note || '')}" placeholder="说明" style="flex:1;min-width:70px;font-size:11px;padding:3px;">
+        <button class="btn btn-sm btn-danger ind-del" style="padding:1px 5px;font-size:10px;">×</button>
       </div>`;
   }).join('');
 
@@ -640,7 +648,7 @@ function showMarketEditModal(custom, onSave) {
       <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">📊 周期提示指标</label>
       <div id="indicator-list" style="max-height:280px;overflow-y:auto;">${indicatorRowsHtml}</div>
       <button class="btn btn-sm" id="btn-add-indicator" style="margin-top:6px;">＋ 添加指标</button>
-      <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">现值 ≤ 下限显示绿色，现值 ≥ 上限显示红色</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">现值 ≤ 下限最高值显示绿色，现值 ≥ 上限最低值显示红色</div>
     </div>
     <div class="form-actions">
       <button class="btn" onclick="closeModal()">取消</button>
@@ -657,14 +665,17 @@ function showMarketEditModal(custom, onSave) {
     let row = document.createElement('div');
     row.className = 'indicator-edit-row';
     row.setAttribute('data-idx', idx);
-    row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:6px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;';
+    row.style.cssText = 'display:flex;align-items:center;gap:3px;padding:6px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;';
     row.innerHTML = `
-      <select class="ind-field" style="flex:0 0 auto;width:110px;font-size:12px;padding:4px;">${opts}</select>
-      <input type="number" class="ind-lower" placeholder="下限" step="0.01" style="width:52px;font-size:12px;padding:4px;text-align:center;">
-      <span style="font-size:10px;color:var(--text-muted);">~</span>
-      <input type="number" class="ind-upper" placeholder="上限" step="0.01" style="width:52px;font-size:12px;padding:4px;text-align:center;">
-      <input type="text" class="ind-note" placeholder="说明" style="flex:1;min-width:80px;font-size:11px;padding:4px;">
-      <button class="btn btn-sm btn-danger ind-del" style="padding:2px 6px;font-size:11px;">×</button>`;
+      <select class="ind-field" style="flex:0 0 auto;width:105px;font-size:11px;padding:3px;">${opts}</select>
+      <input type="number" class="ind-lower-min" placeholder="下限起" step="0.01" style="width:44px;font-size:11px;padding:3px;text-align:center;">
+      <span style="font-size:9px;color:var(--text-muted);">~</span>
+      <input type="number" class="ind-lower-max" placeholder="下限止" step="0.01" style="width:44px;font-size:11px;padding:3px;text-align:center;">
+      <input type="number" class="ind-upper-min" placeholder="上限起" step="0.01" style="width:44px;font-size:11px;padding:3px;text-align:center;">
+      <span style="font-size:9px;color:var(--text-muted);">~</span>
+      <input type="number" class="ind-upper-max" placeholder="上限止" step="0.01" style="width:44px;font-size:11px;padding:3px;text-align:center;">
+      <input type="text" class="ind-note" placeholder="说明" style="flex:1;min-width:70px;font-size:11px;padding:3px;">
+      <button class="btn btn-sm btn-danger ind-del" style="padding:1px 5px;font-size:10px;">×</button>`;
     list.appendChild(row);
     bindDelBtn(row);
   });
@@ -685,10 +696,12 @@ function showMarketEditModal(custom, onSave) {
     let indicators = [];
     rows.forEach(row => {
       let field = row.querySelector('.ind-field').value;
-      let lower = row.querySelector('.ind-lower').value.trim();
-      let upper = row.querySelector('.ind-upper').value.trim();
+      let lower_min = row.querySelector('.ind-lower-min').value.trim();
+      let lower_max = row.querySelector('.ind-lower-max').value.trim();
+      let upper_min = row.querySelector('.ind-upper-min').value.trim();
+      let upper_max = row.querySelector('.ind-upper-max').value.trim();
       let note = row.querySelector('.ind-note').value.trim();
-      if (field) indicators.push({ field, lower, upper, note });
+      if (field) indicators.push({ field, lower_min, lower_max, upper_min, upper_max, note });
     });
     let newCustom = { stage_description: stageDesc, indicators };
     await saveMarketCustomSettings(newCustom);

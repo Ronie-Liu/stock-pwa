@@ -29,9 +29,18 @@ function getIndicatorDef(field) {
 
 async function getMarketCustomSettings() {
   let s = await getSettings();
+  let custom;
   try {
-    return JSON.parse(s.market_custom || '{}');
-  } catch(e) { return {}; }
+    custom = JSON.parse(s.market_custom || '{}');
+  } catch(e) { custom = {}; }
+  // 旧格式迁移：lower/upper → lower_min/lower_max/upper_min/upper_max
+  if (custom.indicators) {
+    for (let item of custom.indicators) {
+      if (item.lower !== undefined) { item.lower_min = item.lower; item.lower_max = ''; delete item.lower; }
+      if (item.upper !== undefined) { item.upper_min = item.upper; item.upper_max = ''; delete item.upper; }
+    }
+  }
+  return custom;
 }
 
 async function saveMarketCustomSettings(custom) {
@@ -42,9 +51,9 @@ function defaultMarketCustom() {
   return {
     stage_description: '',
     indicators: [
-      { field: 'ma20_deviation', lower: '0.95', upper: '1.05', note: '低估/高估分界' },
-      { field: 'profit_ratio_40', lower: '20', upper: '80', note: '短期超卖/超买' },
-      { field: 'profit_ratio_300', lower: '30', upper: '70', note: '中长期超卖/超买' }
+      { field: 'ma20_deviation', lower_min: '0', lower_max: '1', upper_min: '1', upper_max: '2', note: '低估/高估分界' },
+      { field: 'profit_ratio_40', lower_min: '0', lower_max: '20', upper_min: '80', upper_max: '100', note: '短期超卖/超买' },
+      { field: 'profit_ratio_300', lower_min: '0', lower_max: '30', upper_min: '70', upper_max: '100', note: '中长期超卖/超买' }
     ]
   };
 }
