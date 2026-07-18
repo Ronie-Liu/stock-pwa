@@ -733,16 +733,18 @@ function renderThirdBoardUI(rows, dates, selectedDate, loading) {
 
   // 汇总统计
   if (rows && rows.length) {
+    let source = window._tbSource || '';
     let count5 = rows.filter(r => r.name && r.name.endsWith('5')).length;
     let count3 = rows.filter(r => r.name && r.name.endsWith('3')).length;
     let count1 = rows.filter(r => r.name && r.name.endsWith('1')).length;
     let upCount = rows.filter(r => r.change_pct > 0).length;
     let downCount = rows.filter(r => r.change_pct < 0).length;
-    html += `<div style="display:flex;gap:12px;font-size:11px;color:var(--text-secondary);margin-bottom:8px;flex-wrap:wrap;">`;
+    html += `<div style="display:flex;gap:12px;font-size:11px;color:var(--text-secondary);margin-bottom:8px;flex-wrap:wrap;align-items:center;">`;
     html += `<span>共 ${rows.length} 只</span>`;
     html += `<span style="color:var(--up-color);">涨 ${upCount}</span>`;
     html += `<span style="color:var(--down-color);">跌 ${downCount}</span>`;
     html += `<span>5系:${count5}</span><span>3系:${count3}</span><span>1系:${count1}</span>`;
+    if (source) html += `<span style="margin-left:auto;background:var(--bg-input);padding:2px 8px;border-radius:10px;font-size:10px;">${source}</span>`;
     html += `</div>`;
   }
 

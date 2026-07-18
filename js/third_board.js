@@ -254,13 +254,19 @@ async function initThirdBoardData() {
     let ds = d.toISOString().slice(0, 10);
     if (dates.includes(ds)) continue; // 已有
     let loaded = await loadCloudJson(ds);
-    if (loaded) dates = await getThirdBoardAvailableDates();
+    if (loaded) {
+      dates = await getThirdBoardAvailableDates();
+      if (ds === today) window._tbSource = '☁️ 云端';
+    }
   }
 
-  // 方案 B（兜底）：浏览器内实时采集（仅限云端也没有的日期）
-  let result = await collectThirdBoardToday();
-  if (result.success && result.date && !dates.includes(result.date)) {
+  let collectionResult = await collectThirdBoardToday();
+  if (collectionResult.success && collectionResult.date && !dates.includes(collectionResult.date)) {
     dates = await getThirdBoardAvailableDates();
+  }
+  // 标记来源
+  if (!window._tbSource) {
+    window._tbSource = collectionResult.reason === 'already' ? '☁️ 云端' : '🖥️ 实时';
   }
 
   await clearThirdBoardBefore(15);
