@@ -2,12 +2,13 @@
 // 本地存储：stocks表、app_settings表、task_logs表
 
 const DB_NAME = 'StockMonitorDB';
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 const STOCKS_STORE = 'stocks';
 const SETTINGS_STORE = 'app_settings';
 const LOGS_STORE = 'task_logs';
 const MARKET_STORE = 'market_data';
 const THIRD_BOARD_STORE = 'third_board';
+const TB_SHARES_CACHE = 'tb_shares_cache';  // 老三板股本缓存 (key=code)
 
 let db = null;
 
@@ -44,6 +45,11 @@ function openDB() {
       let tbStore = database.createObjectStore(THIRD_BOARD_STORE, { keyPath: 'id' });
       tbStore.createIndex('date_idx', 'date', { unique: false });
       tbStore.createIndex('code_idx', 'code', { unique: false });
+      // tb_shares_cache（股本缓存，单键 code）
+      if (database.objectStoreNames.contains(TB_SHARES_CACHE)) {
+        database.deleteObjectStore(TB_SHARES_CACHE);
+      }
+      let sharesStore = database.createObjectStore(TB_SHARES_CACHE, { keyPath: 'code' });
     };
     request.onsuccess = (e) => {
       db = e.target.result;
@@ -392,5 +398,32 @@ async function getThirdBoardAllRecords() {
       else { resolve(results); }
     };
     req.onerror = () => resolve([]);
+  });
+}
+
+// ===== 股本缓存 =====
+
+async function getCachedShares(code) {
+  await openDB();
+  return new Promise((resolve) => {
+    let store = getStore(TB_SHARES_CACHE);
+    let req = store.get(code);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => resolve(null);
+  });
+}
+
+async function saveCachedShares(code, freeShares, totalShares) {
+  await openDB();
+  return new Promise((resolve) => {
+    let store = getStore(TB_SHARES_CACHE, 'readwrite');
+    let req = store.put({
+      code: code,
+      free_shares: freeShares,
+      total_shares: totalShares,
+      updated_at: Date.now()
+    });
+    req.onsuccess = () => resolve();
+    req.onerror = () => resolve();
   });
 }

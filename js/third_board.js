@@ -1,7 +1,7 @@
 // ===== 老三板数据模块 =====
-// 数据源: qt.gtimg.cn 实时行情 (OHLCV + 买卖盘 + 流通股本)
+// 行情: qt.gtimg.cn (OHLCV + 买卖盘)
+// 股本: 东方财富 RPT_F10_FINANCE_MAINFINADATA → 缓存 IndexedDB tb_shares_cache
 // 存储: IndexedDB third_board store, 保留 15 天
-// 定时: 交易日 15:40 自动采集
 
 const TB_STOCK_LIST = [
   "400002","400005","400008","400010","400012","400016","400018","400021","400022","400023",
@@ -31,18 +31,17 @@ const TB_STOCK_LIST = [
   "420140","420153","420178","420223","420244","420254","420273","420280",
 ];
 
-// ===== 实时行情采集 =====
-
 function _sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// 批量获取实时行情 (最多50只一批)
+// ===== 腾讯实时行情 (OHLCV + 买卖盘) =====
+
 async function fetchTBQuotesBatch(codes) {
   let cs = codes.map(c => 'nq' + c).join(',');
-  let url = 'https://qt.gtimg.cn/q=' + cs;
   try {
-    let resp = await fetch(url, { signal: AbortSignal.timeout(15000),
-      headers: { 'Referer': 'https://gu.qq.com/' } });
-    // 腾讯接口为 GBK 编码，用 TextDecoder 解码
+    let resp = await fetch('https://qt.gtimg.cn/q=' + cs, {
+      signal: AbortSignal.timeout(15000),
+      headers: { 'Referer': 'https://gu.qq.com/' }
+    });
     let buf = await resp.arrayBuffer();
     let text = new TextDecoder('gbk').decode(buf);
     let result = {};
@@ -54,40 +53,23 @@ async function fetchTBQuotesBatch(codes) {
       let parts = line.split('"')[1];
       if (!parts) continue;
       let f = parts.split('~');
-      if (f.length < 73) continue;
+      if (f.length < 38) continue;
 
       let name = (f[1] || '').trim();
       let close = parseFloat(f[3]) || 0;
       let prevClose = parseFloat(f[4]) || 0;
       let open = parseFloat(f[5]) || 0;
-      let volume = parseInt(f[6]) || 0;           // 成交量（手）
+      let volume = parseInt(f[6]) || 0;
       let high = parseFloat(f[33]) || close || 0;
       let low = parseFloat(f[34]) || close || 0;
-      // 成交额 = 量(手) × 100(股/手) × 收盘价
       let amount = volume ? parseFloat((volume * 100 * close).toFixed(2)) : 0;
-      // 流通股本：f[72] = 流通股数
-      let circulateShares = parseInt(f[72]) || 0;
-      // 总股本：f[73] = 总股本（紧跟在流通股之后）
-      let totalShares = parseInt(f[73]) || 0;
 
-      // 买盘5档
-      let buyVol = 0;
-      for (let v = 0; v < 5; v++) {
-        let idx = 10 + v * 2;
-        buyVol += (parseInt(f[idx]) || 0);
-      }
-      // 卖盘5档
-      let sellVol = 0;
-      for (let v = 0; v < 5; v++) {
-        let idx = 20 + v * 2;
-        sellVol += (parseInt(f[idx]) || 0);
-      }
+      let buyVol = 0, sellVol = 0;
+      for (let v = 0; v < 5; v++) { buyVol += (parseInt(f[10 + v*2]) || 0); }
+      for (let v = 0; v < 5; v++) { sellVol += (parseInt(f[20 + v*2]) || 0); }
 
       let changePct = prevClose > 0 ? parseFloat(((close - prevClose) / prevClose * 100).toFixed(2)) : 0;
-      let mktcapFloat = circulateShares > 0 ? parseFloat((close * circulateShares).toFixed(2)) : 0;
-      let mktcapTotal = totalShares > 0 ? parseFloat((close * totalShares).toFixed(2)) : 0;
 
-      // 从 API 解析实际交易日期 (f[30] = YYYYMMDDHHMMSS)
       let tradeDate = '';
       if (f[30] && f[30].length >= 8) {
         let td = f[30];
@@ -96,17 +78,73 @@ async function fetchTBQuotesBatch(codes) {
 
       result[code] = { code, name, open, high, low, close, volume, amount,
         change_pct: changePct, buy_vol: buyVol, sell_vol: sellVol,
-        mktcap_float: mktcapFloat, mktcap_total: mktcapTotal,
-        _tradeDate: tradeDate };
+        mktcap_float: 0, mktcap_total: 0, _tradeDate: tradeDate };
     }
     return result;
-  } catch(e) {
-    console.log('实时行情批量获取失败:', e.message);
-    return {};
-  }
+  } catch(e) { console.log('行情批量获取失败:', e.message); return {}; }
 }
 
-// 获取最新交易日行情（周末/节假日自动获取最近交易日）
+// ===== 东方财富股本 =====
+
+async function fetchEastMoneyShares(code) {
+  try {
+    let url = 'https://datacenter-web.eastmoney.com/api/data/v1/get' +
+      '?reportName=RPT_F10_FINANCE_MAINFINADATA' +
+      '&columns=SECURITY_CODE,A_FREE_SHARE,TOTAL_SHARE' +
+      '&pageSize=1&sortColumns=REPORT_DATE&sortTypes=-1' +
+      '&filter=(SECURITY_CODE=%22' + code + '%22)';
+    let resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    let data = await resp.json();
+    let items = data && data.result && data.result.data;
+    if (items && items[0]) {
+      let freeS = parseFloat(items[0].A_FREE_SHARE) || 0;
+      let totalS = parseFloat(items[0].TOTAL_SHARE) || 0;
+      if (freeS > 0 || totalS > 0) return { free_shares: Math.round(freeS), total_shares: Math.round(totalS) };
+    }
+    return null;
+  } catch(e) { return null; }
+}
+
+// 预加载所有需要的股本数据（缓存优先，缺失的逐个拉取）
+async function ensureSharesCache() {
+  let missing = [];
+  for (let code of TB_STOCK_LIST) {
+    let cached = await getCachedShares(code);
+    if (!cached || !cached.free_shares) { missing.push(code); }
+  }
+  if (!missing.length) { console.log('股本缓存完整:', TB_STOCK_LIST.length, '只'); return; }
+
+  console.log('股本缓存缺失:', missing.length, '只，从东方财富拉取...');
+  let fetched = 0;
+  for (let code of missing) {
+    let shares = await fetchEastMoneyShares(code);
+    if (shares && (shares.free_shares > 0 || shares.total_shares > 0)) {
+      await saveCachedShares(code, shares.free_shares, shares.total_shares);
+      fetched++;
+    }
+    await _sleep(150);
+  }
+  console.log('股本拉取完成:', fetched, '/', missing.length);
+}
+
+// 用缓存股本计算市值
+async function applySharesToRows(rows) {
+  let applied = 0;
+  for (let r of rows) {
+    let cached = await getCachedShares(r.code);
+    if (cached && cached.free_shares > 0) {
+      r.mktcap_float = parseFloat((r.close * cached.free_shares).toFixed(2));
+      applied++;
+    }
+    if (cached && cached.total_shares > 0) {
+      r.mktcap_total = parseFloat((r.close * cached.total_shares).toFixed(2));
+    }
+  }
+  console.log('市值计算完成: 流通市值', applied, '/', rows.length);
+}
+
+// ===== 主采集流程 =====
+
 async function collectThirdBoardToday() {
   // 先采集一批确定实际交易日期
   let sample = await fetchTBQuotesBatch(TB_STOCK_LIST.slice(0, 10));
@@ -114,37 +152,38 @@ async function collectThirdBoardToday() {
   for (let k in sample) {
     if (sample[k]._tradeDate) { tradeDate = sample[k]._tradeDate; break; }
   }
-  if (!tradeDate) {
-    // 兜底：用今天
-    tradeDate = new Date().toISOString().slice(0, 10);
-  }
+  if (!tradeDate) tradeDate = new Date().toISOString().slice(0, 10);
 
-  // 已存在的检查（按实际交易日期查）
   let existing = await getThirdBoardByDate(tradeDate);
   if (existing.length >= 100) {
-    console.log('老三板', tradeDate, '数据已存在:', existing.length, '条，跳过');
+    console.log('老三板', tradeDate, '已存在:', existing.length, '条，跳过');
     return { success: true, reason: 'already', count: existing.length, date: tradeDate };
   }
 
-  console.log('开始采集老三板行情，实际交易日期:', tradeDate);
+  console.log('老三板采集开始:', tradeDate);
   let start = Date.now();
   let all = { ...sample };
 
-  let batchSize = 50;
-  for (let i = 10; i < TB_STOCK_LIST.length; i += batchSize) {
-    let batch = TB_STOCK_LIST.slice(i, i + batchSize);
-    let result = await fetchTBQuotesBatch(batch);
-    Object.assign(all, result);
-    console.log('  进度:', Object.keys(all).length, '/', TB_STOCK_LIST.length);
-    if (i + batchSize < TB_STOCK_LIST.length) await _sleep(400);
-  }
+  // 1) 拉取行情（与股本拉取并行）
+  let quotePromise = (async () => {
+    for (let i = 10; i < TB_STOCK_LIST.length; i += 50) {
+      let batch = TB_STOCK_LIST.slice(i, i + 50);
+      let result = await fetchTBQuotesBatch(batch);
+      Object.assign(all, result);
+      console.log('  行情进度:', Object.keys(all).length, '/', TB_STOCK_LIST.length);
+      if (i + 50 < TB_STOCK_LIST.length) await _sleep(400);
+    }
+  })();
 
-  // 过滤无效行
+  let sharesPromise = ensureSharesCache();
+
+  await Promise.all([quotePromise, sharesPromise]);
+
+  // 3) 组装行
   let rows = [];
   for (let code of TB_STOCK_LIST) {
     let r = all[code];
-    if (!r) continue;
-    if (r.open === 0 && r.high === 0 && r.low === 0) continue; // 未交易
+    if (!r || (r.open === 0 && r.high === 0 && r.low === 0)) continue;
     r.date = tradeDate;
     r.id = tradeDate + '_' + code;
     delete r._tradeDate;
@@ -152,50 +191,39 @@ async function collectThirdBoardToday() {
   }
   rows.sort((a, b) => a.code.localeCompare(b.code));
 
-  if (rows.length > 0) {
-    await saveThirdBoardRows(rows);
-  }
+  // 4) 计算市值
+  await applySharesToRows(rows);
+
+  // 5) 存库
+  if (rows.length > 0) await saveThirdBoardRows(rows);
 
   let elapsed = ((Date.now() - start) / 1000).toFixed(1);
-  console.log('老三板采集完成:', rows.length, '只, 实际日期:', tradeDate, ', 耗时:', elapsed, 's');
+  console.log('老三板采集完成:', rows.length, '只, 日期:', tradeDate, ', 耗时:', elapsed, 's');
 
   await clearThirdBoardBefore(15);
-
   return { success: true, count: rows.length, date: tradeDate, elapsed };
 }
 
-// ===== 初始化 & 增量  =====
+// ===== 初始化 =====
 
 async function initThirdBoardData() {
-  let existingDates = await getThirdBoardAvailableDates();
-  console.log('老三板数据库已有:', existingDates.length, '天');
+  let dates = await getThirdBoardAvailableDates();
+  console.log('老三板数据库已有:', dates.length, '天');
 
-  // 始终尝试采集（周末自动获取最近交易日数据）
   let result = await collectThirdBoardToday();
-  if (result.success && result.date && !existingDates.includes(result.date)) {
-    existingDates = await getThirdBoardAvailableDates();
+  if (result.success && result.date && !dates.includes(result.date)) {
+    dates = await getThirdBoardAvailableDates();
   }
-
   await clearThirdBoardBefore(15);
-
-  return existingDates;
+  return dates;
 }
 
 // ===== API接口 =====
 
-async function apiThirdBoardByDate(dateStr) {
-  return await getThirdBoardByDate(dateStr);
-}
+async function apiThirdBoardByDate(dateStr) { return await getThirdBoardByDate(dateStr); }
+async function apiThirdBoardByCode(code) { return await getThirdBoardByCode(code); }
+async function apiThirdBoardDates() { return await getThirdBoardAvailableDates(); }
 
-async function apiThirdBoardByCode(code) {
-  return await getThirdBoardByCode(code);
-}
-
-async function apiThirdBoardDates() {
-  return await getThirdBoardAvailableDates();
-}
-
-// CSV导出（按日期）
 async function exportThirdBoardCSV(dateStr) {
   let rows = await getThirdBoardByDate(dateStr);
   if (!rows.length) return null;
@@ -209,7 +237,6 @@ async function exportThirdBoardCSV(dateStr) {
   return csv;
 }
 
-// 全文导出（所有日期）
 async function exportThirdBoardAllCSV() {
   let records = await getThirdBoardAllRecords();
   let headers = ['日期','代码','名称','开盘','最高','最低','收盘','成交量(手)','成交额(元)','涨跌幅(%)','买量(手)','卖量(手)','流通市值(元)','总市值(元)'];
