@@ -43,26 +43,38 @@ async function initApp() {
 
 // ===== 定时检查 =====
 let lastCheckedMinute = null;
+let lastTBCollectedDate = null;
 
 function startScheduledCheck() {
-  // 每分钟检查一次
   setInterval(async () => {
+    let now = new Date();
+    let currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+
+    // --- 老三板独立采集：每日 15:40（周一至周五）---
+    if (currentTime === '15:40' && lastTBCollectedDate !== now.toISOString().slice(0,10)) {
+      let dw = now.getDay();
+      if (dw >= 1 && dw <= 5) {
+        lastTBCollectedDate = now.toISOString().slice(0,10);
+        console.log('老三板定时采集触发: 15:40');
+        collectThirdBoardToday().then(r => console.log('老三板采集结果:', r));
+        // 同时刷新大盘数据
+        initMarketData().catch(e => {});
+      }
+    }
+
+    // --- 原有的用户自定义定时推送 ---
     if (!appSettings) return;
-    
     let times = [];
     try { times = JSON.parse(appSettings.schedule_times || '[]'); } catch(e) { times = []; }
     if (times.length === 0) return;
-    
-    let now = new Date();
-    let currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-    
+
     // 避免同一分钟重复检查
     if (currentTime === lastCheckedMinute) return;
     lastCheckedMinute = currentTime;
-    
+
     // 检查是否匹配设定的时间
     if (!times.includes(currentTime)) return;
-    
+
     console.log('定时检查触发:', currentTime);
     await runScheduledCheck();
   }, 30000); // 每30秒检查一次，确保不会错过整点
