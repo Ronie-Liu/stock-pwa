@@ -90,15 +90,17 @@ async function fetchEastMoneyShares(code) {
   try {
     let url = 'https://datacenter-web.eastmoney.com/api/data/v1/get' +
       '?reportName=RPT_F10_FINANCE_MAINFINADATA' +
-      '&columns=SECURITY_CODE,A_FREE_SHARE,TOTAL_SHARE' +
+      '&columns=SECURITY_CODE,A_FREE_SHARE,B_FREE_SHARE,TOTAL_SHARE' +
       '&pageSize=1&sortColumns=REPORT_DATE&sortTypes=-1' +
       '&filter=(SECURITY_CODE=%22' + code + '%22)';
     let resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
     let data = await resp.json();
     let items = data && data.result && data.result.data;
     if (items && items[0]) {
-      let freeS = parseFloat(items[0].A_FREE_SHARE) || 0;
+      let aFree = parseFloat(items[0].A_FREE_SHARE) || 0;
+      let bFree = parseFloat(items[0].B_FREE_SHARE) || 0;
       let totalS = parseFloat(items[0].TOTAL_SHARE) || 0;
+      let freeS = aFree + bFree; // 流通股本 = A股流通 + B股流通
       if (freeS > 0 || totalS > 0) return { free_shares: Math.round(freeS), total_shares: Math.round(totalS) };
     }
     return null;
@@ -127,23 +129,23 @@ async function ensureSharesCache() {
   console.log('股本拉取完成:', fetched, '/', missing.length);
 }
 
-// 用缓存股本计算市值（老三板退市股：流通股本 = TOTAL_SHARE，无限售股）
+// 用缓存股本计算市值
+// 流通市值 = 收盘价 × (A_FREE_SHARE + B_FREE_SHARE)
+// 总市值   = 收盘价 × TOTAL_SHARE
 async function applySharesToRows(rows) {
   let appliedFloat = 0, appliedTotal = 0;
   for (let r of rows) {
     let cached = await getCachedShares(r.code);
-    if (cached && cached.total_shares > 0) {
-      r.mktcap_float = parseFloat((r.close * cached.total_shares).toFixed(2));
-      r.mktcap_total = parseFloat((r.close * cached.total_shares).toFixed(2));
-      appliedTotal++;
-    } else if (cached && cached.free_shares > 0) {
-      // 兜底：只有 A_FREE_SHARE 的情况
+    if (cached && cached.free_shares > 0) {
       r.mktcap_float = parseFloat((r.close * cached.free_shares).toFixed(2));
-      r.mktcap_total = parseFloat((r.close * cached.free_shares).toFixed(2));
       appliedFloat++;
     }
+    if (cached && cached.total_shares > 0) {
+      r.mktcap_total = parseFloat((r.close * cached.total_shares).toFixed(2));
+      appliedTotal++;
+    }
   }
-  console.log('市值计算完成: 流通/总市值', appliedTotal, '/', rows.length);
+  console.log('市值计算: 流通' + appliedFloat + ' 总' + appliedTotal + ' /', rows.length);
 }
 
 // ===== 主采集流程 =====
