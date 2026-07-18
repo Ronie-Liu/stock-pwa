@@ -1,0 +1,9 @@
+{
+  "name": "tb-collect-cloud",
+  "version": "1.0.0",
+  "description": "老三板云端采集 - 腾讯云函数",
+  "main": "collect_tb_cloud.js",
+  "dependencies": {
+    "iconv-lite": "^0.6.3"
+  }
+}

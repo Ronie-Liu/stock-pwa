@@ -211,14 +211,51 @@ async function collectThirdBoardToday() {
 
 // ===== 初始化 =====
 
+const TB_JSON_BASE = 'https://raw.githubusercontent.com/Ronie-Liu/stock-pwa/main/data/third_board_json';
+
+// 从 GitHub Pages 加载云函数已采集的历史 JSON（兜底用）
+async function loadCloudJson(dateStr) {
+  let url = TB_JSON_BASE + '/' + dateStr + '.json';
+  try {
+    let resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!resp.ok) return null;
+    let json = await resp.json();
+    if (json && json.data && json.data.length > 0) {
+      let rows = json.data.map(r => ({
+        ...r,
+        date: dateStr,
+        id: dateStr + '_' + r.code
+      }));
+      await saveThirdBoardRows(rows);
+      console.log('云端JSON加载:', dateStr, rows.length, '条');
+      return rows.length;
+    }
+    return null;
+  } catch(e) { return null; }
+}
+
 async function initThirdBoardData() {
   let dates = await getThirdBoardAvailableDates();
   console.log('老三板数据库已有:', dates.length, '天');
 
+  // 方案 A：浏览器内实时采集（主要通道）
   let result = await collectThirdBoardToday();
   if (result.success && result.date && !dates.includes(result.date)) {
     dates = await getThirdBoardAvailableDates();
   }
+
+  // 方案 B：从云端 JSON 加载缺失的历史日期（兜底通道）
+  let today = new Date().toISOString().slice(0, 10);
+  for (let i = 1; i <= 15; i++) {
+    let d = new Date();
+    d.setDate(d.getDate() - i);
+    let ds = d.toISOString().slice(0, 10);
+    if (ds === today) continue; // 已经由方案A处理过
+    if (dates.includes(ds)) continue; // 已有
+    let loaded = await loadCloudJson(ds);
+    if (loaded) dates = await getThirdBoardAvailableDates();
+  }
+
   await clearThirdBoardBefore(15);
   return dates;
 }
