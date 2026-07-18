@@ -2,7 +2,7 @@
 // 本地存储：stocks表、app_settings表、task_logs表
 
 const DB_NAME = 'StockMonitorDB';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const STOCKS_STORE = 'stocks';
 const SETTINGS_STORE = 'app_settings';
 const LOGS_STORE = 'task_logs';
@@ -37,12 +37,13 @@ function openDB() {
         let mktStore = database.createObjectStore(MARKET_STORE, { keyPath: 'date' });
         mktStore.createIndex('date_idx', 'date', { unique: true });
       }
-      // third_board 表（老三板每日行情，复合主键 date+code）
-      if (!database.objectStoreNames.contains(THIRD_BOARD_STORE)) {
-        let tbStore = database.createObjectStore(THIRD_BOARD_STORE, { keyPath: 'id' });
-        tbStore.createIndex('date_idx', 'date', { unique: false });
-        tbStore.createIndex('code_idx', 'code', { unique: false });
+      // third_board 表（迁移：v4清空旧CSV数据重新在线采集）
+      if (database.objectStoreNames.contains(THIRD_BOARD_STORE)) {
+        database.deleteObjectStore(THIRD_BOARD_STORE);
       }
+      let tbStore = database.createObjectStore(THIRD_BOARD_STORE, { keyPath: 'id' });
+      tbStore.createIndex('date_idx', 'date', { unique: false });
+      tbStore.createIndex('code_idx', 'code', { unique: false });
     };
     request.onsuccess = (e) => {
       db = e.target.result;
