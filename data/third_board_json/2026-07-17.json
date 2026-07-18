@@ -14,8 +14,8 @@
       "change_pct": -4.71,
       "buy_vol": 47,
       "sell_vol": 101,
-      "mktcap_float": 85343500,
-      "mktcap_total": 159376122.18
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400005",
@@ -29,8 +29,8 @@
       "change_pct": -3.57,
       "buy_vol": 0,
       "sell_vol": 7673,
-      "mktcap_float": 51172862.4,
-      "mktcap_total": 121856486.4
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400008",
@@ -44,8 +44,8 @@
       "change_pct": 0,
       "buy_vol": 23,
       "sell_vol": 254,
-      "mktcap_float": 172191571.2,
-      "mktcap_total": 319141350
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400010",
@@ -59,8 +59,8 @@
       "change_pct": 0,
       "buy_vol": 30,
       "sell_vol": 322,
-      "mktcap_float": 22666500,
-      "mktcap_total": 98550000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400012",
@@ -74,8 +74,8 @@
       "change_pct": 0,
       "buy_vol": 7,
       "sell_vol": 1701,
-      "mktcap_float": 84909624.4,
-      "mktcap_total": 91752696.87
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400016",
@@ -89,8 +89,8 @@
       "change_pct": -3.03,
       "buy_vol": 0,
       "sell_vol": 21029,
-      "mktcap_float": 126836608.64,
-      "mktcap_total": 128038491.52
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400018",
@@ -104,8 +104,8 @@
       "change_pct": 1.27,
       "buy_vol": 2,
       "sell_vol": 361,
-      "mktcap_float": 26520000,
-      "mktcap_total": 91480209.6
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400021",
@@ -119,8 +119,8 @@
       "change_pct": -4.48,
       "buy_vol": 0,
       "sell_vol": 153,
-      "mktcap_float": 235238400,
-      "mktcap_total": 235238400
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400022",
@@ -134,8 +134,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 544443889.08,
-      "mktcap_total": 857337946.92
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400023",
@@ -149,8 +149,8 @@
       "change_pct": 2.94,
       "buy_vol": 1684,
       "sell_vol": 0,
-      "mktcap_float": 129127896.8,
-      "mktcap_total": 139551344.8
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400025",
@@ -164,8 +164,8 @@
       "change_pct": -2.56,
       "buy_vol": 0,
       "sell_vol": 372,
-      "mktcap_float": 42286400,
-      "mktcap_total": 42286400
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400027",
@@ -179,8 +179,8 @@
       "change_pct": -3.13,
       "buy_vol": 0,
       "sell_vol": 7038,
-      "mktcap_float": 138258530.6,
-      "mktcap_total": 138272157.58
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400028",
@@ -194,8 +194,8 @@
       "change_pct": -3.45,
       "buy_vol": 0,
       "sell_vol": 11497,
-      "mktcap_float": 81578257.6,
-      "mktcap_total": 85923068.56
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400029",
@@ -209,8 +209,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 229935177,
-      "mktcap_total": 717731763
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400030",
@@ -224,8 +224,8 @@
       "change_pct": -1.28,
       "buy_vol": 24284,
       "sell_vol": 16099,
-      "mktcap_float": 754589290.84,
-      "mktcap_total": 1026782892.52
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400031",
@@ -239,8 +239,8 @@
       "change_pct": 8.33,
       "buy_vol": 15620,
       "sell_vol": 0,
-      "mktcap_float": 70218367.05,
-      "mktcap_total": 73113988.87
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400033",
@@ -254,8 +254,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 181521319.98,
-      "mktcap_total": 280948107.44
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400035",
@@ -269,8 +269,8 @@
       "change_pct": 0,
       "buy_vol": 2613,
       "sell_vol": 49160,
-      "mktcap_float": 131900820.44,
-      "mktcap_total": 149427123.81
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400036",
@@ -284,8 +284,8 @@
       "change_pct": -3.23,
       "buy_vol": 0,
       "sell_vol": 17802,
-      "mktcap_float": 102446773.5,
-      "mktcap_total": 111423770.1
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400039",
@@ -299,8 +299,8 @@
       "change_pct": 0,
       "buy_vol": 18951,
       "sell_vol": 525,
-      "mktcap_float": 55910400,
-      "mktcap_total": 96309367.98
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400040",
@@ -314,8 +314,8 @@
       "change_pct": -1.96,
       "buy_vol": 15,
       "sell_vol": 18518,
-      "mktcap_float": 28154301,
-      "mktcap_total": 82154301
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400041",
@@ -329,8 +329,8 @@
       "change_pct": -2.86,
       "buy_vol": 0,
       "sell_vol": 4784,
-      "mktcap_float": 52935037.92,
-      "mktcap_total": 98905336.32
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400045",
@@ -344,8 +344,8 @@
       "change_pct": 0,
       "buy_vol": 9317,
       "sell_vol": 48462,
-      "mktcap_float": 109131084.92,
-      "mktcap_total": 110854224.26
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400046",
@@ -359,8 +359,8 @@
       "change_pct": -4.35,
       "buy_vol": 249,
       "sell_vol": 17032,
-      "mktcap_float": 110209415.8,
-      "mktcap_total": 180972000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400050",
@@ -374,8 +374,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 356555111.39,
-      "mktcap_total": 848488152.93
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400051",
@@ -389,8 +389,8 @@
       "change_pct": -3.7,
       "buy_vol": 0,
       "sell_vol": 1309,
-      "mktcap_float": 34605792,
-      "mktcap_total": 67911012
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400053",
@@ -404,8 +404,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 391,
-      "mktcap_float": 66409592,
-      "mktcap_total": 143778978.4
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400055",
@@ -419,8 +419,8 @@
       "change_pct": 4.35,
       "buy_vol": 4322,
       "sell_vol": 0,
-      "mktcap_float": 125765292.48,
-      "mktcap_total": 190605600
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400057",
@@ -434,8 +434,8 @@
       "change_pct": -2.63,
       "buy_vol": 226,
       "sell_vol": 5877,
-      "mktcap_float": 112426337.79,
-      "mktcap_total": 239763476.89
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400059",
@@ -449,8 +449,8 @@
       "change_pct": -3.52,
       "buy_vol": 2110,
       "sell_vol": 579,
-      "mktcap_float": 2571429565.19,
-      "mktcap_total": 2582063661.37
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400065",
@@ -464,8 +464,8 @@
       "change_pct": 0,
       "buy_vol": 1803,
       "sell_vol": 33602,
-      "mktcap_float": 201299927.04,
-      "mktcap_total": 258072953.04
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400066",
@@ -479,8 +479,8 @@
       "change_pct": 0,
       "buy_vol": 82,
       "sell_vol": 9740,
-      "mktcap_float": 64458005.25,
-      "mktcap_total": 64458005.25
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400067",
@@ -494,8 +494,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 112940620.8,
-      "mktcap_total": 192144084.16
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400068",
@@ -509,8 +509,8 @@
       "change_pct": 1.69,
       "buy_vol": 28,
       "sell_vol": 3719,
-      "mktcap_float": 1058364462,
-      "mktcap_total": 1058364462
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400069",
@@ -524,8 +524,8 @@
       "change_pct": -4.88,
       "buy_vol": 0,
       "sell_vol": 1304,
-      "mktcap_float": 2899318967.7,
-      "mktcap_total": 2899318967.7
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400070",
@@ -539,8 +539,8 @@
       "change_pct": 0,
       "buy_vol": 14415,
       "sell_vol": 37120,
-      "mktcap_float": 127030993.21,
-      "mktcap_total": 127031521.21
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400071",
@@ -554,8 +554,8 @@
       "change_pct": -6.67,
       "buy_vol": 0,
       "sell_vol": 332515,
-      "mktcap_float": 1053817530.08,
-      "mktcap_total": 1174684167.86
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400072",
@@ -569,8 +569,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 9358114941.12,
-      "mktcap_total": 16944313359.12
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400073",
@@ -584,8 +584,8 @@
       "change_pct": -4.42,
       "buy_vol": 68,
       "sell_vol": 436,
-      "mktcap_float": 1819392604.12,
-      "mktcap_total": 1819392604.12
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400078",
@@ -599,8 +599,8 @@
       "change_pct": 0,
       "buy_vol": 36263,
       "sell_vol": 25170,
-      "mktcap_float": 66102987.93,
-      "mktcap_total": 102502987.93
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400080",
@@ -614,8 +614,8 @@
       "change_pct": 0,
       "buy_vol": 10539,
       "sell_vol": 29367,
-      "mktcap_float": 128182824,
-      "mktcap_total": 128182824
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400081",
@@ -629,8 +629,8 @@
       "change_pct": -12.5,
       "buy_vol": 8773,
       "sell_vol": 28840,
-      "mktcap_float": 71823719.24,
-      "mktcap_total": 170652023.43
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400082",
@@ -644,8 +644,8 @@
       "change_pct": -2.22,
       "buy_vol": 60536,
       "sell_vol": 15890,
-      "mktcap_float": 2652745755,
-      "mktcap_total": 2653464000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400083",
@@ -659,8 +659,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 197317937.19,
-      "mktcap_total": 197855262.66
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400084",
@@ -674,8 +674,8 @@
       "change_pct": -6.67,
       "buy_vol": 0,
       "sell_vol": 61461,
-      "mktcap_float": 490360157,
-      "mktcap_total": 558521626.88
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400088",
@@ -689,8 +689,8 @@
       "change_pct": 0,
       "buy_vol": 75996,
       "sell_vol": 93058,
-      "mktcap_float": 260308275.4,
-      "mktcap_total": 357648877.3
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400089",
@@ -704,8 +704,8 @@
       "change_pct": -2,
       "buy_vol": 12270,
       "sell_vol": 11542,
-      "mktcap_float": 1720745515.58,
-      "mktcap_total": 1720745515.58
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400093",
@@ -719,8 +719,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 319118201.6,
-      "mktcap_total": 397578412
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400094",
@@ -734,8 +734,8 @@
       "change_pct": -4.55,
       "buy_vol": 22895,
       "sell_vol": 34493,
-      "mktcap_float": 364622921.67,
-      "mktcap_total": 364622924.82
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400095",
@@ -749,8 +749,8 @@
       "change_pct": 16.67,
       "buy_vol": 16507,
       "sell_vol": 60231,
-      "mktcap_float": 219187653.79,
-      "mktcap_total": 219461174.1
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400096",
@@ -764,8 +764,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 1207674428.1,
-      "mktcap_total": 1500123079.8
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400097",
@@ -779,8 +779,8 @@
       "change_pct": -3.13,
       "buy_vol": 0,
       "sell_vol": 50684,
-      "mktcap_float": 461501744.24,
-      "mktcap_total": 461501744.24
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400098",
@@ -794,8 +794,8 @@
       "change_pct": -1.18,
       "buy_vol": 77,
       "sell_vol": 2372,
-      "mktcap_float": 2859840009.18,
-      "mktcap_total": 4386170595.62
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400099",
@@ -809,8 +809,8 @@
       "change_pct": 0,
       "buy_vol": 6221,
       "sell_vol": 8123,
-      "mktcap_float": 109551001.2,
-      "mktcap_total": 148287000.4
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400100",
@@ -824,8 +824,8 @@
       "change_pct": -3.64,
       "buy_vol": 0,
       "sell_vol": 25282,
-      "mktcap_float": 1506701936.79,
-      "mktcap_total": 2037890317.1
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400101",
@@ -839,8 +839,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 146470639.38,
-      "mktcap_total": 234682605.14
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400102",
@@ -854,8 +854,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 3956878651.54,
-      "mktcap_total": 4319898344.04
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400104",
@@ -869,8 +869,8 @@
       "change_pct": 14.29,
       "buy_vol": 63415,
       "sell_vol": 45368,
-      "mktcap_float": 84547601.28,
-      "mktcap_total": 108000000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400107",
@@ -884,8 +884,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 496216931.82,
-      "mktcap_total": 496353088
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400108",
@@ -899,8 +899,8 @@
       "change_pct": 0,
       "buy_vol": 29843,
       "sell_vol": 13011,
-      "mktcap_float": 122694163.06,
-      "mktcap_total": 122694163.06
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400110",
@@ -914,8 +914,8 @@
       "change_pct": -1.96,
       "buy_vol": 54,
       "sell_vol": 3622,
-      "mktcap_float": 607610592,
-      "mktcap_total": 775733475.5
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400113",
@@ -929,8 +929,8 @@
       "change_pct": 0,
       "buy_vol": 705,
       "sell_vol": 11302,
-      "mktcap_float": 38984070.72,
-      "mktcap_total": 39211244.88
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400114",
@@ -944,8 +944,8 @@
       "change_pct": -4.55,
       "buy_vol": 3790,
       "sell_vol": 6712,
-      "mktcap_float": 127978405.38,
-      "mktcap_total": 183407700
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400116",
@@ -959,8 +959,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 382859689.2,
-      "mktcap_total": 1462573880.4
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400117",
@@ -974,8 +974,8 @@
       "change_pct": 0,
       "buy_vol": 17114,
       "sell_vol": 9372,
-      "mktcap_float": 21006825,
-      "mktcap_total": 21010500
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400118",
@@ -989,8 +989,8 @@
       "change_pct": -9.09,
       "buy_vol": 42589,
       "sell_vol": 21113,
-      "mktcap_float": 140178038.3,
-      "mktcap_total": 184489623.1
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400119",
@@ -1004,8 +1004,8 @@
       "change_pct": -0.99,
       "buy_vol": 1151,
       "sell_vol": 9808,
-      "mktcap_float": 1093064378,
-      "mktcap_total": 1093064378
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400120",
@@ -1019,8 +1019,8 @@
       "change_pct": 0,
       "buy_vol": 551,
       "sell_vol": 9208,
-      "mktcap_float": 210008211.3,
-      "mktcap_total": 210008211.3
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400121",
@@ -1034,8 +1034,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 299563963.38,
-      "mktcap_total": 300663963.38
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400122",
@@ -1049,8 +1049,8 @@
       "change_pct": -3.52,
       "buy_vol": 569,
       "sell_vol": 889,
-      "mktcap_float": 1483882623.06,
-      "mktcap_total": 1823620660.62
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400123",
@@ -1064,8 +1064,8 @@
       "change_pct": -5,
       "buy_vol": 0,
       "sell_vol": 6479,
-      "mktcap_float": 96679075.22,
-      "mktcap_total": 96679075.22
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400124",
@@ -1079,8 +1079,8 @@
       "change_pct": 0,
       "buy_vol": 1889,
       "sell_vol": 3523,
-      "mktcap_float": 104255086.5,
-      "mktcap_total": 104255086.5
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400125",
@@ -1094,8 +1094,8 @@
       "change_pct": 0,
       "buy_vol": 985,
       "sell_vol": 2624,
-      "mktcap_float": 323681826.76,
-      "mktcap_total": 323685267.76
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400126",
@@ -1109,8 +1109,8 @@
       "change_pct": 0,
       "buy_vol": 860,
       "sell_vol": 11527,
-      "mktcap_float": 96709697.04,
-      "mktcap_total": 168563859.64
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400127",
@@ -1124,8 +1124,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 76376778.4,
-      "mktcap_total": 80146078.09
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400128",
@@ -1139,8 +1139,8 @@
       "change_pct": -1.75,
       "buy_vol": 222,
       "sell_vol": 1055,
-      "mktcap_float": 239991529.12,
-      "mktcap_total": 245846254.64
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400129",
@@ -1154,8 +1154,8 @@
       "change_pct": 0,
       "buy_vol": 942,
       "sell_vol": 5856,
-      "mktcap_float": 25600000,
-      "mktcap_total": 25600000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400130",
@@ -1169,8 +1169,8 @@
       "change_pct": -4.35,
       "buy_vol": 0,
       "sell_vol": 12618,
-      "mktcap_float": 119382210.2,
-      "mktcap_total": 402176811.3
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400131",
@@ -1184,8 +1184,8 @@
       "change_pct": -1.33,
       "buy_vol": 1639,
       "sell_vol": 9352,
-      "mktcap_float": 811360134.36,
-      "mktcap_total": 1458363905.16
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400132",
@@ -1199,8 +1199,8 @@
       "change_pct": 0,
       "buy_vol": 8823,
       "sell_vol": 14084,
-      "mktcap_float": 73794039.84,
-      "mktcap_total": 179591600
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400133",
@@ -1214,8 +1214,8 @@
       "change_pct": 3.57,
       "buy_vol": 21135,
       "sell_vol": 0,
-      "mktcap_float": 148062284.58,
-      "mktcap_total": 158896800
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400134",
@@ -1229,8 +1229,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 1040860286.54,
-      "mktcap_total": 1742702109.68
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400135",
@@ -1244,8 +1244,8 @@
       "change_pct": 0,
       "buy_vol": 6047,
       "sell_vol": 27529,
-      "mktcap_float": 46961494.92,
-      "mktcap_total": 46961494.92
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400136",
@@ -1259,8 +1259,8 @@
       "change_pct": 1.67,
       "buy_vol": 0,
       "sell_vol": 8466,
-      "mktcap_float": 319151795.65,
-      "mktcap_total": 319151795.65
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400137",
@@ -1274,8 +1274,8 @@
       "change_pct": 0,
       "buy_vol": 2700,
       "sell_vol": 34845,
-      "mktcap_float": 37597600,
-      "mktcap_total": 37597600
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400138",
@@ -1289,8 +1289,8 @@
       "change_pct": 0,
       "buy_vol": 970,
       "sell_vol": 1059,
-      "mktcap_float": 109523280.6,
-      "mktcap_total": 110891764.2
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400139",
@@ -1304,8 +1304,8 @@
       "change_pct": -14.29,
       "buy_vol": 75613,
       "sell_vol": 218330,
-      "mktcap_float": 85631580,
-      "mktcap_total": 85631580
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400140",
@@ -1319,8 +1319,8 @@
       "change_pct": 0,
       "buy_vol": 2634,
       "sell_vol": 2303,
-      "mktcap_float": 249709460,
-      "mktcap_total": 254870000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400141",
@@ -1334,8 +1334,8 @@
       "change_pct": 0,
       "buy_vol": 9701,
       "sell_vol": 67777,
-      "mktcap_float": 81459508.41,
-      "mktcap_total": 82027898.61
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400142",
@@ -1349,8 +1349,8 @@
       "change_pct": -2.67,
       "buy_vol": 391,
       "sell_vol": 950,
-      "mktcap_float": 188882572.5,
-      "mktcap_total": 230757945.75
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400143",
@@ -1364,8 +1364,8 @@
       "change_pct": -4.44,
       "buy_vol": 0,
       "sell_vol": 10227,
-      "mktcap_float": 266122817.82,
-      "mktcap_total": 1170100620.62
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400144",
@@ -1379,8 +1379,8 @@
       "change_pct": 0,
       "buy_vol": 2357,
       "sell_vol": 10515,
-      "mktcap_float": 119303804.75,
-      "mktcap_total": 141843597.25
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400145",
@@ -1394,8 +1394,8 @@
       "change_pct": 0,
       "buy_vol": 7436,
       "sell_vol": 44002,
-      "mktcap_float": 191011139.52,
-      "mktcap_total": 191323602.56
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400146",
@@ -1409,8 +1409,8 @@
       "change_pct": -2.94,
       "buy_vol": 0,
       "sell_vol": 12741,
-      "mktcap_float": 125739794.4,
-      "mktcap_total": 181336320
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400147",
@@ -1424,8 +1424,8 @@
       "change_pct": -3.03,
       "buy_vol": 0,
       "sell_vol": 42346,
-      "mktcap_float": 319365661.76,
-      "mktcap_total": 412673314.56
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400148",
@@ -1439,8 +1439,8 @@
       "change_pct": 12.5,
       "buy_vol": 23422,
       "sell_vol": 0,
-      "mktcap_float": 21518541.09,
-      "mktcap_total": 28803600
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400149",
@@ -1454,8 +1454,8 @@
       "change_pct": 0,
       "buy_vol": 389,
       "sell_vol": 6000,
-      "mktcap_float": 87383217.32,
-      "mktcap_total": 87383217.32
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400150",
@@ -1469,8 +1469,8 @@
       "change_pct": 0,
       "buy_vol": 16239,
       "sell_vol": 13571,
-      "mktcap_float": 138961881.1,
-      "mktcap_total": 143966294.5
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400151",
@@ -1484,8 +1484,8 @@
       "change_pct": -2.04,
       "buy_vol": 570,
       "sell_vol": 372,
-      "mktcap_float": 308889836.16,
-      "mktcap_total": 308949141.12
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400152",
@@ -1499,8 +1499,8 @@
       "change_pct": -9.09,
       "buy_vol": 3253,
       "sell_vol": 5684,
-      "mktcap_float": 33644160,
-      "mktcap_total": 33644160
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400153",
@@ -1514,8 +1514,8 @@
       "change_pct": -3.45,
       "buy_vol": 0,
       "sell_vol": 39287,
-      "mktcap_float": 364976850,
-      "mktcap_total": 364980000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400154",
@@ -1529,8 +1529,8 @@
       "change_pct": 0,
       "buy_vol": 18079,
       "sell_vol": 45763,
-      "mktcap_float": 58212334.32,
-      "mktcap_total": 76103423.2
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400155",
@@ -1544,8 +1544,8 @@
       "change_pct": 4.88,
       "buy_vol": 250,
       "sell_vol": 3948,
-      "mktcap_float": 875194777.56,
-      "mktcap_total": 875246377.56
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400156",
@@ -1559,8 +1559,8 @@
       "change_pct": 0,
       "buy_vol": 18398,
       "sell_vol": 56002,
-      "mktcap_float": 33557962.08,
-      "mktcap_total": 46310677.68
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400157",
@@ -1574,8 +1574,8 @@
       "change_pct": 0,
       "buy_vol": 1624,
       "sell_vol": 38184,
-      "mktcap_float": 42032982.24,
-      "mktcap_total": 42034390.24
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400159",
@@ -1589,8 +1589,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 185329342.24,
-      "mktcap_total": 185329342.24
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400160",
@@ -1604,8 +1604,8 @@
       "change_pct": -3.7,
       "buy_vol": 0,
       "sell_vol": 9338,
-      "mktcap_float": 173056000,
-      "mktcap_total": 173056000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400161",
@@ -1619,8 +1619,8 @@
       "change_pct": 0,
       "buy_vol": 53114,
       "sell_vol": 117559,
-      "mktcap_float": 183256135.7,
-      "mktcap_total": 233612426.3
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400162",
@@ -1634,8 +1634,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 26459055,
-      "mktcap_total": 26460000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400163",
@@ -1649,8 +1649,8 @@
       "change_pct": -2.98,
       "buy_vol": 777,
       "sell_vol": 633,
-      "mktcap_float": 273765963.77,
-      "mktcap_total": 273840000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400164",
@@ -1664,8 +1664,8 @@
       "change_pct": 0,
       "buy_vol": 5342,
       "sell_vol": 398590,
-      "mktcap_float": 46120221.18,
-      "mktcap_total": 53167425.9
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400165",
@@ -1679,8 +1679,8 @@
       "change_pct": 20,
       "buy_vol": 385790,
       "sell_vol": 204536,
-      "mktcap_float": 181726941.72,
-      "mktcap_total": 182095826.1
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400166",
@@ -1694,8 +1694,8 @@
       "change_pct": 0,
       "buy_vol": 8677,
       "sell_vol": 36033,
-      "mktcap_float": 80599024.2,
-      "mktcap_total": 87769755.7
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400167",
@@ -1709,8 +1709,8 @@
       "change_pct": -7.69,
       "buy_vol": 0,
       "sell_vol": 80700,
-      "mktcap_float": 40734349.68,
-      "mktcap_total": 61927886.4
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400168",
@@ -1724,8 +1724,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 261984255.4,
-      "mktcap_total": 439010258.4
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400169",
@@ -1739,8 +1739,8 @@
       "change_pct": -5.56,
       "buy_vol": 6503,
       "sell_vol": 32153,
-      "mktcap_float": 196903919.5,
-      "mktcap_total": 196903919.5
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400170",
@@ -1754,8 +1754,8 @@
       "change_pct": -3.13,
       "buy_vol": 0,
       "sell_vol": 1535,
-      "mktcap_float": 79958378.74,
-      "mktcap_total": 105713156.42
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400171",
@@ -1769,8 +1769,8 @@
       "change_pct": 0,
       "buy_vol": 185017,
       "sell_vol": 79755,
-      "mktcap_float": 1305519446.14,
-      "mktcap_total": 1329539259.1
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400172",
@@ -1784,8 +1784,8 @@
       "change_pct": -10,
       "buy_vol": 0,
       "sell_vol": 10453,
-      "mktcap_float": 40616509.05,
-      "mktcap_total": 41099860.98
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400173",
@@ -1799,8 +1799,8 @@
       "change_pct": 0,
       "buy_vol": 190,
       "sell_vol": 9745,
-      "mktcap_float": 299847757.8,
-      "mktcap_total": 373969999.08
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400174",
@@ -1814,8 +1814,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 4894495061.6,
-      "mktcap_total": 4898101871.6
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400175",
@@ -1829,8 +1829,8 @@
       "change_pct": 5,
       "buy_vol": 4661,
       "sell_vol": 0,
-      "mktcap_float": 151828548.06,
-      "mktcap_total": 165864496.56
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400176",
@@ -1844,8 +1844,8 @@
       "change_pct": -6.25,
       "buy_vol": 0,
       "sell_vol": 18202,
-      "mktcap_float": 22737892.5,
-      "mktcap_total": 33750000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400177",
@@ -1859,8 +1859,8 @@
       "change_pct": -1.18,
       "buy_vol": 3762,
       "sell_vol": 630,
-      "mktcap_float": 417190923.08,
-      "mktcap_total": 451355576
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400179",
@@ -1874,8 +1874,8 @@
       "change_pct": 0,
       "buy_vol": 18745,
       "sell_vol": 2802,
-      "mktcap_float": 107211909.42,
-      "mktcap_total": 107211909.42
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400180",
@@ -1889,8 +1889,8 @@
       "change_pct": 0,
       "buy_vol": 43707,
       "sell_vol": 57136,
-      "mktcap_float": 51669120.09,
-      "mktcap_total": 56436113.44
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400181",
@@ -1904,8 +1904,8 @@
       "change_pct": -5.56,
       "buy_vol": 0,
       "sell_vol": 4551,
-      "mktcap_float": 22605181.86,
-      "mktcap_total": 32364855.51
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400182",
@@ -1919,8 +1919,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 38417600,
-      "mktcap_total": 49920000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400183",
@@ -1934,8 +1934,8 @@
       "change_pct": -2.7,
       "buy_vol": 0,
       "sell_vol": 6448,
-      "mktcap_float": 15063120,
-      "mktcap_total": 29919600
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400184",
@@ -1949,8 +1949,8 @@
       "change_pct": -4.76,
       "buy_vol": 0,
       "sell_vol": 81058,
-      "mktcap_float": 496565645.4,
-      "mktcap_total": 919370345.4
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400185",
@@ -1964,8 +1964,8 @@
       "change_pct": 6.67,
       "buy_vol": 14804,
       "sell_vol": 0,
-      "mktcap_float": 30595295.36,
-      "mktcap_total": 32679834.88
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400186",
@@ -1979,8 +1979,8 @@
       "change_pct": 0,
       "buy_vol": 92695,
       "sell_vol": 40840,
-      "mktcap_float": 145068031.14,
-      "mktcap_total": 146648269.98
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400188",
@@ -1994,8 +1994,8 @@
       "change_pct": -5,
       "buy_vol": 102,
       "sell_vol": 2,
-      "mktcap_float": 27797464.74,
-      "mktcap_total": 29360626.47
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400189",
@@ -2009,8 +2009,8 @@
       "change_pct": 0,
       "buy_vol": 9360,
       "sell_vol": 8879,
-      "mktcap_float": 25528976.64,
-      "mktcap_total": 38484549.6
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400190",
@@ -2024,8 +2024,8 @@
       "change_pct": -2.94,
       "buy_vol": 0,
       "sell_vol": 206867,
-      "mktcap_float": 82697143.98,
-      "mktcap_total": 172516548.27
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400191",
@@ -2039,8 +2039,8 @@
       "change_pct": 0,
       "buy_vol": 16904,
       "sell_vol": 45307,
-      "mktcap_float": 253624787,
-      "mktcap_total": 253624787
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400192",
@@ -2054,8 +2054,8 @@
       "change_pct": 4.35,
       "buy_vol": 2363,
       "sell_vol": 12477,
-      "mktcap_float": 177638473.92,
-      "mktcap_total": 321629358.24
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400193",
@@ -2069,8 +2069,8 @@
       "change_pct": 0,
       "buy_vol": 222573,
       "sell_vol": 471008,
-      "mktcap_float": 108251490,
-      "mktcap_total": 108251490
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400194",
@@ -2084,8 +2084,8 @@
       "change_pct": 0,
       "buy_vol": 99703,
       "sell_vol": 295359,
-      "mktcap_float": 74869456.26,
-      "mktcap_total": 74992756.26
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400195",
@@ -2099,8 +2099,8 @@
       "change_pct": 0,
       "buy_vol": 143611,
       "sell_vol": 216226,
-      "mktcap_float": 104775355.8,
-      "mktcap_total": 149334086.4
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400196",
@@ -2114,8 +2114,8 @@
       "change_pct": -8.33,
       "buy_vol": 3416,
       "sell_vol": 11405,
-      "mktcap_float": 140874665.8,
-      "mktcap_total": 140883580.86
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400197",
@@ -2129,8 +2129,8 @@
       "change_pct": 0,
       "buy_vol": 23300,
       "sell_vol": 31567,
-      "mktcap_float": 92019241.93,
-      "mktcap_total": 166160172.53
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400198",
@@ -2144,8 +2144,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 158034768.5,
-      "mktcap_total": 214964082.76
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400199",
@@ -2159,8 +2159,8 @@
       "change_pct": 20,
       "buy_vol": 248517,
       "sell_vol": 389747,
-      "mktcap_float": 245954190.3,
-      "mktcap_total": 248422977
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400200",
@@ -2174,8 +2174,8 @@
       "change_pct": 0,
       "buy_vol": 9309,
       "sell_vol": 24121,
-      "mktcap_float": 37302657.39,
-      "mktcap_total": 92322047.07
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400201",
@@ -2189,8 +2189,8 @@
       "change_pct": -2.08,
       "buy_vol": 15649,
       "sell_vol": 19228,
-      "mktcap_float": 670313757.95,
-      "mktcap_total": 672210179.75
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400202",
@@ -2204,8 +2204,8 @@
       "change_pct": -3.32,
       "buy_vol": 12,
       "sell_vol": 342,
-      "mktcap_float": 1538933692.64,
-      "mktcap_total": 3689641200
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400203",
@@ -2219,8 +2219,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 144381667.09,
-      "mktcap_total": 144381667.09
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400204",
@@ -2234,8 +2234,8 @@
       "change_pct": 0,
       "buy_vol": 37042,
       "sell_vol": 89175,
-      "mktcap_float": 43334208,
-      "mktcap_total": 53798910.6
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400205",
@@ -2249,8 +2249,8 @@
       "change_pct": -8.33,
       "buy_vol": 93647,
       "sell_vol": 120532,
-      "mktcap_float": 231498656.62,
-      "mktcap_total": 571582072.16
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400206",
@@ -2264,8 +2264,8 @@
       "change_pct": 0,
       "buy_vol": 7650,
       "sell_vol": 55617,
-      "mktcap_float": 26498585.82,
-      "mktcap_total": 31784275.39
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400207",
@@ -2279,8 +2279,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 372033072,
-      "mktcap_total": 374653396.32
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400208",
@@ -2294,8 +2294,8 @@
       "change_pct": 0,
       "buy_vol": 30578,
       "sell_vol": 45301,
-      "mktcap_float": 308838539.5,
-      "mktcap_total": 392876339.5
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400209",
@@ -2309,8 +2309,8 @@
       "change_pct": 0,
       "buy_vol": 22367,
       "sell_vol": 97597,
-      "mktcap_float": 112692970,
-      "mktcap_total": 137466961.6
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400210",
@@ -2324,8 +2324,8 @@
       "change_pct": -1.75,
       "buy_vol": 1810,
       "sell_vol": 4610,
-      "mktcap_float": 466783924.88,
-      "mktcap_total": 540842848.56
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400211",
@@ -2339,8 +2339,8 @@
       "change_pct": 0,
       "buy_vol": 2948,
       "sell_vol": 53098,
-      "mktcap_float": 132460976.4,
-      "mktcap_total": 158780526.3
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400212",
@@ -2354,8 +2354,8 @@
       "change_pct": 1.23,
       "buy_vol": 219,
       "sell_vol": 2190,
-      "mktcap_float": 435978218.28,
-      "mktcap_total": 436134625.08
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400213",
@@ -2369,8 +2369,8 @@
       "change_pct": 0,
       "buy_vol": 9119,
       "sell_vol": 10422,
-      "mktcap_float": 167070269.14,
-      "mktcap_total": 172818817.75
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400214",
@@ -2384,8 +2384,8 @@
       "change_pct": 0,
       "buy_vol": 1381,
       "sell_vol": 21161,
-      "mktcap_float": 247751949.24,
-      "mktcap_total": 862768700.03
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400215",
@@ -2399,8 +2399,8 @@
       "change_pct": 0,
       "buy_vol": 315,
       "sell_vol": 8659,
-      "mktcap_float": 1154825973.84,
-      "mktcap_total": 1319513884.92
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400216",
@@ -2414,8 +2414,8 @@
       "change_pct": -2.63,
       "buy_vol": 786,
       "sell_vol": 2988,
-      "mktcap_float": 127650000,
-      "mktcap_total": 127650000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400217",
@@ -2429,8 +2429,8 @@
       "change_pct": 0,
       "buy_vol": 19913,
       "sell_vol": 29157,
-      "mktcap_float": 151055000,
-      "mktcap_total": 151055000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400218",
@@ -2444,8 +2444,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 154971244.7,
-      "mktcap_total": 155190923.65
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400219",
@@ -2459,8 +2459,8 @@
       "change_pct": -5,
       "buy_vol": 554,
       "sell_vol": 5074,
-      "mktcap_float": 65280460.3,
-      "mktcap_total": 79490376
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400220",
@@ -2474,8 +2474,8 @@
       "change_pct": 2.31,
       "buy_vol": 25,
       "sell_vol": 2294,
-      "mktcap_float": 431345005,
-      "mktcap_total": 431345005
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400221",
@@ -2489,8 +2489,8 @@
       "change_pct": -4.55,
       "buy_vol": 0,
       "sell_vol": 11626,
-      "mktcap_float": 157186412.25,
-      "mktcap_total": 161022372
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400222",
@@ -2504,8 +2504,8 @@
       "change_pct": -7.14,
       "buy_vol": 0,
       "sell_vol": 8586,
-      "mktcap_float": 29111169.36,
-      "mktcap_total": 29149486.86
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400224",
@@ -2519,8 +2519,8 @@
       "change_pct": 0,
       "buy_vol": 19951,
       "sell_vol": 33355,
-      "mktcap_float": 338834661.94,
-      "mktcap_total": 338834661.94
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400225",
@@ -2534,8 +2534,8 @@
       "change_pct": 0,
       "buy_vol": 49267,
       "sell_vol": 56596,
-      "mktcap_float": 304698958.24,
-      "mktcap_total": 306124712.08
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400226",
@@ -2549,8 +2549,8 @@
       "change_pct": 0,
       "buy_vol": 3357,
       "sell_vol": 58798,
-      "mktcap_float": 93134030.08,
-      "mktcap_total": 93653430.08
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400227",
@@ -2564,8 +2564,8 @@
       "change_pct": 1.61,
       "buy_vol": 7257,
       "sell_vol": 31150,
-      "mktcap_float": 1224261790.92,
-      "mktcap_total": 2243191982.22
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400228",
@@ -2579,8 +2579,8 @@
       "change_pct": 0,
       "buy_vol": 4756,
       "sell_vol": 34858,
-      "mktcap_float": 52402903.7,
-      "mktcap_total": 52402903.7
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400229",
@@ -2594,8 +2594,8 @@
       "change_pct": 0,
       "buy_vol": 4174,
       "sell_vol": 6108,
-      "mktcap_float": 13820246.16,
-      "mktcap_total": 16955691.12
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400230",
@@ -2609,8 +2609,8 @@
       "change_pct": 0,
       "buy_vol": 18023,
       "sell_vol": 26406,
-      "mktcap_float": 93493059.55,
-      "mktcap_total": 115344913.86
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400231",
@@ -2624,8 +2624,8 @@
       "change_pct": 0,
       "buy_vol": 38864,
       "sell_vol": 52043,
-      "mktcap_float": 492461836.44,
-      "mktcap_total": 531070964.04
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400232",
@@ -2639,8 +2639,8 @@
       "change_pct": -4.55,
       "buy_vol": 575,
       "sell_vol": 231,
-      "mktcap_float": 85680000,
-      "mktcap_total": 214263000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400233",
@@ -2654,8 +2654,8 @@
       "change_pct": 0,
       "buy_vol": 16510,
       "sell_vol": 6941,
-      "mktcap_float": 57306746.21,
-      "mktcap_total": 57556655.1
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400234",
@@ -2669,8 +2669,8 @@
       "change_pct": 0,
       "buy_vol": 25733,
       "sell_vol": 6978,
-      "mktcap_float": 373725942.6,
-      "mktcap_total": 373725942.6
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400235",
@@ -2684,8 +2684,8 @@
       "change_pct": -14.29,
       "buy_vol": 125754,
       "sell_vol": 272115,
-      "mktcap_float": 268519507.44,
-      "mktcap_total": 268771951.38
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400236",
@@ -2699,8 +2699,8 @@
       "change_pct": -4.76,
       "buy_vol": 0,
       "sell_vol": 101640,
-      "mktcap_float": 1698515175.2,
-      "mktcap_total": 1698515175.2
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400237",
@@ -2714,8 +2714,8 @@
       "change_pct": -4.4,
       "buy_vol": 0,
       "sell_vol": 74285,
-      "mktcap_float": 1051356044.88,
-      "mktcap_total": 1051356044.88
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400238",
@@ -2729,8 +2729,8 @@
       "change_pct": -3.64,
       "buy_vol": 0,
       "sell_vol": 9982,
-      "mktcap_float": 269878568.38,
-      "mktcap_total": 269878568.38
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400239",
@@ -2744,8 +2744,8 @@
       "change_pct": -4.35,
       "buy_vol": 11568,
       "sell_vol": 36412,
-      "mktcap_float": 463671328.12,
-      "mktcap_total": 478972928.5
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400240",
@@ -2759,8 +2759,8 @@
       "change_pct": -4.55,
       "buy_vol": 97,
       "sell_vol": 33708,
-      "mktcap_float": 252536118.87,
-      "mktcap_total": 259556434.2
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400241",
@@ -2774,8 +2774,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 128784978.9,
-      "mktcap_total": 158086278.45
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400242",
@@ -2789,8 +2789,8 @@
       "change_pct": -6.67,
       "buy_vol": 12996,
       "sell_vol": 18859,
-      "mktcap_float": 77154405.58,
-      "mktcap_total": 93767379.86
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400243",
@@ -2804,8 +2804,8 @@
       "change_pct": -7.69,
       "buy_vol": 0,
       "sell_vol": 32474,
-      "mktcap_float": 104599487.52,
-      "mktcap_total": 111797249.28
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400245",
@@ -2819,8 +2819,8 @@
       "change_pct": 0,
       "buy_vol": 2822720,
       "sell_vol": 2806650,
-      "mktcap_float": 1081720269.48,
-      "mktcap_total": 1081720269.48
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400246",
@@ -2834,8 +2834,8 @@
       "change_pct": 0,
       "buy_vol": 1299,
       "sell_vol": 16259,
-      "mktcap_float": 313657166.76,
-      "mktcap_total": 322620085.76
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400247",
@@ -2849,8 +2849,8 @@
       "change_pct": 0,
       "buy_vol": 34449,
       "sell_vol": 37950,
-      "mktcap_float": 860885150.97,
-      "mktcap_total": 976537740.75
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400248",
@@ -2864,8 +2864,8 @@
       "change_pct": 0,
       "buy_vol": 4569,
       "sell_vol": 31631,
-      "mktcap_float": 239189222.1,
-      "mktcap_total": 239351819.4
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400249",
@@ -2879,8 +2879,8 @@
       "change_pct": 4.35,
       "buy_vol": 2186,
       "sell_vol": 0,
-      "mktcap_float": 66395527.2,
-      "mktcap_total": 66602995.2
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400250",
@@ -2894,8 +2894,8 @@
       "change_pct": -3.33,
       "buy_vol": 9025,
       "sell_vol": 8060,
-      "mktcap_float": 239219474.31,
-      "mktcap_total": 266798445.31
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400251",
@@ -2909,8 +2909,8 @@
       "change_pct": 0,
       "buy_vol": 66981,
       "sell_vol": 156139,
-      "mktcap_float": 500335400.25,
-      "mktcap_total": 677496084.39
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400252",
@@ -2924,8 +2924,8 @@
       "change_pct": -12.5,
       "buy_vol": 9361,
       "sell_vol": 56379,
-      "mktcap_float": 47133675.96,
-      "mktcap_total": 47199564.16
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400253",
@@ -2939,8 +2939,8 @@
       "change_pct": 0,
       "buy_vol": 9905,
       "sell_vol": 10120,
-      "mktcap_float": 118073876.4,
-      "mktcap_total": 181242930.2
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400254",
@@ -2954,8 +2954,8 @@
       "change_pct": 0,
       "buy_vol": 5454,
       "sell_vol": 90128,
-      "mktcap_float": 1003076529.83,
-      "mktcap_total": 1070222490.12
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400255",
@@ -2969,8 +2969,8 @@
       "change_pct": -1.66,
       "buy_vol": 48,
       "sell_vol": 95,
-      "mktcap_float": 846560000,
-      "mktcap_total": 846560000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400256",
@@ -2984,8 +2984,8 @@
       "change_pct": -5.88,
       "buy_vol": 73427,
       "sell_vol": 124354,
-      "mktcap_float": 539273639.2,
-      "mktcap_total": 1019881774.08
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400257",
@@ -2999,8 +2999,8 @@
       "change_pct": -6.25,
       "buy_vol": 1347,
       "sell_vol": 7706,
-      "mktcap_float": 37878573,
-      "mktcap_total": 42807147.9
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400258",
@@ -3014,8 +3014,8 @@
       "change_pct": 0,
       "buy_vol": 1319,
       "sell_vol": 6180,
-      "mktcap_float": 79797664.1,
-      "mktcap_total": 80500000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400259",
@@ -3029,8 +3029,8 @@
       "change_pct": -4.35,
       "buy_vol": 0,
       "sell_vol": 38597,
-      "mktcap_float": 546227567.6,
-      "mktcap_total": 750506759.86
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400260",
@@ -3044,8 +3044,8 @@
       "change_pct": -1.64,
       "buy_vol": 2610,
       "sell_vol": 2171,
-      "mktcap_float": 105190708.2,
-      "mktcap_total": 131820000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400261",
@@ -3059,8 +3059,8 @@
       "change_pct": -6.25,
       "buy_vol": 6126,
       "sell_vol": 20474,
-      "mktcap_float": 83538000,
-      "mktcap_total": 83538000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400262",
@@ -3074,8 +3074,8 @@
       "change_pct": 0,
       "buy_vol": 15932,
       "sell_vol": 73089,
-      "mktcap_float": 71676000,
-      "mktcap_total": 71676000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400263",
@@ -3089,8 +3089,8 @@
       "change_pct": 0,
       "buy_vol": 5050,
       "sell_vol": 11819,
-      "mktcap_float": 200373618.1,
-      "mktcap_total": 282506035.3
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400264",
@@ -3104,8 +3104,8 @@
       "change_pct": 4.35,
       "buy_vol": 44499,
       "sell_vol": 0,
-      "mktcap_float": 691185218.4,
-      "mktcap_total": 878098784.4
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400265",
@@ -3119,8 +3119,8 @@
       "change_pct": 0,
       "buy_vol": 16637,
       "sell_vol": 8790,
-      "mktcap_float": 101179469.8,
-      "mktcap_total": 101484146.4
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400267",
@@ -3134,8 +3134,8 @@
       "change_pct": -4.98,
       "buy_vol": 0,
       "sell_vol": 1728,
-      "mktcap_float": 3882439295.68,
-      "mktcap_total": 3883807769.6
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400268",
@@ -3149,8 +3149,8 @@
       "change_pct": 4.93,
       "buy_vol": 47,
       "sell_vol": 3523,
-      "mktcap_float": 13118593001.17,
-      "mktcap_total": 13143555762.36
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400269",
@@ -3164,8 +3164,8 @@
       "change_pct": 0,
       "buy_vol": 12411,
       "sell_vol": 221682,
-      "mktcap_float": 85353407.62,
-      "mktcap_total": 86581907.62
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400270",
@@ -3179,8 +3179,8 @@
       "change_pct": 0,
       "buy_vol": 2115,
       "sell_vol": 8697,
-      "mktcap_float": 187406014.47,
-      "mktcap_total": 188235000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400271",
@@ -3194,8 +3194,8 @@
       "change_pct": 0,
       "buy_vol": 1691,
       "sell_vol": 546,
-      "mktcap_float": 825392313.44,
-      "mktcap_total": 1294449068.96
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400272",
@@ -3209,8 +3209,8 @@
       "change_pct": 0,
       "buy_vol": 49684,
       "sell_vol": 55081,
-      "mktcap_float": 141962390.13,
-      "mktcap_total": 182321029.66
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400274",
@@ -3224,8 +3224,8 @@
       "change_pct": -2.7,
       "buy_vol": 0,
       "sell_vol": 4352,
-      "mktcap_float": 158400000,
-      "mktcap_total": 158400000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400275",
@@ -3239,8 +3239,8 @@
       "change_pct": 4.65,
       "buy_vol": 54877,
       "sell_vol": 0,
-      "mktcap_float": 298153327.95,
-      "mktcap_total": 342421909.65
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400276",
@@ -3254,8 +3254,8 @@
       "change_pct": -5,
       "buy_vol": 0,
       "sell_vol": 8738,
-      "mktcap_float": 382469921.15,
-      "mktcap_total": 444737240.8
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400277",
@@ -3269,8 +3269,8 @@
       "change_pct": 0,
       "buy_vol": 26163,
       "sell_vol": 66235,
-      "mktcap_float": 34922600,
-      "mktcap_total": 42522600
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400278",
@@ -3284,8 +3284,8 @@
       "change_pct": -14.29,
       "buy_vol": 85925,
       "sell_vol": 94140,
-      "mktcap_float": 32593500,
-      "mktcap_total": 37024800
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400279",
@@ -3299,8 +3299,8 @@
       "change_pct": 4.92,
       "buy_vol": 523,
       "sell_vol": 6452,
-      "mktcap_float": 209262035.2,
-      "mktcap_total": 479664000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400280",
@@ -3314,8 +3314,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 685608686.82,
-      "mktcap_total": 1381581135
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400281",
@@ -3329,8 +3329,8 @@
       "change_pct": 0,
       "buy_vol": 17830,
       "sell_vol": 1835,
-      "mktcap_float": 7225622664,
-      "mktcap_total": 7846622664
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400282",
@@ -3344,8 +3344,8 @@
       "change_pct": -3.45,
       "buy_vol": 0,
       "sell_vol": 24997,
-      "mktcap_float": 44932767.32,
-      "mktcap_total": 45378408.32
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400283",
@@ -3359,8 +3359,8 @@
       "change_pct": -4.55,
       "buy_vol": 24092,
       "sell_vol": 30132,
-      "mktcap_float": 237748733.46,
-      "mktcap_total": 243150604.2
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400284",
@@ -3374,8 +3374,8 @@
       "change_pct": -4.76,
       "buy_vol": 0,
       "sell_vol": 138775,
-      "mktcap_float": 56735750.4,
-      "mktcap_total": 65146714.4
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400285",
@@ -3389,8 +3389,8 @@
       "change_pct": -2.86,
       "buy_vol": 0,
       "sell_vol": 19412,
-      "mktcap_float": 15943736.96,
-      "mktcap_total": 22779966
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400286",
@@ -3404,8 +3404,8 @@
       "change_pct": -2.7,
       "buy_vol": 0,
       "sell_vol": 138719,
-      "mktcap_float": 255916612.8,
-      "mktcap_total": 255916612.8
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400287",
@@ -3419,8 +3419,8 @@
       "change_pct": -4.88,
       "buy_vol": 0,
       "sell_vol": 29281,
-      "mktcap_float": 821554599.84,
-      "mktcap_total": 870359611.68
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400288",
@@ -3434,8 +3434,8 @@
       "change_pct": -3.57,
       "buy_vol": 0,
       "sell_vol": 267614,
-      "mktcap_float": 74715012.09,
-      "mktcap_total": 93649504.59
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400289",
@@ -3449,8 +3449,8 @@
       "change_pct": 0.23,
       "buy_vol": 9,
       "sell_vol": 351,
-      "mktcap_float": 13109927591.52,
-      "mktcap_total": 13109927591.52
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400290",
@@ -3464,8 +3464,8 @@
       "change_pct": -6.67,
       "buy_vol": 0,
       "sell_vol": 236013,
-      "mktcap_float": 49047055.68,
-      "mktcap_total": 49047055.68
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "400291",
@@ -3479,8 +3479,8 @@
       "change_pct": -6.25,
       "buy_vol": 30392,
       "sell_vol": 34452,
-      "mktcap_float": 52844449.05,
-      "mktcap_total": 96255962.4
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "420008",
@@ -3494,8 +3494,8 @@
       "change_pct": -3.85,
       "buy_vol": 0,
       "sell_vol": 434,
-      "mktcap_float": 3188732.8,
-      "mktcap_total": 5910025
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "420016",
@@ -3509,8 +3509,8 @@
       "change_pct": 6.67,
       "buy_vol": 399,
       "sell_vol": 0,
-      "mktcap_float": 6341830.43,
-      "mktcap_total": 6401924.58
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "420063",
@@ -3524,8 +3524,8 @@
       "change_pct": -4.92,
       "buy_vol": 0,
       "sell_vol": 525,
-      "mktcap_float": 7250000,
-      "mktcap_total": 17226000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "420073",
@@ -3539,8 +3539,8 @@
       "change_pct": -4.42,
       "buy_vol": 66,
       "sell_vol": 470,
-      "mktcap_float": 82560672.79,
-      "mktcap_total": 82560672.79
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "420085",
@@ -3554,8 +3554,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 81,
-      "mktcap_float": 7301574.9,
-      "mktcap_total": 11952774.9
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "420103",
@@ -3569,8 +3569,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 605,
-      "mktcap_float": 2318625,
-      "mktcap_total": 4779000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "420108",
@@ -3584,8 +3584,8 @@
       "change_pct": -9.09,
       "buy_vol": 0,
       "sell_vol": 1281,
-      "mktcap_float": 17527737.58,
-      "mktcap_total": 17527737.58
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "420120",
@@ -3599,8 +3599,8 @@
       "change_pct": 0,
       "buy_vol": 1576,
       "sell_vol": 1915,
-      "mktcap_float": 13300520.05,
-      "mktcap_total": 13300520.05
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "420140",
@@ -3614,8 +3614,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 5,
-      "mktcap_float": 17122934.4,
-      "mktcap_total": 17476800
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "420153",
@@ -3629,8 +3629,8 @@
       "change_pct": -3.45,
       "buy_vol": 0,
       "sell_vol": 302,
-      "mktcap_float": 36497685,
-      "mktcap_total": 36498000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "420178",
@@ -3644,8 +3644,8 @@
       "change_pct": -4.85,
       "buy_vol": 0,
       "sell_vol": 359,
-      "mktcap_float": 27440000,
-      "mktcap_total": 78400000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "420223",
@@ -3659,8 +3659,8 @@
       "change_pct": 0,
       "buy_vol": 508,
       "sell_vol": 2740,
-      "mktcap_float": 6960000,
-      "mktcap_total": 18560000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "420244",
@@ -3674,8 +3674,8 @@
       "change_pct": 4.76,
       "buy_vol": 686,
       "sell_vol": 0,
-      "mktcap_float": 8580000,
-      "mktcap_total": 34141250
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "420254",
@@ -3689,8 +3689,8 @@
       "change_pct": 6.25,
       "buy_vol": 2568,
       "sell_vol": 2869,
-      "mktcap_float": 89748952.67,
-      "mktcap_total": 95756749.12
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "420273",
@@ -3704,8 +3704,8 @@
       "change_pct": -3.77,
       "buy_vol": 0,
       "sell_vol": 3160,
-      "mktcap_float": 9384000,
-      "mktcap_total": 17799000
+      "mktcap_float": 0,
+      "mktcap_total": 0
     },
     {
       "code": "420280",
@@ -3719,8 +3719,8 @@
       "change_pct": 0,
       "buy_vol": 0,
       "sell_vol": 0,
-      "mktcap_float": 52662696.23,
-      "mktcap_total": 106121449.5
+      "mktcap_float": 0,
+      "mktcap_total": 0
     }
   ]
 }
