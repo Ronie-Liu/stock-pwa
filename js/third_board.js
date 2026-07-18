@@ -80,9 +80,17 @@ async function fetchTBQuotesBatch(codes) {
       let changePct = prevClose > 0 ? parseFloat(((close - prevClose) / prevClose * 100).toFixed(2)) : 0;
       let mktcapFloat = circulateShares > 0 ? parseFloat((close * circulateShares).toFixed(2)) : 0;
 
+      // 从 API 解析实际交易日期 (f[30] = YYYYMMDDHHMMSS)
+      let tradeDate = '';
+      if (f[30] && f[30].length >= 8) {
+        let td = f[30];
+        tradeDate = td.slice(0, 4) + '-' + td.slice(4, 6) + '-' + td.slice(6, 8);
+      }
+
       result[code] = { code, name, open, high, low, close, volume, amount,
         change_pct: changePct, buy_vol: buyVol, sell_vol: sellVol,
-        mktcap_float: mktcapFloat, mktcap_total: 0, circulate_shares: circulateShares };
+        mktcap_float: mktcapFloat, mktcap_total: 0, circulate_shares: circulateShares,
+        _tradeDate: tradeDate };
     }
     return result;
   } catch(e) {
@@ -91,28 +99,32 @@ async function fetchTBQuotesBatch(codes) {
   }
 }
 
-// 获取今日全部248只老三板行情
+// 获取最新交易日行情（周末/节假日自动获取最近交易日）
 async function collectThirdBoardToday() {
-  let today = new Date().toISOString().slice(0, 10);
-  // 周末直接跳过
-  if (new Date().getDay() === 0 || new Date().getDay() === 6) {
-    console.log('老三板采集跳过: 周末');
-    return { success: false, reason: 'weekend', count: 0 };
+  // 先采集一批确定实际交易日期
+  let sample = await fetchTBQuotesBatch(TB_STOCK_LIST.slice(0, 10));
+  let tradeDate = '';
+  for (let k in sample) {
+    if (sample[k]._tradeDate) { tradeDate = sample[k]._tradeDate; break; }
+  }
+  if (!tradeDate) {
+    // 兜底：用今天
+    tradeDate = new Date().toISOString().slice(0, 10);
   }
 
-  // 已存在的检查
-  let existing = await getThirdBoardByDate(today);
+  // 已存在的检查（按实际交易日期查）
+  let existing = await getThirdBoardByDate(tradeDate);
   if (existing.length >= 100) {
-    console.log('老三板今日数据已存在:', existing.length, '条，跳过');
-    return { success: true, reason: 'already', count: existing.length };
+    console.log('老三板', tradeDate, '数据已存在:', existing.length, '条，跳过');
+    return { success: true, reason: 'already', count: existing.length, date: tradeDate };
   }
 
-  console.log('开始采集老三板今日行情...');
+  console.log('开始采集老三板行情，实际交易日期:', tradeDate);
   let start = Date.now();
-  let all = {};
+  let all = { ...sample };
 
   let batchSize = 50;
-  for (let i = 0; i < TB_STOCK_LIST.length; i += batchSize) {
+  for (let i = 10; i < TB_STOCK_LIST.length; i += batchSize) {
     let batch = TB_STOCK_LIST.slice(i, i + batchSize);
     let result = await fetchTBQuotesBatch(batch);
     Object.assign(all, result);
@@ -126,8 +138,9 @@ async function collectThirdBoardToday() {
     let r = all[code];
     if (!r) continue;
     if (r.open === 0 && r.high === 0 && r.low === 0) continue; // 未交易
-    r.date = today;
-    r.id = today + '_' + code;
+    r.date = tradeDate;
+    r.id = tradeDate + '_' + code;
+    delete r._tradeDate;
     rows.push(r);
   }
   rows.sort((a, b) => a.code.localeCompare(b.code));
@@ -136,7 +149,7 @@ async function collectThirdBoardToday() {
     await saveThirdBoardRows(rows);
   }
 
-  // 总股本 - 从东方财富API逐只获取（可选，失败不影响主流程）
+  // 总股本（可选）
   try {
     let totalSharesPatched = 0;
     for (let r of rows) {
@@ -144,25 +157,24 @@ async function collectThirdBoardToday() {
         let ts = await fetchTBTotalShares(r.code);
         if (ts > 0) {
           r.mktcap_total = parseFloat((r.close * ts).toFixed(2));
-          r.id = today + '_' + r.code;
+          r.id = tradeDate + '_' + r.code;
           totalSharesPatched++;
         }
         await _sleep(100);
       } catch(e) { /* skip */ }
     }
     if (totalSharesPatched > 0) {
-      await saveThirdBoardRows(rows); // 更新总市值
+      await saveThirdBoardRows(rows);
       console.log('  总市值更新:', totalSharesPatched, '只');
     }
   } catch(e) { /* skip */ }
 
   let elapsed = ((Date.now() - start) / 1000).toFixed(1);
-  console.log('老三板采集完成:', rows.length, '只, 耗时', elapsed, 's');
+  console.log('老三板采集完成:', rows.length, '只, 实际日期:', tradeDate, ', 耗时:', elapsed, 's');
 
-  // 清理过期数据
   await clearThirdBoardBefore(15);
 
-  return { success: true, count: rows.length, elapsed };
+  return { success: true, count: rows.length, date: tradeDate, elapsed };
 }
 
 // 获取总股本（东方财富）
@@ -183,24 +195,18 @@ async function fetchTBTotalShares(code) {
 // ===== 初始化 & 增量  =====
 
 async function initThirdBoardData() {
-  // 先用CSV加载历史数据（如果还有的话）
   let existingDates = await getThirdBoardAvailableDates();
   console.log('老三板数据库已有:', existingDates.length, '天');
 
-  // 尝试加载缺失的今日数据
-  let today = new Date().toISOString().slice(0, 10);
-  if (!existingDates.includes(today)) {
-    let dayOfWeek = new Date().getDay();
-    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-      // 不是周末才尝试采集
-      await collectThirdBoardToday();
-    }
+  // 始终尝试采集（周末自动获取最近交易日数据）
+  let result = await collectThirdBoardToday();
+  if (result.success && result.date && !existingDates.includes(result.date)) {
+    existingDates = await getThirdBoardAvailableDates();
   }
 
-  // 清理过期
   await clearThirdBoardBefore(15);
 
-  return await getThirdBoardAvailableDates();
+  return existingDates;
 }
 
 // ===== API接口 =====
