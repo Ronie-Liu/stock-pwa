@@ -151,7 +151,14 @@ async function applySharesToRows(rows) {
 // ===== 主采集流程 =====
 
 async function collectThirdBoardToday() {
-  // 先采集一批确定实际交易日期
+  // 先检查云端是否已有今天数据（优先从JSON加载，避免重复采集）
+  let existing = await getThirdBoardByDate(new Date().toISOString().slice(0, 10));
+  if (existing.length >= 100) {
+    console.log('老三板今日已存在:', existing.length, '条，跳过');
+    return { success: true, reason: 'already', count: existing.length, date: new Date().toISOString().slice(0, 10) };
+  }
+
+  // 采集前10只确定实际交易日期
   let sample = await fetchTBQuotesBatch(TB_STOCK_LIST.slice(0, 10));
   let tradeDate = '';
   for (let k in sample) {
@@ -159,7 +166,8 @@ async function collectThirdBoardToday() {
   }
   if (!tradeDate) tradeDate = new Date().toISOString().slice(0, 10);
 
-  let existing = await getThirdBoardByDate(tradeDate);
+  // 再查一次按实际日期
+  existing = await getThirdBoardByDate(tradeDate);
   if (existing.length >= 100) {
     console.log('老三板', tradeDate, '已存在:', existing.length, '条，跳过');
     return { success: true, reason: 'already', count: existing.length, date: tradeDate };
@@ -238,22 +246,21 @@ async function initThirdBoardData() {
   let dates = await getThirdBoardAvailableDates();
   console.log('老三板数据库已有:', dates.length, '天');
 
-  // 方案 A：浏览器内实时采集（主要通道）
-  let result = await collectThirdBoardToday();
-  if (result.success && result.date && !dates.includes(result.date)) {
-    dates = await getThirdBoardAvailableDates();
-  }
-
-  // 方案 B：从云端 JSON 加载缺失的历史日期（兜底通道）
+  // 方案 A（优先）：从云端 JSON 加载缺失的历史日期
   let today = new Date().toISOString().slice(0, 10);
-  for (let i = 1; i <= 15; i++) {
+  for (let i = 0; i <= 15; i++) {
     let d = new Date();
     d.setDate(d.getDate() - i);
     let ds = d.toISOString().slice(0, 10);
-    if (ds === today) continue; // 已经由方案A处理过
     if (dates.includes(ds)) continue; // 已有
     let loaded = await loadCloudJson(ds);
     if (loaded) dates = await getThirdBoardAvailableDates();
+  }
+
+  // 方案 B（兜底）：浏览器内实时采集（仅限云端也没有的日期）
+  let result = await collectThirdBoardToday();
+  if (result.success && result.date && !dates.includes(result.date)) {
+    dates = await getThirdBoardAvailableDates();
   }
 
   await clearThirdBoardBefore(15);
