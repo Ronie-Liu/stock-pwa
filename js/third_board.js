@@ -127,20 +127,23 @@ async function ensureSharesCache() {
   console.log('股本拉取完成:', fetched, '/', missing.length);
 }
 
-// 用缓存股本计算市值
+// 用缓存股本计算市值（老三板退市股：流通股本 = TOTAL_SHARE，无限售股）
 async function applySharesToRows(rows) {
-  let applied = 0;
+  let appliedFloat = 0, appliedTotal = 0;
   for (let r of rows) {
     let cached = await getCachedShares(r.code);
-    if (cached && cached.free_shares > 0) {
-      r.mktcap_float = parseFloat((r.close * cached.free_shares).toFixed(2));
-      applied++;
-    }
     if (cached && cached.total_shares > 0) {
+      r.mktcap_float = parseFloat((r.close * cached.total_shares).toFixed(2));
       r.mktcap_total = parseFloat((r.close * cached.total_shares).toFixed(2));
+      appliedTotal++;
+    } else if (cached && cached.free_shares > 0) {
+      // 兜底：只有 A_FREE_SHARE 的情况
+      r.mktcap_float = parseFloat((r.close * cached.free_shares).toFixed(2));
+      r.mktcap_total = parseFloat((r.close * cached.free_shares).toFixed(2));
+      appliedFloat++;
     }
   }
-  console.log('市值计算完成: 流通市值', applied, '/', rows.length);
+  console.log('市值计算完成: 流通/总市值', appliedTotal, '/', rows.length);
 }
 
 // ===== 主采集流程 =====
