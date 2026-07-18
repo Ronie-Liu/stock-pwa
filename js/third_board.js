@@ -54,7 +54,7 @@ async function fetchTBQuotesBatch(codes) {
       let parts = line.split('"')[1];
       if (!parts) continue;
       let f = parts.split('~');
-      if (f.length < 45) continue;
+      if (f.length < 73) continue;
 
       let name = (f[1] || '').trim();
       let close = parseFloat(f[3]) || 0;
@@ -65,12 +65,10 @@ async function fetchTBQuotesBatch(codes) {
       let low = parseFloat(f[34]) || close || 0;
       // 成交额 = 量(手) × 100(股/手) × 收盘价
       let amount = volume ? parseFloat((volume * 100 * close).toFixed(2)) : 0;
-      // 流通股本：腾讯接口位置不固定，扫描尾部连续大数
-      let circulateShares = 0;
-      for (let i = f.length - 1; i >= 50; i--) {
-        let v = parseFloat(f[i]);
-        if (v > 1000000) { circulateShares = Math.round(v); break; }
-      }
+      // 流通股本：f[72] = 流通股数
+      let circulateShares = parseInt(f[72]) || 0;
+      // 总股本：f[73] = 总股本（紧跟在流通股之后）
+      let totalShares = parseInt(f[73]) || 0;
 
       // 买盘5档
       let buyVol = 0;
@@ -87,6 +85,7 @@ async function fetchTBQuotesBatch(codes) {
 
       let changePct = prevClose > 0 ? parseFloat(((close - prevClose) / prevClose * 100).toFixed(2)) : 0;
       let mktcapFloat = circulateShares > 0 ? parseFloat((close * circulateShares).toFixed(2)) : 0;
+      let mktcapTotal = totalShares > 0 ? parseFloat((close * totalShares).toFixed(2)) : 0;
 
       // 从 API 解析实际交易日期 (f[30] = YYYYMMDDHHMMSS)
       let tradeDate = '';
@@ -97,7 +96,7 @@ async function fetchTBQuotesBatch(codes) {
 
       result[code] = { code, name, open, high, low, close, volume, amount,
         change_pct: changePct, buy_vol: buyVol, sell_vol: sellVol,
-        mktcap_float: mktcapFloat, mktcap_total: 0, circulate_shares: circulateShares,
+        mktcap_float: mktcapFloat, mktcap_total: mktcapTotal,
         _tradeDate: tradeDate };
     }
     return result;
@@ -157,47 +156,12 @@ async function collectThirdBoardToday() {
     await saveThirdBoardRows(rows);
   }
 
-  // 总股本（可选）
-  try {
-    let totalSharesPatched = 0;
-    for (let r of rows) {
-      try {
-        let ts = await fetchTBTotalShares(r.code);
-        if (ts > 0) {
-          r.mktcap_total = parseFloat((r.close * ts).toFixed(2));
-          r.id = tradeDate + '_' + r.code;
-          totalSharesPatched++;
-        }
-        await _sleep(100);
-      } catch(e) { /* skip */ }
-    }
-    if (totalSharesPatched > 0) {
-      await saveThirdBoardRows(rows);
-      console.log('  总市值更新:', totalSharesPatched, '只');
-    }
-  } catch(e) { /* skip */ }
-
   let elapsed = ((Date.now() - start) / 1000).toFixed(1);
   console.log('老三板采集完成:', rows.length, '只, 实际日期:', tradeDate, ', 耗时:', elapsed, 's');
 
   await clearThirdBoardBefore(15);
 
   return { success: true, count: rows.length, date: tradeDate, elapsed };
-}
-
-// 获取总股本（东方财富）
-async function fetchTBTotalShares(code) {
-  try {
-    let url = 'https://datacenter-web.eastmoney.com/api/data/v1/get' +
-      '?reportName=RPT_F10_FINANCE_MAINFINADATA' +
-      '&columns=SECURITY_CODE,TOTAL_SHARE' +
-      '&pageSize=1&sortColumns=REPORT_DATE&sortTypes=-1' +
-      '&filter=(SECURITY_CODE=%22' + code + '%22)';
-    let resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    let data = await resp.json();
-    let items = data && data.result && data.result.data;
-    return items && items[0] && items[0].TOTAL_SHARE ? parseFloat(items[0].TOTAL_SHARE) : 0;
-  } catch(e) { return 0; }
 }
 
 // ===== 初始化 & 增量  =====
