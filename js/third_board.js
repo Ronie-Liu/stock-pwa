@@ -42,7 +42,9 @@ async function fetchTBQuotesBatch(codes) {
   try {
     let resp = await fetch(url, { signal: AbortSignal.timeout(15000),
       headers: { 'Referer': 'https://gu.qq.com/' } });
-    let text = await resp.text();
+    // 腾讯接口为 GBK 编码，用 TextDecoder 解码
+    let buf = await resp.arrayBuffer();
+    let text = new TextDecoder('gbk').decode(buf);
     let result = {};
     let lines = text.trim().split('\n');
     for (let line of lines) {
@@ -54,15 +56,21 @@ async function fetchTBQuotesBatch(codes) {
       let f = parts.split('~');
       if (f.length < 45) continue;
 
-      let name = (f[1] || '').replace(/\s+/g, '');
+      let name = (f[1] || '').trim();
       let close = parseFloat(f[3]) || 0;
       let prevClose = parseFloat(f[4]) || 0;
       let open = parseFloat(f[5]) || 0;
-      let volume = parseInt(f[6]) || 0;
+      let volume = parseInt(f[6]) || 0;           // 成交量（手）
       let high = parseFloat(f[33]) || close || 0;
       let low = parseFloat(f[34]) || close || 0;
-      let amount = parseFloat(f[37]) || (volume * close) || 0;
-      let circulateShares = parseInt(f[45]) || 0;  // 流通股本(股)
+      // 成交额 = 量(手) × 100(股/手) × 收盘价
+      let amount = volume ? parseFloat((volume * 100 * close).toFixed(2)) : 0;
+      // 流通股本：腾讯接口位置不固定，扫描尾部连续大数
+      let circulateShares = 0;
+      for (let i = f.length - 1; i >= 50; i--) {
+        let v = parseFloat(f[i]);
+        if (v > 1000000) { circulateShares = Math.round(v); break; }
+      }
 
       // 买盘5档
       let buyVol = 0;
