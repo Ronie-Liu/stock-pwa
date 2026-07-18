@@ -37,6 +37,8 @@ async function initApp() {
 
   // 后台初始化大盘数据（不阻塞UI）
   initMarketData().catch(e => console.log('大盘数据初始化失败:', e));
+  // 后台初始化老三板数据
+  initThirdBoardData().catch(e => console.log('老三板数据初始化失败:', e));
 }
 
 // ===== 定时检查 =====
@@ -825,126 +827,138 @@ async function renderLogsSection() {
 
 // ===== Tab: 大盘 =====
 
+let marketSubTab = 'index'; // 'index' | 'third_board'
+
 async function renderMarketTab() {
   let container = document.getElementById('page-market');
   if (!container) return;
+  container.innerHTML = '<div class="loading-indicator"><span class="spinner"></span> 加载中…</div>';
 
-  // 先显示loading
-  container.innerHTML = renderMarketPage(null, null, true);
-
-  // 加载自定义设置
   let custom = await getMarketCustomSettings();
   if (!custom || !custom.indicators) custom = defaultMarketCustom();
 
   try {
     let records = await getMarketRecords(20);
     let latestRecord = records.length > 0 ? records[0] : null;
-
-    // 始终获取实时行情（非交易时段返回最近收盘价）
     let realtimeQuote = null;
     try { realtimeQuote = await fetchTodayIndexQuote(); } catch(e) {}
-
-    // 判断是否在盘中交易时段
     let now = new Date();
-    let dayOfWeek = now.getDay();
-    let hour = now.getHours();
-    let minute = now.getMinutes();
+    let dayOfWeek = now.getDay(), hour = now.getHours(), minute = now.getMinutes();
     let isTrading = dayOfWeek >= 1 && dayOfWeek <= 5 &&
-        (hour > 9 || (hour === 9 && minute >= 30)) &&
-        (hour < 15 || (hour === 15 && minute === 0));
-
-    // 非交易时段：如果实时接口没返回，用最新数据库记录构造行情
+        (hour > 9 || (hour === 9 && minute >= 30)) && (hour < 15 || (hour === 15 && minute === 0));
     if (!realtimeQuote && latestRecord) {
-      realtimeQuote = {
-        name: '上证指数',
-        last_px: latestRecord.close,
-        open_px: latestRecord.open,
-        high_px: latestRecord.high,
-        low_px: latestRecord.low,
-        prev_close: latestRecord.open,
-        amount: latestRecord.amount,
-        volume: latestRecord.volume,
+      realtimeQuote = { name: '上证指数', last_px: latestRecord.close, open_px: latestRecord.open,
+        high_px: latestRecord.high, low_px: latestRecord.low, prev_close: latestRecord.open,
+        amount: latestRecord.amount, volume: latestRecord.volume,
         change_pct: latestRecord.open ? ((latestRecord.close - latestRecord.open) / latestRecord.open * 100) : 0,
-        is_realtime: false
-      };
+        is_realtime: false, _is_trading: isTrading };
     }
-    realtimeQuote._is_trading = isTrading;
+    if (realtimeQuote) realtimeQuote._is_trading = isTrading;
 
-    container.innerHTML = renderMarketPage(records, realtimeQuote, false, custom, latestRecord);
-
-    // 绑定事件
-    let editBtn = container.querySelector('#btn-edit-custom');
-    let refreshBtn = container.querySelector('#btn-refresh-market');
-    let exportBtn = container.querySelector('#btn-export-csv');
-
-    if (editBtn) {
-      editBtn.addEventListener('click', () => {
-        showMarketEditModal(custom, async (newCustom) => {
-          custom = newCustom;
-          // 重新渲染以显示最新自定义内容
-          let curRecords = await getMarketRecords(20);
-          let curLatest = curRecords.length > 0 ? curRecords[0] : null;
-          container.innerHTML = renderMarketPage(curRecords, realtimeQuote, false, custom, curLatest);
-          await renderMarketTab(); // 重新绑定事件
-        });
-      });
+    let headerHtml = buildMarketSubNav();
+    let contentHtml = '';
+    if (marketSubTab === 'third_board') {
+      contentHtml = await renderThirdBoardSubTab();
+    } else {
+      contentHtml = renderMarketPage(records, realtimeQuote, false, custom, latestRecord);
     }
-
-    if (refreshBtn) {
-      refreshBtn.addEventListener('click', async () => {
-        container.innerHTML = renderMarketPage(null, null, true);
-        try {
-          await initMarketData();
-          let newRt = null;
-          try { newRt = await fetchTodayIndexQuote(); } catch(e) {}
-          custom = await getMarketCustomSettings();
-          if (!custom || !custom.indicators) custom = defaultMarketCustom();
-          let newRecords = await getMarketRecords(20);
-          let newLatest = newRecords.length > 0 ? newRecords[0] : null;
-          let d = new Date(), dw = d.getDay(), dh = d.getHours(), dm = d.getMinutes();
-          let isTrading = dw >= 1 && dw <= 5 && (dh > 9 || (dh === 9 && dm >= 30)) && (dh < 15 || (dh === 15 && dm === 0));
-          if (!newRt && newLatest) {
-            newRt = {
-              name: '上证指数', last_px: newLatest.close, open_px: newLatest.open,
-              high_px: newLatest.high, low_px: newLatest.low, prev_close: newLatest.open,
-              amount: newLatest.amount, volume: newLatest.volume,
-              change_pct: newLatest.open ? ((newLatest.close - newLatest.open) / newLatest.open * 100) : 0,
-              is_realtime: false
-            };
-          }
-          newRt._is_trading = isTrading;
-          container.innerHTML = renderMarketPage(newRecords, newRt, false, custom, newLatest);
-          await renderMarketTab();
-        } catch (e) {
-          container.innerHTML = '<div class="empty-state">刷新失败: ' + escapeHtml(e.message) + '</div>';
-        }
-      });
-    }
-
-    if (exportBtn) {
-      exportBtn.addEventListener('click', async () => {
-        try {
-          showToast('正在导出CSV...');
-          let csv = await exportMarketCSV();
-          let blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-          let url = URL.createObjectURL(blob);
-          let a = document.createElement('a');
-          a.href = url;
-          a.download = '上证指数大盘数据_' + new Date().toISOString().slice(0, 10) + '.csv';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-          let rowCount = csv.split('\n').filter(l => l.trim()).length - 1;
-          showToast('CSV导出成功！共 ' + rowCount + ' 条数据');
-        } catch (e) {
-          showToast('CSV导出失败: ' + e.message, 'error');
-        }
-      });
-    }
+    container.innerHTML = '<div class="market-header" style="padding:14px 14px 0;">' + headerHtml + '</div>' + contentHtml;
+    bindMarketEvents(container, records, realtimeQuote, custom, latestRecord);
   } catch (e) {
-    container.innerHTML = '<div class="empty-state">加载大盘数据失败: ' + escapeHtml(e.message) + '<br><button class="btn btn-sm" onclick="switchTab(\'market\')">重试</button></div>';
+    container.innerHTML = '<div class="empty-state">加载失败: ' + escapeHtml(e.message) + '<br><button class="btn btn-sm" onclick="switchTab(\'market\')">重试</button></div>';
   }
+}
+
+function buildMarketSubNav() {
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div style="display:flex;align-items:center;gap:2px;">
+        <button class="market-sub-tab" data-sub="index" style="padding:6px 14px;font-size:13px;font-weight:600;border:none;border-radius:7px 7px 0 0;cursor:pointer;background:${marketSubTab==='index'?'var(--bg-card)':'transparent'};color:${marketSubTab==='index'?'var(--text)':'var(--text-muted)'};">上证大盘</button>
+        <button class="market-sub-tab" data-sub="third_board" style="padding:6px 14px;font-size:13px;font-weight:600;border:none;border-radius:7px 7px 0 0;cursor:pointer;background:${marketSubTab==='third_board'?'var(--bg-card)':'transparent'};color:${marketSubTab==='third_board'?'var(--text)':'var(--text-muted)'};">老三板</button>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        ${marketSubTab==='index'?`<button class="btn btn-sm" id="btn-edit-custom" title="编辑自定义" style="padding:5px 10px;font-size:12px;border-radius:7px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>`:''}
+        <button class="btn btn-sm" id="btn-refresh-market" title="刷新" style="padding:5px 10px;font-size:12px;border-radius:7px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg></button>
+        <button class="btn btn-sm btn-primary" id="btn-export-csv" title="导出CSV" style="padding:5px 10px;font-size:12px;border-radius:7px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+      </div>
+    </div>`;
+}
+
+function bindMarketEvents(container, records, realtimeQuote, custom, latestRecord) {
+  container.querySelectorAll('.market-sub-tab').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      marketSubTab = btn.dataset.sub;
+      await renderMarketTab();
+    });
+  });
+
+  if (marketSubTab === 'index') {
+    let editBtn = container.querySelector('#btn-edit-custom');
+    if (editBtn) editBtn.addEventListener('click', () => {
+      showMarketEditModal(custom, async () => { marketSubTab = 'index'; await renderMarketTab(); });
+    });
+    let exportBtn = container.querySelector('#btn-export-csv');
+    if (exportBtn) exportBtn.addEventListener('click', async () => {
+      try {
+        showToast('正在导出CSV...');
+        let csv = marketSubTab === 'third_board' ? await exportThirdBoardAllCSV() : await exportMarketCSV();
+        if (!csv) return showToast('无数据', 'error');
+        let blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+        let url = URL.createObjectURL(blob);
+        let a = document.createElement('a');
+        a.href = url; a.download = (marketSubTab === 'third_board' ? '老三板全部' : '上证指数') + '_' + new Date().toISOString().slice(0,10) + '.csv';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        showToast('导出成功');
+      } catch(e) { showToast('导出失败: ' + e.message, 'error'); }
+    });
+  }
+
+  if (marketSubTab === 'third_board') bindThirdBoardEvents(container);
+
+  let refreshBtn = container.querySelector('#btn-refresh-market');
+  if (refreshBtn) refreshBtn.addEventListener('click', async () => {
+    container.innerHTML = '<div class="loading-indicator"><span class="spinner"></span> 刷新中…</div>';
+    try {
+      if (marketSubTab === 'third_board') await initThirdBoardData();
+      else await initMarketData();
+      await renderMarketTab();
+    } catch(e) { container.innerHTML = '<div class="empty-state">刷新失败: ' + escapeHtml(e.message) + '</div>'; }
+  });
+}
+
+// ===== 老三板子Tab =====
+
+async function renderThirdBoardSubTab() {
+  let dates = await apiThirdBoardDates();
+  let selectedDate = dates.length > 0 ? dates[0] : '';
+  let rows = selectedDate ? await apiThirdBoardByDate(selectedDate) : [];
+  return renderThirdBoardUI(rows, dates, selectedDate, false);
+}
+
+function bindThirdBoardEvents(container) {
+  let dateSelect = container.querySelector('#tb-date-select');
+  if (dateSelect) dateSelect.addEventListener('change', async () => {
+    let ds = dateSelect.value, rows = await apiThirdBoardByDate(ds);
+    let dates = await apiThirdBoardDates();
+    let old = container.querySelector('div[style*="padding:0 14px 14px"]');
+    if (old) old.outerHTML = renderThirdBoardUI(rows, dates, ds, false);
+    bindThirdBoardEvents(container);
+  });
+
+  let exportBtn = container.querySelector('#btn-tb-export-csv');
+  if (exportBtn) exportBtn.addEventListener('click', async () => {
+    let ds = (container.querySelector('#tb-date-select') || {}).value || '';
+    if (!ds) return showToast('请先选择日期', 'error');
+    try {
+      let csv = await exportThirdBoardCSV(ds);
+      if (!csv) return showToast('无数据', 'error');
+      let blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      let url = URL.createObjectURL(blob); let a = document.createElement('a');
+      a.href = url; a.download = '老三板' + ds.replace(/-/g,'') + '.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      showToast('导出成功');
+    } catch(e) { showToast('导出失败: ' + e.message, 'error'); }
+  });
 }
 
 // ===== 全局回调（给模态弹窗用） =====
@@ -1025,7 +1039,7 @@ function registerSW() {
   navigator.serviceWorker.getRegistrations().then((regs) => {
     return Promise.all(regs.map(r => r.unregister()));
   }).then(() => {
-    return navigator.serviceWorker.register('/sw.js?v=20260613a');
+    return navigator.serviceWorker.register('/sw.js?v=20260718');
   }).then((reg) => {
     console.log('SW 注册成功:', reg.scope);
 

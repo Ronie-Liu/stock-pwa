@@ -2,11 +2,12 @@
 // 本地存储：stocks表、app_settings表、task_logs表
 
 const DB_NAME = 'StockMonitorDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STOCKS_STORE = 'stocks';
 const SETTINGS_STORE = 'app_settings';
 const LOGS_STORE = 'task_logs';
 const MARKET_STORE = 'market_data';
+const THIRD_BOARD_STORE = 'third_board';
 
 let db = null;
 
@@ -35,6 +36,12 @@ function openDB() {
       if (!database.objectStoreNames.contains(MARKET_STORE)) {
         let mktStore = database.createObjectStore(MARKET_STORE, { keyPath: 'date' });
         mktStore.createIndex('date_idx', 'date', { unique: true });
+      }
+      // third_board 表（老三板每日行情，复合主键 date+code）
+      if (!database.objectStoreNames.contains(THIRD_BOARD_STORE)) {
+        let tbStore = database.createObjectStore(THIRD_BOARD_STORE, { keyPath: 'id' });
+        tbStore.createIndex('date_idx', 'date', { unique: false });
+        tbStore.createIndex('code_idx', 'code', { unique: false });
       }
     };
     request.onsuccess = (e) => {
@@ -298,5 +305,91 @@ async function clearMarketData() {
     let req = store.clear();
     req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error);
+  });
+}
+
+// ===== Third Board（老三板每日行情） =====
+
+async function saveThirdBoardRows(rows) {
+  await openDB();
+  return new Promise((resolve, reject) => {
+    let store = getStore(THIRD_BOARD_STORE, 'readwrite');
+    let count = 0, total = rows.length;
+    if (total === 0) { resolve(0); return; }
+    for (let r of rows) {
+      let req = store.put(r);
+      req.onsuccess = () => { count++; if (count >= total) resolve(total); };
+      req.onerror = () => reject(req.error);
+    }
+  });
+}
+
+async function getThirdBoardByDate(dateStr) {
+  await openDB();
+  return new Promise((resolve, reject) => {
+    let store = getStore(THIRD_BOARD_STORE);
+    let req = store.index('date_idx').getAll(IDBKeyRange.only(dateStr));
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => resolve([]);
+  });
+}
+
+async function getThirdBoardByCode(code) {
+  await openDB();
+  return new Promise((resolve, reject) => {
+    let store = getStore(THIRD_BOARD_STORE);
+    let req = store.index('code_idx').getAll(IDBKeyRange.only(code));
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => resolve([]);
+  });
+}
+
+async function getThirdBoardAvailableDates() {
+  await openDB();
+  return new Promise((resolve, reject) => {
+    let store = getStore(THIRD_BOARD_STORE);
+    let dates = new Set();
+    let req = store.index('date_idx').openCursor(null, 'next');
+    req.onsuccess = (e) => {
+      let cursor = e.target.result;
+      if (cursor) { dates.add(cursor.value.date); cursor.continue(); }
+      else { resolve([...dates].sort().reverse()); }
+    };
+    req.onerror = () => resolve([]);
+  });
+}
+
+async function clearThirdBoardBefore(days = 15) {
+  let cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  let cutoffStr = cutoff.toISOString().slice(0, 10);
+  await openDB();
+  return new Promise((resolve, reject) => {
+    let store = getStore(THIRD_BOARD_STORE, 'readwrite');
+    let index = store.index('date_idx');
+    let range = IDBKeyRange.upperBound(cutoffStr, true);
+    let req = index.openCursor(range);
+    let deleted = 0;
+    req.onsuccess = (e) => {
+      let cursor = e.target.result;
+      if (cursor) { cursor.delete(); deleted++; cursor.continue(); }
+      else { resolve(deleted); }
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function getThirdBoardAllRecords() {
+  await openDB();
+  return new Promise((resolve, reject) => {
+    let store = getStore(THIRD_BOARD_STORE);
+    let results = [];
+    let req = store.openCursor();
+    req.onsuccess = (e) => {
+      let cursor = e.target.result;
+      if (cursor) { results.push(cursor.value); cursor.continue(); }
+      else { resolve(results); }
+    };
+    req.onerror = () => resolve([]);
   });
 }
