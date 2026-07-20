@@ -243,34 +243,43 @@ async function loadCloudJson(dateStr) {
 }
 
 async function initThirdBoardData() {
-  let dates = await getThirdBoardAvailableDates();
-  console.log('老三板数据库已有:', dates.length, '天');
-
-  // 方案 A（优先）：从云端 JSON 加载缺失的历史日期
   let today = new Date().toISOString().slice(0, 10);
-  for (let i = 0; i <= 15; i++) {
+  window._tbSource = '';
+
+  // 步骤 1：优先从云端 JSON 加载（不走本地判断 — 云端数据最可靠）
+  let cloudLoaded = await loadCloudJson(today);
+  if (cloudLoaded) {
+    window._tbSource = '☁️ 云端';
+    console.log('☁️ 云端 JSON 加载成功:', today, cloudLoaded, '只');
+  }
+
+  // 步骤 2：补充历史空缺（云端 JSON）
+  let dates = await getThirdBoardAvailableDates();
+  for (let i = 1; i <= 15; i++) {
     let d = new Date();
     d.setDate(d.getDate() - i);
     let ds = d.toISOString().slice(0, 10);
-    if (dates.includes(ds)) continue; // 已有
+    if (dates.includes(ds)) continue;
     let loaded = await loadCloudJson(ds);
-    if (loaded) {
-      dates = await getThirdBoardAvailableDates();
-      if (ds === today) window._tbSource = '☁️ 云端';
-    }
+    if (loaded) dates = await getThirdBoardAvailableDates();
   }
 
-  let collectionResult = await collectThirdBoardToday();
-  if (collectionResult.success && collectionResult.date && !dates.includes(collectionResult.date)) {
-    dates = await getThirdBoardAvailableDates();
-  }
-  // 标记来源
-  if (!window._tbSource) {
-    window._tbSource = collectionResult.reason === 'already' ? '☁️ 云端' : '🖥️ 实时';
+  // 步骤 3：兜底 — 浏览器实时采集（云端也没数据的日期）
+  if (!cloudLoaded) {
+    let collectionResult = await collectThirdBoardToday();
+    if (collectionResult.success && collectionResult.date) {
+      dates = await getThirdBoardAvailableDates();
+      if (!window._tbSource) {
+        window._tbSource = collectionResult.reason === 'already' ? '☁️ 云端' : '🖥️ 实时';
+      }
+    }
+  } else {
+    // 云端已有数据，跳过实时采集
+    console.log('☁️ 云端数据已就绪，跳过实时采集');
   }
 
   await clearThirdBoardBefore(15);
-  return dates;
+  return await getThirdBoardAvailableDates();
 }
 
 // ===== API接口 =====

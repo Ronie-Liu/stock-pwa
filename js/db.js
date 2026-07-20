@@ -2,7 +2,7 @@
 // 本地存储：stocks表、app_settings表、task_logs表
 
 const DB_NAME = 'StockMonitorDB';
-const DB_VERSION = 8;
+const DB_VERSION = 9;
 const STOCKS_STORE = 'stocks';
 const SETTINGS_STORE = 'app_settings';
 const LOGS_STORE = 'task_logs';
