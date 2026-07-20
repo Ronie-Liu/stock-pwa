@@ -245,15 +245,18 @@ async function loadCloudJson(dateStr) {
 async function initThirdBoardData() {
   let today = new Date().toISOString().slice(0, 10);
   window._tbSource = '';
+  window._tbHistory = [];
 
   // 步骤 1：优先从云端 JSON 加载（不走本地判断 — 云端数据最可靠）
   let cloudLoaded = await loadCloudJson(today);
   if (cloudLoaded) {
     window._tbSource = '☁️ 云端';
     console.log('☁️ 云端 JSON 加载成功:', today, cloudLoaded, '只');
+  } else {
+    console.log('⚠️ 云端 JSON 未找到:', today);
   }
 
-  // 步骤 2：补充历史空缺（云端 JSON）
+  // 步骤 2：补充历史空缺（往前 15 天，云端 JSON）
   let dates = await getThirdBoardAvailableDates();
   for (let i = 1; i <= 15; i++) {
     let d = new Date();
@@ -261,7 +264,14 @@ async function initThirdBoardData() {
     let ds = d.toISOString().slice(0, 10);
     if (dates.includes(ds)) continue;
     let loaded = await loadCloudJson(ds);
-    if (loaded) dates = await getThirdBoardAvailableDates();
+    if (loaded) {
+      dates = await getThirdBoardAvailableDates();
+      window._tbHistory.push(ds);
+      console.log('📥 历史加载:', ds, loaded, '只');
+    }
+  }
+  if (window._tbHistory.length > 0) {
+    console.log('📥 历史加载完成:', window._tbHistory.length, '天');
   }
 
   // 步骤 3：兜底 — 浏览器实时采集（云端也没数据的日期）

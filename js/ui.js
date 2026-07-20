@@ -745,6 +745,10 @@ function renderThirdBoardUI(rows, dates, selectedDate, loading) {
     html += `<span style="color:var(--down-color);">跌 ${downCount}</span>`;
     html += `<span>5系:${count5}</span><span>3系:${count3}</span><span>1系:${count1}</span>`;
     if (source) html += `<span style="margin-left:auto;background:var(--bg-input);padding:2px 8px;border-radius:10px;font-size:10px;">${source}</span>`;
+    let history = window._tbHistory || [];
+    if (history.length > 0) {
+      html += `<span style="background:var(--bg-input);padding:2px 8px;border-radius:10px;font-size:10px;">📥 +${history.length}天</span>`;
+    }
     html += `</div>`;
   }
 
