@@ -37,8 +37,14 @@ async function initApp() {
 
   // 后台初始化大盘数据（不阻塞UI）
   initMarketData().catch(e => console.log('大盘数据初始化失败:', e));
-  // 后台初始化老三板数据
-  initThirdBoardData().catch(e => console.log('老三板数据初始化失败:', e));
+  // 后台初始化老三板数据，完成后自动刷新老三板页面
+  initThirdBoardData().then((r) => {
+    console.log('老三板初始化完成:', r);
+    // 如果当前正在看老三板，重新渲染
+    if (currentTab === 'market' && marketSubTab === 'third_board') {
+      renderMarketTab();
+    }
+  }).catch(e => console.log('老三板数据初始化失败:', e));
 }
 
 // ===== 定时检查 =====
