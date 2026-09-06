@@ -248,7 +248,7 @@ function mapEastMoneyRow(r) {
   }
 
   if (!isNaN(open) && !isNaN(prevClose) && prevClose > 0) {
-    openRatio = open / prevClose * 100;
+    openRatio = (open - prevClose) / prevClose * 100;
     if (!isNaN(current)) {
       bodyRatio = (current - open) / prevClose * 100;
       if (!isNaN(high)) {
@@ -618,13 +618,13 @@ function renderLowOpenHighPage(body) {
     <div style="padding:12px 12px 24px;">
       <div class="condition-panel" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:12px;">
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">筛选条件（输入后自动保存）</div>
-        ${condItem('open', '开盘涨幅 ≤', '如 100')}
-        ${condItem('body', '蜡烛实体涨幅 ≥', '如 0')}
-        ${condItem('ma120', 'MA120乖离 ≤', '如 100')}
-        ${condItem('upperShadow', '上影线实体涨幅 ≤', '如 2')}
-        ${condItem('volMA10', '成交量MA10乖离 ≤', '如 200')}
+        ${condItem('open', '开盘涨幅 ≤', '如 0（低开为负）')}
+        ${condItem('body', '蜡烛实体涨幅 ≥', '如 2')}
+        ${condItem('ma120', 'MA120乖离 ≤', '如 100（低于均线<100）')}
+        ${condItem('upperShadow', '上影线实体涨幅 ≤', '如 1')}
+        ${condItem('volMA10', '成交量MA10乖离 ≤', '如 100（缩量<100）')}
         <div style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.6;">
-          开盘涨幅 = 开盘价 ÷ 前收价 × 100%<br>
+          开盘涨幅 = (开盘价 − 前收价) ÷ 前收价 × 100%（低开为负）<br>
           蜡烛实体涨幅 = (现价 − 开盘价) ÷ 前收价 × 100%<br>
           MA120乖离 = 现价 ÷ MA120均价 × 100%<br>
           上影线实体涨幅 = (最高价 − max(开盘价, 现价)) ÷ 前收价 × 100%<br>
