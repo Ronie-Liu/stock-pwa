@@ -432,7 +432,12 @@ async function renderMinuteChart(code, quote) {
     let changeRate = (change / prevClose) * 100;
     let avgLast = avgs[avgs.length - 1];
     let lastP = points[points.length - 1];
-    let totalVol = lastP.cumVol || points.reduce((a, p) => a + p.volume, 0);   // 手
+    // 成交量(手)：优先用实时报价(标准“手”)，否则按分时单位折算
+    let quoteVol = (quote && !quote.error && quote.volume) ? parseFloat(quote.volume) : null;
+    let rawTotalVol = lastP.cumVol || points.reduce((a, p) => a + p.volume, 0);
+    let totalVol = rawTotalVol;
+    if (quoteVol != null && quoteVol > 0) totalVol = quoteVol;
+    else if (result.volUnit === 'share') totalVol = rawTotalVol / 100; // 股→手
     let totalAmt = lastP.cumAmt || points.reduce((a, p) => a + p.volume * p.price * 100, 0); // 元
     let turnover = (quote && !quote.error && quote.turnover_ratio != null) ? quote.turnover_ratio : null;
 

@@ -1,6 +1,6 @@
 // Service Worker - 自选股价格监控 PWA
 // 🔄 网络优先策略：确保每次打开都获取最新代码
-const CACHE_NAME = 'stock-monitor-v16';
+const CACHE_NAME = 'stock-monitor-v17';
 
 // 需要缓存的路径（离线回退用）
 const CACHE_WHITELIST = [

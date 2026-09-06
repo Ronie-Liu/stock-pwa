@@ -234,25 +234,46 @@ async function fetchMinute(code) {
       let sd = json.data && json.data[tcode] && json.data[tcode].data;
       if (!sd || !sd.data || sd.data.length === 0) throw new Error('无分时数据');
 
-      let prevCumVol = 0;
-      let points = sd.data.map(line => {
+      // 解析原始点
+      let rawPoints = sd.data.map(line => {
         let f = String(line).split(' ');
-        let time = f[0];
-        let price = parseFloat(f[1]);
-        let cumVol = parseFloat(f[2]);   // 累计成交量(手)
-        let cumAmt = parseFloat(f[3]);   // 累计成交额(元)
-        let avgPrice = cumVol > 0 ? cumAmt / (cumVol * 100) : price;  // 均价 = 额/量(股)
-        let volume = Math.max(0, cumVol - prevCumVol);  // 每分钟增量(手)
-        prevCumVol = cumVol;
-        return { time, price, avgPrice, volume, cumVol, cumAmt };
+        return {
+          time: f[0],
+          price: parseFloat(f[1]),
+          cumVol: parseFloat(f[2]),   // 累计成交量（手或股，见下方判定）
+          cumAmt: parseFloat(f[3])    // 累计成交额(元)
+        };
       });
 
-      return { code, points, date: sd.date || '', error: null };
+      // 判定成交量单位：腾讯分时接口对沪深主板返回“手”，
+      // 对科创板/创业板等部分股票返回“股”，需按均价是否贴近现价来判定。
+      let volUnit = 'lot'; // 手
+      let lastRaw = rawPoints[rawPoints.length - 1];
+      if (lastRaw && lastRaw.cumVol > 0 && lastRaw.price > 0 && lastRaw.cumAmt > 0) {
+        let avgLot = lastRaw.cumAmt / (lastRaw.cumVol * 100);
+        let avgShare = lastRaw.cumAmt / lastRaw.cumVol;
+        if (Math.abs(avgShare - lastRaw.price) < Math.abs(avgLot - lastRaw.price)) {
+          volUnit = 'share'; // 股
+        }
+      }
+
+      let prevCumVol = 0;
+      let points = rawPoints.map(r => {
+        let avgPrice = r.price;
+        if (r.cumVol > 0 && r.cumAmt > 0) {
+          avgPrice = volUnit === 'share' ? r.cumAmt / r.cumVol : r.cumAmt / (r.cumVol * 100);
+        }
+        let volume = Math.max(0, r.cumVol - prevCumVol);  // 每分钟增量(保持原单位)
+        prevCumVol = r.cumVol;
+        return { time: r.time, price: r.price, avgPrice, volume, cumVol: r.cumVol, cumAmt: r.cumAmt };
+      });
+
+      return { code, points, date: sd.date || '', volUnit, error: null };
     } catch (e) {
       lastErr = e;
     }
   }
-  return { code, points: [], date: '', error: (lastErr && lastErr.message) || '分时获取失败' };
+  return { code, points: [], date: '', volUnit: 'lot', error: (lastErr && lastErr.message) || '分时获取失败' };
 }
 
 /**
