@@ -2,6 +2,8 @@
 
 // 全局状态
 let currentTab = 'watchlist';
+let envSubTab = 'trend';      // 环境页子功能: resonance | liquidity | sentiment | trend | settings
+let marketSubTab = 'index';   // 趋势周期子导航: index | third_board
 let watchlistStocks = [];
 let holdingsStocks = [];
 let watchlistQuotes = [];
@@ -40,9 +42,9 @@ async function initApp() {
   // 后台初始化老三板数据，完成后自动刷新老三板页面
   initThirdBoardData().then((r) => {
     console.log('老三板初始化完成:', r);
-    // 如果当前正在看老三板，重新渲染
-    if (currentTab === 'market' && marketSubTab === 'third_board') {
-      renderMarketTab();
+    // 如果当前正在看环境-趋势周期-老三板，重新渲染
+    if (currentTab === 'environment' && envSubTab === 'trend' && marketSubTab === 'third_board') {
+      renderEnvironmentTab();
     }
   }).catch(e => console.log('老三板数据初始化失败:', e));
 }
@@ -175,10 +177,10 @@ async function refreshCurrentPage() {
     await renderWatchlistPage();
   } else if (currentTab === 'holdings') {
     await renderHoldingsPage();
-  } else if (currentTab === 'upload') {
-    renderUploadPage();
-  } else if (currentTab === 'settings') {
-    renderSettings();
+  } else if (currentTab === 'selection') {
+    renderSelectionTab();
+  } else if (currentTab === 'environment') {
+    await renderEnvironmentTab();
   }
 }
 
@@ -202,12 +204,10 @@ async function switchTab(tabId) {
     await renderWatchlistPage();
   } else if (tabId === 'holdings') {
     await renderHoldingsPage();
-  } else if (tabId === 'market') {
-    await renderMarketTab();
-  } else if (tabId === 'upload') {
-    renderUploadPage();
-  } else if (tabId === 'settings') {
-    await renderSettings();
+  } else if (tabId === 'selection') {
+    renderSelectionTab();
+  } else if (tabId === 'environment') {
+    await renderEnvironmentTab();
   }
 }
 
@@ -231,7 +231,7 @@ async function renderWatchlistPage() {
     listContainer.innerHTML = `
       <div class="empty-state">
         ${ICONS.empty}
-        <p>暂无自选股<br>点击「添加」或切换到「上传文件」导入 CSV</p>
+        <p>暂无自选股<br>点击「添加」添加自选股</p>
       </div>`;
   } else {
     listContainer.innerHTML = '<div class="loading-indicator"><span class="spinner"></span> 加载行情中...</div>';
@@ -522,24 +522,90 @@ function bindCardEvents(container, isHoldings) {
   });
 }
 
-// ===== Tab 3: 上传文件 =====
+// ===== Tab: 条件选股（占位） =====
 
-function renderUploadPage() {
-  let container = document.getElementById('page-upload');
+function renderSelectionTab() {
+  let container = document.getElementById('page-selection');
   if (!container) return;
 
-  container.innerHTML = renderCSVPage(watchlistStocks.length, holdingsStocks.length);
-  setupCSVEvents();
+  container.innerHTML = `
+    ${renderPageHeader('条件选股', '按条件筛选股票')}
+    <div class="empty-state">
+      ${ICONS.empty}
+      <p>条件选股功能开发中<br>敬请期待</p>
+    </div>`;
 }
 
-// ===== Tab 4: 设置 =====
+// ===== Tab: 环境（子功能：共振/流动性/情绪偏好/趋势周期/系统设置） =====
 
-async function renderSettings() {
-  let container = document.getElementById('page-settings');
+async function renderEnvironmentTab() {
+  let container = document.getElementById('page-environment');
   if (!container) return;
 
+  container.innerHTML = buildEnvSubNav();
+
+  if (envSubTab === 'trend') {
+    let body = document.createElement('div');
+    body.id = 'env-body';
+    container.appendChild(body);
+    await renderMarketBody(body);
+  } else if (envSubTab === 'settings') {
+    let body = document.createElement('div');
+    body.id = 'env-body';
+    container.appendChild(body);
+    await renderSettingsBody(body);
+  } else {
+    container.innerHTML += renderEnvPlaceholder(envSubTab);
+  }
+
+  bindEnvSubNavEvents(container);
+}
+
+function buildEnvSubNav() {
+  let tabs = [
+    { id: 'resonance', label: '共振' },
+    { id: 'liquidity', label: '流动性' },
+    { id: 'sentiment', label: '情绪偏好' },
+    { id: 'trend', label: '趋势周期' },
+    { id: 'settings', label: '系统设置' }
+  ];
+  return `
+    <div class="env-sub-nav" style="display:flex;align-items:center;gap:4px;overflow-x:auto;padding:10px 12px 0;white-space:nowrap;-webkit-overflow-scrolling:touch;">
+      ${tabs.map(t => `
+        <button class="env-sub-tab" data-env="${t.id}" style="padding:7px 14px;font-size:13px;font-weight:600;border:none;border-radius:7px 7px 0 0;cursor:pointer;white-space:nowrap;background:${envSubTab===t.id?'var(--bg-card)':'transparent'};color:${envSubTab===t.id?'var(--text)':'var(--text-muted)'};">${t.label}</button>
+      `).join('')}
+    </div>`;
+}
+
+function renderEnvPlaceholder(subTab) {
+  let labels = { resonance: '共振', liquidity: '流动性', sentiment: '情绪偏好' };
+  let desc = {
+    resonance: '多周期多维度共振分析',
+    liquidity: '市场资金与流动性监测',
+    sentiment: '市场情绪与风险偏好'
+  };
+  return `
+    <div class="empty-state" style="min-height:320px;display:flex;flex-direction:column;justify-content:center;">
+      ${ICONS.empty}
+      <p>「${labels[subTab] || ''}」功能开发中<br><span style="font-size:12px;color:var(--text-muted);">${desc[subTab] || ''}</span></p>
+    </div>`;
+}
+
+function bindEnvSubNavEvents(container) {
+  container.querySelectorAll('.env-sub-tab').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (btn.dataset.env === envSubTab) return;
+      envSubTab = btn.dataset.env;
+      await renderEnvironmentTab();
+    });
+  });
+}
+
+// ===== Tab: 系统设置（环境子功能） =====
+
+async function renderSettingsBody(body) {
   appSettings = await getSettings();
-  container.innerHTML = renderSettingsPage(appSettings);
+  body.innerHTML = renderSettingsPage(appSettings);
 
   // 主题切换
   let themeToggle = document.getElementById('theme-toggle');
@@ -563,7 +629,7 @@ async function renderSettings() {
         if (statusEl) statusEl.textContent = '✅ 已注册';
         showToast('推送注册成功');
         // 刷新设置页
-        await renderSettings();
+        await renderSettingsBody(body);
       } else if (result === 'denied') {
         showToast('推送权限被拒绝，请在浏览器设置中开启', 'error');
       } else if (result === 'unsupported') {
@@ -843,14 +909,10 @@ async function renderLogsSection() {
   logsContainer.innerHTML = renderLogs(logs);
 }
 
-// ===== Tab: 大盘 =====
+// ===== Tab: 趋势周期（环境子功能，原大盘功能） =====
 
-let marketSubTab = 'index'; // 'index' | 'third_board'
-
-async function renderMarketTab() {
-  let container = document.getElementById('page-market');
-  if (!container) return;
-  container.innerHTML = '<div class="loading-indicator"><span class="spinner"></span> 加载中…</div>';
+async function renderMarketBody(body) {
+  body.innerHTML = '<div class="loading-indicator"><span class="spinner"></span> 加载中…</div>';
 
   let custom = await getMarketCustomSettings();
   if (!custom || !custom.indicators) custom = defaultMarketCustom();
@@ -880,10 +942,10 @@ async function renderMarketTab() {
     } else {
       contentHtml = renderMarketPage(records, realtimeQuote, false, custom, latestRecord);
     }
-    container.innerHTML = '<div class="market-header" style="padding:14px 14px 0;">' + headerHtml + '</div>' + contentHtml;
-    bindMarketEvents(container, records, realtimeQuote, custom, latestRecord);
+    body.innerHTML = '<div class="market-header" style="padding:8px 12px 0;">' + headerHtml + '</div>' + contentHtml;
+    bindMarketEvents(body, records, realtimeQuote, custom, latestRecord);
   } catch (e) {
-    container.innerHTML = '<div class="empty-state">加载失败: ' + escapeHtml(e.message) + '<br><button class="btn btn-sm" onclick="switchTab(\'market\')">重试</button></div>';
+    body.innerHTML = '<div class="empty-state">加载失败: ' + escapeHtml(e.message) + '<br><button class="btn btn-sm" onclick="switchTab(\'environment\')">重试</button></div>';
   }
 }
 
@@ -906,14 +968,14 @@ function bindMarketEvents(container, records, realtimeQuote, custom, latestRecor
   container.querySelectorAll('.market-sub-tab').forEach(btn => {
     btn.addEventListener('click', async () => {
       marketSubTab = btn.dataset.sub;
-      await renderMarketTab();
+      await renderMarketBody(container);
     });
   });
 
   if (marketSubTab === 'index') {
     let editBtn = container.querySelector('#btn-edit-custom');
     if (editBtn) editBtn.addEventListener('click', () => {
-      showMarketEditModal(custom, async () => { marketSubTab = 'index'; await renderMarketTab(); });
+      showMarketEditModal(custom, async () => { marketSubTab = 'index'; await renderMarketBody(container); });
     });
     let exportBtn = container.querySelector('#btn-export-csv');
     if (exportBtn) exportBtn.addEventListener('click', async () => {
@@ -939,7 +1001,7 @@ function bindMarketEvents(container, records, realtimeQuote, custom, latestRecor
     try {
       if (marketSubTab === 'third_board') await initThirdBoardData();
       else await initMarketData();
-      await renderMarketTab();
+      await renderMarketBody(container);
     } catch(e) { container.innerHTML = '<div class="empty-state">刷新失败: ' + escapeHtml(e.message) + '</div>'; }
   });
 }
@@ -1025,7 +1087,7 @@ function setupGlobalEvents() {
   document.addEventListener('touchmove', (e) => {
     if (!isPulling) return;
     let deltaY = e.touches[0].clientY - touchStartY;
-    if (deltaY > 60 && (currentTab === 'watchlist' || currentTab === 'holdings' || currentTab === 'market')) {
+    if (deltaY > 60 && (currentTab === 'watchlist' || currentTab === 'holdings' || currentTab === 'environment')) {
       isPulling = false;
       if (currentTab === 'watchlist') {
         (async () => {
@@ -1037,9 +1099,9 @@ function setupGlobalEvents() {
           await loadAllData();
           await refreshHoldingsQuotes();
         })();
-      } else if (currentTab === 'market') {
+      } else if (currentTab === 'environment') {
         (async () => {
-          await renderMarketTab();
+          await renderEnvironmentTab();
         })();
       }
     }
@@ -1057,7 +1119,7 @@ function registerSW() {
   navigator.serviceWorker.getRegistrations().then((regs) => {
     return Promise.all(regs.map(r => r.unregister()));
   }).then(() => {
-    return navigator.serviceWorker.register('/sw.js?v=20260718');
+    return navigator.serviceWorker.register('/sw.js?v=20260906');
   }).then((reg) => {
     console.log('SW 注册成功:', reg.scope);
 

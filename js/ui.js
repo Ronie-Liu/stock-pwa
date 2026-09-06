@@ -247,7 +247,7 @@ function renderStockList(stocks, quotes, isHoldings) {
     return `
       <div class="empty-state">
         ${ICONS.empty}
-        <p>暂无${typeName}<br>点击添加或导入 CSV</p>
+        <p>暂无${typeName}<br>点击添加</p>
       </div>
     `;
   }
