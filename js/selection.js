@@ -143,29 +143,55 @@ function renderLowerShadowPage(body) {
 
 // ===== 东方财富全市场实时行情 =====
 
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// 多个行情源镜像，主源失败自动切换备用源
+const EM_HOSTS = [
+  'https://push2.eastmoney.com',
+  'https://push2delay.eastmoney.com'
+];
+
 async function fetchAllAQuotes() {
-  const base = 'https://push2.eastmoney.com/api/qt/clist/get';
+  let lastErr = null;
+  for (let host of EM_HOSTS) {
+    try {
+      return await fetchQuotesFromHost(host);
+    } catch (e) {
+      lastErr = e;
+      console.warn('行情源 ' + host + ' 失败，尝试备用源：', e);
+    }
+  }
+  throw lastErr || new Error('全部行情源请求失败');
+}
+
+async function fetchQuotesFromHost(host) {
   const pz = 100;
   let all = [];
   let pn = 1;
 
   while (true) {
-    let url = `${base}?pn=${pn}&pz=${pz}&po=1&np=1&fltt=2&invt=2&fid=f3` +
+    let url = `${host}/api/qt/clist/get?pn=${pn}&pz=${pz}&po=1&np=1&fltt=2&invt=2&fid=f3` +
       `&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23` +
       `&fields=f2,f3,f8,f12,f13,f14,f15,f16,f17,f18`;
 
     let json = await fetchWithRetry(url);
-    let data = json && json.data;
-    if (!data || !Array.isArray(data.diff)) break;
+    if (!json || json.data == null) {
+      throw new Error('行情源返回异常(rc=' + (json && json.rc != null ? json.rc : 'null') + ')');
+    }
+    let data = json.data;
+    if (!Array.isArray(data.diff)) break;
 
     all.push(...data.diff);
 
     let total = data.total || 0;
     if (all.length >= total || data.diff.length < pz) break;
     pn++;
+    if (pn % 5 === 0) await sleep(120); // 每5页稍作停顿，降低触发限频的概率
   }
 
-  return all.map(mapEastMoneyRow).filter(r => r != null);
+  let rows = all.map(mapEastMoneyRow).filter(r => r != null);
+  if (rows.length === 0) throw new Error('未获取到任何行情数据');
+  return rows;
 }
 
 async function fetchWithRetry(url, retries = 3) {
@@ -173,14 +199,19 @@ async function fetchWithRetry(url, retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
       let controller = new AbortController();
-      let timeout = setTimeout(() => controller.abort(), 15000);
+      let timeout = setTimeout(() => controller.abort(), 20000);
       let resp = await fetch(url, { signal: controller.signal });
       clearTimeout(timeout);
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      return await resp.json();
+      let text = await resp.text();
+      try {
+        return JSON.parse(text);
+      } catch (parseErr) {
+        throw new Error('响应非JSON(可能被限频或网络拦截)');
+      }
     } catch (e) {
       lastErr = e;
-      if (i < retries - 1) await new Promise(r => setTimeout(r, 500 * (i + 1)));
+      if (i < retries - 1) await sleep(600 * (i + 1));
     }
   }
   throw lastErr || new Error('请求失败');
@@ -292,7 +323,11 @@ async function startScreen() {
     }
   } catch (e) {
     console.error('筛选失败:', e);
-    if (progressEl) progressEl.innerHTML = `<div class="inline-msg error">筛选失败: ${escapeHtml(e.message || e)}</div>`;
+    let msg = (e && e.message) ? e.message : String(e);
+    if (/Failed to fetch|NetworkError|网络错误/i.test(msg)) {
+      msg = '网络请求失败，请检查网络后重试';
+    }
+    if (progressEl) progressEl.innerHTML = `<div class="inline-msg error">筛选失败：${escapeHtml(msg)}</div>`;
     showToast('筛选失败，请重试', 'error');
   } finally {
     isScreening = false;

@@ -1,6 +1,6 @@
 // Service Worker - 自选股价格监控 PWA
 // 🔄 网络优先策略：确保每次打开都获取最新代码
-const CACHE_NAME = 'stock-monitor-v7';
+const CACHE_NAME = 'stock-monitor-v8';
 
 // 需要缓存的路径（离线回退用）
 const CACHE_WHITELIST = [
@@ -37,8 +37,7 @@ self.addEventListener('fetch', (event) => {
 
   // API请求不走SW
   if (url.hostname.includes('qt.gtimg.cn') ||
-      url.hostname.includes('push2.eastmoney.com') ||
-      url.hostname.includes('push2his.eastmoney.com') ||
+      url.hostname.includes('eastmoney.com') ||
       url.hostname.includes('hq.sinajs.cn') ||
       url.hostname.includes('ifzq.gtimg.cn') ||
       url.hostname.includes('web.ifzq.gtimg.cn') ||
