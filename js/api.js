@@ -208,6 +208,54 @@ async function fetchKLineTencent(code, count) {
 }
 
 /**
+ * 获取个股分时数据（腾讯分时API，多域名容错）
+ * 返回 { code, points, date, error }
+ * points: [{ time:"0930", price, avgPrice, volume(手), cumVol(手), cumAmt(元) }]
+ */
+async function fetchMinute(code) {
+  let tcode = stdToTencent(code);
+  const hosts = ['https://ifzq.gtimg.cn', 'https://web.ifzq.gtimg.cn'];
+  let lastErr = null;
+  for (let host of hosts) {
+    try {
+      let url = host + '/appstock/app/minute/query?code=' + tcode;
+      let controller = new AbortController();
+      let timeout = setTimeout(() => controller.abort(), 15000);
+      let resp = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      let text = await resp.text();
+      // WAF 拦截页是 HTML 重定向，正常响应以 { 开头
+      if (text.indexOf('waf.tencent.com') >= 0 || text.trim().charAt(0) !== '{') {
+        throw new Error('被WAF拦截');
+      }
+      let json = JSON.parse(text);
+      let sd = json.data && json.data[tcode] && json.data[tcode].data;
+      if (!sd || !sd.data || sd.data.length === 0) throw new Error('无分时数据');
+
+      let prevCumVol = 0;
+      let points = sd.data.map(line => {
+        let f = String(line).split(' ');
+        let time = f[0];
+        let price = parseFloat(f[1]);
+        let cumVol = parseFloat(f[2]);   // 累计成交量(手)
+        let cumAmt = parseFloat(f[3]);   // 累计成交额(元)
+        let avgPrice = cumVol > 0 ? cumAmt / (cumVol * 100) : price;  // 均价 = 额/量(股)
+        let volume = Math.max(0, cumVol - prevCumVol);  // 每分钟增量(手)
+        prevCumVol = cumVol;
+        return { time, price, avgPrice, volume, cumVol, cumAmt };
+      });
+
+      return { code, points, date: sd.date || '', error: null };
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  return { code, points: [], date: '', error: (lastErr && lastErr.message) || '分时获取失败' };
+}
+
+/**
  * AI分析（调用公开大模型API）
  * 使用免费/公开接口分析K线形态
  */

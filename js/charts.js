@@ -1,6 +1,7 @@
 // ===== K线图渲染（ECharts CDN） =====
 
 let klineChart = null;
+let minuteChart = null;
 let currentKlineData = [];
 let dataZoomLocked = false;
 
@@ -366,6 +367,178 @@ async function renderKLineChart(code) {
   }
 }
 
+// ===== 分时图渲染（经典金融软件样式） =====
+
+function formatMinuteTime(hhmm) {
+  if (!hhmm || String(hhmm).length < 4) return hhmm || '';
+  let s = String(hhmm);
+  return s.slice(0, 2) + ':' + s.slice(2, 4);
+}
+
+function formatVolHand(vol) {
+  if (vol == null || isNaN(vol)) return '--';
+  if (vol >= 1e8) return (vol / 1e8).toFixed(2) + '亿手';
+  if (vol >= 1e4) return (vol / 1e4).toFixed(2) + '万手';
+  return Math.round(vol) + '手';
+}
+
+function formatAmount(amt) {
+  if (amt == null || isNaN(amt)) return '--';
+  if (amt >= 1e8) return (amt / 1e8).toFixed(2) + '亿';
+  if (amt >= 1e4) return (amt / 1e4).toFixed(2) + '万';
+  return Math.round(amt) + '元';
+}
+
+/**
+ * 渲染个股分时图（现价线 + 均价线 + 成交量柱）
+ * 信息栏含：现价/涨跌幅/均价/开/高/低/昨收/量/额/换手
+ */
+async function renderMinuteChart(code, quote) {
+  let container = document.getElementById('minute-chart');
+  let infoEl = document.getElementById('minute-info');
+  if (!container) return;
+
+  if (infoEl) infoEl.innerHTML = '<div class="minute-info-loading"><span class="spinner"></span> 加载分时数据...</div>';
+
+  if (typeof echarts === 'undefined') {
+    try { await loadECharts(); }
+    catch (e) {
+      if (infoEl) infoEl.innerHTML = '<div class="minute-info-empty">图表组件加载失败</div>';
+      return;
+    }
+  }
+
+  try {
+    let result = await fetchMinute(code);
+    if (result.error || !result.points || result.points.length === 0) {
+      if (infoEl) infoEl.innerHTML = '<div class="minute-info-empty">暂无分时数据' + (result.error ? '（' + escapeHtml(result.error) + '）' : '') + '</div>';
+      return;
+    }
+
+    let points = result.points;
+    let times = points.map(p => p.time);
+    let prices = points.map(p => p.price);
+    let avgs = points.map(p => p.avgPrice);
+
+    // 昨收（涨跌幅基准）
+    let prevClose = (quote && !quote.error && quote.prev_close) ? parseFloat(quote.prev_close) : null;
+    if (!prevClose || prevClose <= 0) prevClose = prices[0];
+
+    let last = prices[prices.length - 1];
+    let open = prices[0];
+    let high = Math.max(...prices);
+    let low = Math.min(...prices);
+    let change = last - prevClose;
+    let changeRate = (change / prevClose) * 100;
+    let avgLast = avgs[avgs.length - 1];
+    let lastP = points[points.length - 1];
+    let totalVol = lastP.cumVol || points.reduce((a, p) => a + p.volume, 0);   // 手
+    let totalAmt = lastP.cumAmt || points.reduce((a, p) => a + p.volume * p.price * 100, 0); // 元
+    let turnover = (quote && !quote.error && quote.turnover_ratio != null) ? quote.turnover_ratio : null;
+
+    let up = changeRate >= 0;
+    let mainColor = up ? '#ef4444' : '#22c55e';
+    let sign = up ? '+' : '';
+
+    // 信息栏渲染
+    if (infoEl) {
+      infoEl.innerHTML = `
+        <div class="minute-info-main">
+          <div class="minute-info-price" style="color:${mainColor}">${last.toFixed(2)}</div>
+          <div class="minute-info-change">
+            <span style="color:${mainColor}">${sign}${change.toFixed(2)}</span>
+            <span class="minute-info-rate" style="background:${mainColor}">${sign}${changeRate.toFixed(2)}%</span>
+          </div>
+        </div>
+        <div class="minute-info-grid">
+          <div class="minute-info-cell"><span class="k">均价</span><span class="v">${avgLast.toFixed(2)}</span></div>
+          <div class="minute-info-cell"><span class="k">今开</span><span class="v">${open.toFixed(2)}</span></div>
+          <div class="minute-info-cell"><span class="k">最高</span><span class="v">${high.toFixed(2)}</span></div>
+          <div class="minute-info-cell"><span class="k">最低</span><span class="v">${low.toFixed(2)}</span></div>
+          <div class="minute-info-cell"><span class="k">昨收</span><span class="v">${prevClose.toFixed(2)}</span></div>
+          <div class="minute-info-cell"><span class="k">成交量</span><span class="v">${formatVolHand(totalVol)}</span></div>
+          <div class="minute-info-cell"><span class="k">成交额</span><span class="v">${formatAmount(totalAmt)}</span></div>
+          <div class="minute-info-cell"><span class="k">换手率</span><span class="v">${turnover != null ? turnover.toFixed(2) + '%' : '--'}</span></div>
+        </div>
+        ${result.date ? `<div class="minute-info-date">${escapeHtml(result.date)}</div>` : ''}
+      `;
+    }
+
+    container.innerHTML = '';
+    let isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    let textColor = isLight ? '#333' : '#e0e0e0';
+    let bgColor = isLight ? '#ffffff' : '#1e1e1e';
+    let borderColor = isLight ? '#e0e0e0' : '#2a2a2a';
+    let lineColor = isLight ? '#333333' : '#e0e0e0';
+    let avgLineColor = '#f5a623'; // 均价线（经典黄色）
+    let upColor = '#ef4444', downColor = '#22c55e';
+
+    // 价格轴范围（含均价）
+    let priceMin = Math.min(low, Math.min(...avgs), prevClose);
+    let priceMax = Math.max(high, Math.max(...avgs), prevClose);
+    let pad = (priceMax - priceMin) * 0.06 || prevClose * 0.01 || 0.01;
+    priceMin = priceMin - pad;
+    priceMax = priceMax + pad;
+
+    // 成交量柱颜色：与前一分钟价格比较
+    let volData = points.map((p, i) => {
+      let isUpBar = i === 0 ? p.price >= prevClose : p.price >= points[i - 1].price;
+      return { value: p.volume, itemStyle: { color: isUpBar ? upColor : downColor } };
+    });
+
+    let option = {
+      backgroundColor: bgColor,
+      animation: false,
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'cross', crossStyle: { color: textColor, width: 1, type: 'dashed' }, label: { backgroundColor: isLight ? '#f0f0f0' : '#333', color: textColor, fontSize: 10 } },
+        formatter: function(params) {
+          let idx = params[0] && params[0].dataIndex;
+          if (idx == null) return '';
+          let p = points[idx];
+          let dChange = p.price - prevClose;
+          let dRate = (dChange / prevClose) * 100;
+          let s = dRate >= 0 ? '+' : '';
+          let c = dRate >= 0 ? upColor : downColor;
+          return '<div style="font-size:11px;line-height:1.7">'
+            + '<div>' + formatMinuteTime(p.time) + '</div>'
+            + '<div style="color:' + c + '">现价 ' + p.price.toFixed(2) + '（' + s + dRate.toFixed(2) + '%）</div>'
+            + '<div>均价 ' + p.avgPrice.toFixed(2) + '</div>'
+            + '<div>量 ' + formatVolHand(p.cumVol) + '</div>'
+            + '</div>';
+        }
+      },
+      grid: [
+        { left: '2%', right: '8%', top: '2%', height: '60%' },
+        { left: '2%', right: '8%', top: '70%', height: '22%' }
+      ],
+      xAxis: [
+        { type: 'category', data: times, boundaryGap: false, gridIndex: 0, axisLine: { lineStyle: { color: borderColor } }, axisLabel: { show: false }, axisTick: { show: false } },
+        { type: 'category', data: times, boundaryGap: false, gridIndex: 1, axisLine: { lineStyle: { color: borderColor } }, axisLabel: { color: textColor, fontSize: 9, interval: Math.max(0, Math.floor(times.length / 5) - 1), formatter: v => formatMinuteTime(v) }, axisTick: { show: false } }
+      ],
+      yAxis: [
+        { scale: true, position: 'left', min: priceMin, max: priceMax, gridIndex: 0, splitLine: { lineStyle: { color: borderColor, type: 'dashed' } }, axisLabel: { color: textColor, fontSize: 9, formatter: v => v.toFixed(2) } },
+        { scale: true, position: 'right', min: (priceMin - prevClose) / prevClose * 100, max: (priceMax - prevClose) / prevClose * 100, gridIndex: 0, splitLine: { show: false }, axisLabel: { color: textColor, fontSize: 9, formatter: v => v.toFixed(1) + '%' } },
+        { scale: true, gridIndex: 1, splitLine: { show: false }, axisLabel: { color: textColor, fontSize: 8, formatter: v => v >= 1e4 ? (v / 1e4).toFixed(0) + '万' : v } }
+      ],
+      series: [
+        { name: '分时', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: prices, symbol: 'none', lineStyle: { color: lineColor, width: 1.4 },
+          areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [ { offset: 0, color: up ? 'rgba(239,68,68,0.28)' : 'rgba(34,197,94,0.28)' }, { offset: 1, color: 'rgba(0,0,0,0)' } ] } } },
+        { name: '均价', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: avgs, symbol: 'none', lineStyle: { color: avgLineColor, width: 1.2 } },
+        { name: '成交量', type: 'bar', xAxisIndex: 1, yAxisIndex: 2, data: volData, barWidth: '70%' }
+      ]
+    };
+
+    minuteChart = echarts.init(container);
+    minuteChart.setOption(option);
+    window.addEventListener('resize', () => { if (minuteChart) minuteChart.resize(); });
+  } catch (e) {
+    container.innerHTML = '';
+    if (infoEl) infoEl.innerHTML = '<div class="minute-info-empty">分时加载失败: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
 /**
  * 切换缩放锁定状态
  */
@@ -418,4 +591,5 @@ function loadECharts() {
 
 function disposeChart() {
   if (klineChart) { klineChart.dispose(); klineChart = null; }
+  if (minuteChart) { minuteChart.dispose(); minuteChart = null; }
 }

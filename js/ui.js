@@ -412,6 +412,12 @@ function showDetailPage(stock, quote) {
       </div>
       <div class="detail-body">
         <div class="chart-before">
+          <div class="minute-section">
+            <div class="minute-info" id="minute-info">
+              <div class="minute-info-loading"><span class="spinner"></span> 加载分时数据...</div>
+            </div>
+            <div class="minute-chart" id="minute-chart"></div>
+          </div>
           <div class="chart-top-bar">
             <div class="indicator-panel" id="indicator-panel">
               <span class="ind-item">加载中...</span>
@@ -443,6 +449,11 @@ function showDetailPage(stock, quote) {
     document.getElementById('detail-page').remove();
     if (typeof onDetailClose === 'function') onDetailClose();
   });
+
+  // 加载分时图
+  if (typeof renderMinuteChart === 'function') {
+    renderMinuteChart(stock.code, quote);
+  }
 
   // 加载K线图
   if (typeof renderKLineChart === 'function') {
