@@ -384,9 +384,10 @@ function toggleZoomLock() {
 }
 
 const ECHARTS_CDNS = [
-  'https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js',
+  'https://cdn.staticfile.org/echarts/5.5.0/echarts.min.js',
+  'https://registry.npmmirror.com/echarts/5.5.0/files/dist/echarts.min.js',
   'https://cdn.bootcdn.net/ajax/libs/echarts/5.5.0/echarts.min.js',
-  'https://registry.npmmirror.com/echarts/5.5.0/files/dist/echarts.min.js'
+  'https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js'
 ];
 
 function loadECharts() {

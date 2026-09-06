@@ -117,10 +117,86 @@ function parseTencentQuotes(text, codes) {
 }
 
 /**
- * 获取K线数据（腾讯复权日K API）
- * 沪深支持完整历史数据，北交所返回可用数据
+ * 标准代码 → 东方财富 secid（1=沪，0=深/北）
+ */
+function stdToSecId(code) {
+  let digits = extractDigits(code);
+  if (code.includes('.SH') || code.match(/^(600|601|603|605|688|900)/)) return '1.' + digits;
+  return '0.' + digits;
+}
+
+/**
+ * 获取K线数据（优先东方财富复权日K，失败回退腾讯）
  */
 async function fetchKLine(code, count = 120) {
+  let em = await fetchKLineEastMoney(code, count);
+  if (!em.error && em.candles && em.candles.length > 0) return em;
+  return fetchKLineTencent(code, count);
+}
+
+/**
+ * 东方财富复权日K（push2his.eastmoney.com，CORS *）
+ * 字段：日期,开,收,高,低,量,额,振幅,涨跌幅,涨跌额,换手率
+ */
+async function fetchKLineEastMoney(code, count) {
+  let secid = stdToSecId(code);
+  let url = 'https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=' + secid +
+    '&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61' +
+    '&klt=101&fqt=1&end=20500101&lmt=' + count;
+
+  try {
+    let controller = new AbortController();
+    let timeout = setTimeout(() => controller.abort(), 12000);
+    let resp = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    let json = await resp.json();
+
+    let d = json.data;
+    if (!d || !Array.isArray(d.klines) || d.klines.length === 0) throw new Error('无K线数据');
+
+    let candles = d.klines.map(line => {
+      let p = String(line).split(',');
+      return {
+        date: p[0],
+        open: parseFloat(p[1]),
+        close: parseFloat(p[2]),
+        high: parseFloat(p[3]),
+        low: parseFloat(p[4]),
+        volume: (parseFloat(p[5]) || 0) * 100, // 手→股
+        amount: parseFloat(p[6]) || 0,
+        amplitude: parseFloat(p[7]) || 0,
+        change_rate: parseFloat(p[8]) || 0,
+        change: parseFloat(p[9]) || 0,
+        turnover: parseFloat(p[10]) || 0,
+        ma5: null, ma10: null, ma20: null, ma30: null, ma60: null
+      };
+    });
+
+    // 兜底补算涨跌幅和振幅
+    for (let i = 1; i < candles.length; i++) {
+      let prev = candles[i - 1];
+      if (prev.close > 0) {
+        candles[i].change = parseFloat((candles[i].close - prev.close).toFixed(3));
+        candles[i].change_rate = parseFloat((candles[i].change / prev.close * 100).toFixed(2));
+        if (candles[i].high > 0 && candles[i].low > 0) {
+          candles[i].amplitude = parseFloat(((candles[i].high - candles[i].low) / prev.close * 100).toFixed(2));
+        }
+      }
+    }
+
+    return { code, candles, error: null };
+  } catch (e) {
+    console.error('东方财富K线失败:', e.message);
+    return { code, candles: [], error: e.message };
+  }
+}
+
+/**
+ * 腾讯复权日K（备用源）
+ */
+async function fetchKLineTencent(code, count) {
   let tcode = stdToTencent(code);
   let url = 'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=' + tcode + ',day,,,' + count + ',qfq';
 
@@ -147,7 +223,7 @@ async function fetchKLine(code, count = 120) {
       close: parseFloat(item[2]),
       high: parseFloat(item[3]),
       low: parseFloat(item[4]),
-      volume: (parseFloat(item[5]) || 0) * 100, // 手→股, safeNum防NaN
+      volume: (parseFloat(item[5]) || 0) * 100, // 手→股
       amount: 0,
       amplitude: 0,
       change_rate: 0,
@@ -168,7 +244,7 @@ async function fetchKLine(code, count = 120) {
 
     return { code, candles, error: null };
   } catch (e) {
-    console.error('获取K线失败:', e.message);
+    console.error('腾讯K线失败:', e.message);
     return { code, candles: [], error: e.message };
   }
 }
