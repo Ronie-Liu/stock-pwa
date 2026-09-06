@@ -522,19 +522,8 @@ function bindCardEvents(container, isHoldings) {
   });
 }
 
-// ===== Tab: 条件选股（占位） =====
-
-function renderSelectionTab() {
-  let container = document.getElementById('page-selection');
-  if (!container) return;
-
-  container.innerHTML = `
-    ${renderPageHeader('条件选股', '按条件筛选股票')}
-    <div class="empty-state">
-      ${ICONS.empty}
-      <p>条件选股功能开发中<br>敬请期待</p>
-    </div>`;
-}
+// ===== Tab: 条件选股（由 js/selection.js 实现，含子功能页「下影线」） =====
+// renderSelectionTab() 定义在 selection.js
 
 // ===== Tab: 环境（子功能：共振/流动性/情绪偏好/趋势周期/系统设置） =====
 
@@ -1119,7 +1108,7 @@ function registerSW() {
   navigator.serviceWorker.getRegistrations().then((regs) => {
     return Promise.all(regs.map(r => r.unregister()));
   }).then(() => {
-    return navigator.serviceWorker.register('/sw.js?v=20260906');
+    return navigator.serviceWorker.register('/sw.js?v=20260906b');
   }).then((reg) => {
     console.log('SW 注册成功:', reg.scope);
 
