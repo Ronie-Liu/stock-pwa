@@ -1108,7 +1108,7 @@ function registerSW() {
   navigator.serviceWorker.getRegistrations().then((regs) => {
     return Promise.all(regs.map(r => r.unregister()));
   }).then(() => {
-    return navigator.serviceWorker.register('/sw.js?v=20260906f');
+    return navigator.serviceWorker.register('/sw.js?v=20260906g');
   }).then((reg) => {
     console.log('SW 注册成功:', reg.scope);
 
