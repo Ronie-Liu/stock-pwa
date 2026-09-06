@@ -146,9 +146,16 @@ async function renderKLineChart(code) {
   let container = document.getElementById('kline-chart');
   if (!container) return;
 
-  if (typeof echarts === 'undefined') await loadECharts();
-
   container.innerHTML = '<div style="text-align:center;padding-top:140px;color:var(--text-secondary)"><span class="spinner"></span> 加载K线数据...</div>';
+
+  if (typeof echarts === 'undefined') {
+    try {
+      await loadECharts();
+    } catch (e) {
+      container.innerHTML = '<div style="text-align:center;padding-top:140px;color:var(--danger)">图表组件加载失败，请检查网络后重试</div>';
+      return;
+    }
+  }
 
   try {
     let result = await fetchKLine(code, 120);
@@ -376,14 +383,35 @@ function toggleZoomLock() {
   }
 }
 
+const ECHARTS_CDNS = [
+  'https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js',
+  'https://cdn.bootcdn.net/ajax/libs/echarts/5.5.0/echarts.min.js',
+  'https://registry.npmmirror.com/echarts/5.5.0/files/dist/echarts.min.js'
+];
+
 function loadECharts() {
   return new Promise((resolve, reject) => {
     if (typeof echarts !== 'undefined') return resolve();
-    let script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js';
-    script.onload = resolve;
-    script.onerror = () => reject(new Error('ECharts加载失败'));
-    document.head.appendChild(script);
+    let idx = 0;
+    function tryNext() {
+      if (typeof echarts !== 'undefined') return resolve();
+      if (idx >= ECHARTS_CDNS.length) return reject(new Error('ECharts加载失败'));
+      let script = document.createElement('script');
+      let settled = false;
+      function done(ok) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (ok) resolve();
+        else tryNext();
+      }
+      let timer = setTimeout(() => { script.remove(); done(false); }, 8000);
+      script.onload = () => done(true);
+      script.onerror = () => { script.remove(); done(false); };
+      script.src = ECHARTS_CDNS[idx++];
+      document.head.appendChild(script);
+    }
+    tryNext();
   });
 }
 

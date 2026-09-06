@@ -2,13 +2,13 @@
 // 子功能页：下影线
 // 数据源：东方财富全市场实时行情（push2.eastmoney.com），MA120 用腾讯复权日K计算
 
+const LS_COND_KEY = 'selection_lower_shadow_conditions';
+
 let selectionSubTab = 'lower_shadow';
 let lowerShadowConditions = loadLowerShadowConditions();
 let lowerShadowResults = [];
 let lowerShadowSort = { key: 'shadow', dir: 'desc' };
 let isScreening = false;
-
-const LS_COND_KEY = 'selection_lower_shadow_conditions';
 
 // 列名 → 数据字段映射
 const COL_FIELD = {
@@ -339,6 +339,16 @@ function setProgress(el, msg) {
   if (el) el.innerHTML = `<div class="loading-indicator"><span class="spinner"></span> ${escapeHtml(msg)}</div>`;
 }
 
+// 计算收盘价序列最近 120 日的简单移动平均（返回标量）。
+// 注意：全局已有 charts.js 定义的 calcMA（返回数组），此处必须用独立函数名，避免被覆盖导致计算出错。
+function calcMA120Value(closes) {
+  let n = Math.min(closes.length, 120);
+  if (n === 0) return null;
+  let sum = 0;
+  for (let i = closes.length - n; i < closes.length; i++) sum += closes[i];
+  return sum / n;
+}
+
 async function computeMA120(candidates, onProgress) {
   const CONCURRENCY = 10;
   const results = new Array(candidates.length);
@@ -357,7 +367,7 @@ async function computeMA120(candidates, onProgress) {
         if (kl && kl.candles && kl.candles.length >= 120) {
           let closes = kl.candles.map(c => c.close).filter(v => !isNaN(v));
           if (closes.length >= 120) {
-            ma120 = calcMA(closes.slice(-120), 120);
+            ma120 = calcMA120Value(closes);
           }
         }
       } catch (e) {
