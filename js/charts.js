@@ -89,14 +89,14 @@ function updateIndicatorPanel(candles, idx) {
   let ma5 = c.ma5;
   let ma10 = c.ma10;
   let ma20 = c.ma20;
-  let ma30 = c.ma30;
+  let ma120 = c.ma120;
   let ma60 = c.ma60;
 
   // 如果API没返回，本地计算
   if (ma5 == null) ma5 = calcMA(closes, 5)[idx];
   if (ma10 == null) ma10 = calcMA(closes, 10)[idx];
   if (ma20 == null) ma20 = calcMA(closes, 20)[idx];
-  if (ma30 == null) ma30 = calcMA(closes, 30)[idx];
+  if (ma120 == null) ma120 = calcMA(closes, Math.min(120, closes.length))[idx];
   if (ma60 == null) ma60 = calcMA(closes, Math.min(60, closes.length))[idx];
   let boll = calcBOLL(closes);
   let macdArr = calcMACDData(closes);
@@ -123,7 +123,7 @@ function updateIndicatorPanel(candles, idx) {
       <span class="ind-tag ind-tag-ma5" style="border-left:3px solid #ff9800">MA5 <b>${ma5!=null?ma5.toFixed(2):'--'}</b></span>
       <span class="ind-tag ind-tag-ma10" style="border-left:3px solid #2196f3">MA10 <b>${ma10!=null?ma10.toFixed(2):'--'}</b></span>
       <span class="ind-tag ind-tag-ma20" style="border-left:3px solid #9c27b0">MA20 <b>${ma20!=null?ma20.toFixed(2):'--'}</b></span>
-      <span class="ind-tag ind-tag-ma30" style="border-left:3px solid #00bcd4">MA30 <b>${ma30!=null?ma30.toFixed(2):'--'}</b></span>
+      <span class="ind-tag ind-tag-ma120" style="border-left:3px solid #00bcd4">MA120 <b>${ma120!=null?ma120.toFixed(2):'--'}</b></span>
       <span class="ind-tag ind-tag-ma60" style="border-left:3px solid #795548">MA60 <b>${ma60!=null?ma60.toFixed(2):'--'}</b></span>
     </div>
     <div class="ind-line ind-line-boll">
@@ -158,7 +158,7 @@ async function renderKLineChart(code) {
   }
 
   try {
-    let result = await fetchKLine(code, 120);
+    let result = await fetchKLine(code, 250);
     if (result.error || !result.candles || result.candles.length === 0) {
       container.innerHTML = '<div style="text-align:center;padding-top:140px;color:var(--text-secondary)">暂无K线数据</div>';
       return;
@@ -173,14 +173,14 @@ async function renderKLineChart(code) {
     let ma5 = currentKlineData.map(c => c.ma5);
     let ma10 = currentKlineData.map(c => c.ma10);
     let ma20 = currentKlineData.map(c => c.ma20);
-    let ma30 = currentKlineData.map(c => c.ma30);
+    let ma120 = currentKlineData.map(c => c.ma120);
     let ma60 = currentKlineData.map(c => c.ma60);
 
     // 如果API没返回MA数据（非新浪API），本地计算
     if (ma5.every(v => v == null)) ma5 = calcMA(closes, 5);
     if (ma10.every(v => v == null)) ma10 = calcMA(closes, 10);
     if (ma20.every(v => v == null)) ma20 = calcMA(closes, 20);
-    if (ma30.every(v => v == null)) ma30 = calcMA(closes, 30);
+    if (ma120.every(v => v == null)) ma120 = calcMA(closes, Math.min(120, closes.length));
     if (ma60.every(v => v == null)) ma60 = calcMA(closes, Math.min(60, closes.length));
 
     // 计算指标
@@ -256,7 +256,7 @@ async function renderKLineChart(code) {
         { left: '10%', right: '5%', top: '71%', height: '14%' }
       ],
       legend: {
-        data: ['K线', 'MA5', 'MA10', 'MA20', 'MA30', 'MA60', '成交量', 'DIF', 'DEA', 'MACD', 'BOLL上轨', 'BOLL中轨', 'BOLL下轨'],
+        data: ['K线', 'MA5', 'MA10', 'MA20', 'MA120', 'MA60', '成交量', 'DIF', 'DEA', 'MACD', 'BOLL上轨', 'BOLL中轨', 'BOLL下轨'],
         top: 2,
         left: 5,
         right: 5,
@@ -293,7 +293,7 @@ async function renderKLineChart(code) {
         { name: 'MA5', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma5, symbol: 'none', lineStyle: { color: '#ff9800', width: 1 } },
         { name: 'MA10', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma10, symbol: 'none', lineStyle: { color: '#2196f3', width: 1 } },
         { name: 'MA20', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma20, symbol: 'none', lineStyle: { color: '#9c27b0', width: 1 } },
-        { name: 'MA30', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma30, symbol: 'none', lineStyle: { color: '#00bcd4', width: 1 } },
+        { name: 'MA120', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma120, symbol: 'none', lineStyle: { color: '#00bcd4', width: 1 } },
         { name: 'MA60', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma60, symbol: 'none', lineStyle: { color: '#795548', width: 1 } },
 
         // === Grid 1: 成交量柱形图 ===
