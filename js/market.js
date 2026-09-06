@@ -101,12 +101,8 @@ function computeRealtimeIndicatorValue(field, latestRecord, realtimeQuote) {
 // 获取上证K线（3年）
 async function fetchIndexKLineRaw(years = 3) {
   let count = years * 250;
-  let url = 'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=' + SH_INDEX_CODE + ',day,,,' + count + ',qfq';
   try {
-    let resp = await fetch(url, { signal: AbortSignal.timeout(30000) });
-    let json = await resp.json();
-    let data = json.data && json.data[SH_INDEX_CODE];
-    let raw = data ? (data.qfqday || data.day || []) : [];
+    let raw = await fetchTencentKLineRaw(SH_INDEX_CODE, count, 'day');
     return raw.map(r => ({
       date: r[0],
       open: parseFloat(r[1]), close: parseFloat(r[2]),

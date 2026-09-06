@@ -117,36 +117,63 @@ function parseTencentQuotes(text, codes) {
 }
 
 /**
- * 获取K线数据（腾讯 ifzq.gtimg.cn 复权日K，CORS *）
- * 注意：web.ifzq.gtimg.cn 已被腾讯 WAF 拦截(501)，需使用 ifzq.gtimg.cn
+ * 获取K线数据（腾讯复权日K，多域名容错）
+ * 注意：腾讯 WAF 会在 ifzq.gtimg.cn 与 web.ifzq.gtimg.cn 之间轮流拦截(501)，
+ * 因此逐个尝试两个域名，避免单个域名被封导致历史数据失效。
  */
 async function fetchKLine(code, count = 120) {
   return fetchKLineTencent(code, count);
 }
 
 /**
- * 腾讯复权日K（ifzq.gtimg.cn，CORS *）
+ * 腾讯复权K线原始数据（多域名容错）
+ * 返回原始数组 [[date,open,close,high,low,volume,...], ...]
+ * period: day / week / month
+ */
+async function fetchTencentKLineRaw(tcode, count = 120, period = 'day') {
+  const hosts = ['https://ifzq.gtimg.cn', 'https://web.ifzq.gtimg.cn'];
+  let lastErr = null;
+  for (let host of hosts) {
+    try {
+      let url = host + '/appstock/app/fqkline/get?param=' + tcode + ',' + period + ',,,' + count + ',qfq';
+      let controller = new AbortController();
+      let timeout = setTimeout(() => controller.abort(), 15000);
+      let resp = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      let text = await resp.text();
+      // WAF 拦截页是 HTML 重定向，正常响应以 { 开头
+      if (text.indexOf('waf.tencent.com') >= 0 || text.trim().charAt(0) !== '{') {
+        throw new Error('被WAF拦截');
+      }
+      let json = JSON.parse(text);
+      let sd = json.data && json.data[tcode];
+      if (!sd) throw new Error('响应数据异常');
+
+      // 北交所优先day/week，沪深优先qfqday/qfqweek
+      let isBJ = tcode.startsWith('bj');
+      let key = period === 'week' ? (isBJ ? 'week' : 'qfqweek')
+              : period === 'month' ? (isBJ ? 'month' : 'qfqmonth')
+              : (isBJ ? 'day' : 'qfqday');
+      let raw = sd[key] || sd[period] || sd.qfqday || sd.day;
+      if (!raw || raw.length === 0) throw new Error('无K线数据');
+      return raw;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('K线获取失败');
+}
+
+/**
+ * 腾讯复权日K（多域名容错）
  */
 async function fetchKLineTencent(code, count) {
   let tcode = stdToTencent(code);
-  let url = 'https://ifzq.gtimg.cn/appstock/app/fqkline/get?param=' + tcode + ',day,,,' + count + ',qfq';
 
   try {
-    let controller = new AbortController();
-    let timeout = setTimeout(() => controller.abort(), 12000);
-    let resp = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeout);
-
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    let json = await resp.json();
-
-    let stockData = json.data && json.data[tcode];
-    if (!stockData) throw new Error('响应数据异常');
-
-    // 北交所优先day，沪深优先qfqday
-    let isBJ = tcode.startsWith('bj');
-    let raw = isBJ ? (stockData.day || stockData.qfqday) : (stockData.qfqday || stockData.day);
-    if (!raw || raw.length === 0) throw new Error('无K线数据');
+    let raw = await fetchTencentKLineRaw(tcode, count, 'day');
 
     let candles = raw.map(item => ({
       date: item[0],

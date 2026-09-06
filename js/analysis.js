@@ -1,6 +1,6 @@
 // ===== 三维共振技术分析引擎 v4 =====
 // 宏观: 大盘+资金+市场 | 中观: 板块四阶段诊断+精选池 | 微观: 资金面+技术面四维
-// 数据来源: 腾讯行情 + 东方财富 + 新浪 | 基于历史数据的指标运算，不构成投资建议
+// 数据来源: 腾讯行情 | 基于历史数据的指标运算，不构成投资建议
 
 // ==================== 工具函数 ====================
 function safeNum(v, f = 0) { let n = parseFloat(v); return isNaN(n) || !isFinite(n) ? f : n; }
@@ -16,17 +16,8 @@ function calcMASeriesS(data, period) {
 }
 
 async function fetchKLineRaw(tcode, count = 120, period = 'day') {
-  let url = 'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=' + tcode + ',' + period + ',,,' + count + ',qfq';
   try {
-    let resp = await fetch(url, { signal: AbortSignal.timeout(12000) });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    let json = await resp.json();
-    let sd = json.data && json.data[tcode];
-    if (!sd) throw new Error('无数据');
-    let isBJ = tcode.startsWith('bj');
-    let key = period === 'week' ? (isBJ ? 'week' : 'qfqweek') : (isBJ ? 'day' : 'qfqday');
-    let raw = sd[key] || sd[period];
-    if (!raw || !raw.length) throw new Error('无' + period + '线');
+    let raw = await fetchTencentKLineRaw(tcode, count, period);
     return raw.map(item => ({
       date: item[0], open: parseFloat(item[1]), close: parseFloat(item[2]),
       high: parseFloat(item[3]), low: parseFloat(item[4]), volume: parseFloat(item[5]) || 0
@@ -64,45 +55,13 @@ function calcBB(data, period = 20, mult = 2) {
 // ==================== 板块数据获取 ====================
 
 async function fetchSectorBoards(code) {
-  let prefix = code.startsWith('6') ? 'SH' : 'SZ';
-  let fullCode = prefix + code.replace(/\D/g, '');
-  let url = 'https://emweb.securities.eastmoney.com/PC_HSF10/CoreConception/PageAjax?code=' + fullCode;
-  try {
-    let resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    let data = await resp.json();
-    let ssbk = data.ssbk || [];
-    let industries = [], concepts = [];
-    for (let b of ssbk) {
-      let entry = { name: b.BOARD_NAME, code: b.BOARD_CODE, rank: b.BOARD_RANK, isPrecise: b.IS_PRECISE };
-      if (b.BOARD_CODE && parseInt(b.BOARD_CODE) >= 1000) {
-        industries.push(entry);
-      } else if (b.BOARD_CODE && parseInt(b.BOARD_CODE) >= 100) {
-        concepts.push(entry);
-      } else {
-        if (b.IS_PRECISE === '1') concepts.push(entry);
-        else industries.push(entry);
-      }
-    }
-    industries.sort((a, b) => a.rank - b.rank);
-    concepts.sort((a, b) => a.rank - b.rank);
-    return { industries, concepts, all: ssbk };
-  } catch (e) { console.log('板块查询失败:', e.message); return { industries: [], concepts: [], all: [] }; }
+  // 已移除东方财富接口（用户要求不再使用），板块概念暂不可用
+  return { industries: [], concepts: [], all: [] };
 }
 
 async function fetchSectorKLine(boardCode, count = 120) {
-  let url = 'https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=90.BK' + boardCode + '&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57&klt=101&fqt=0&lmt=' + count;
-  try {
-    let resp = await fetch(url, { signal: AbortSignal.timeout(12000) });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    let json = await resp.json();
-    if (json.rc !== 0 || !json.data || !json.data.klines) throw new Error('无数据');
-    return {
-      name: json.data.name || boardCode,
-      dktotal: json.data.dktotal || 0,
-      candles: json.data.klines.map(line => { let p = line.split(','); return { date: p[0], open: parseFloat(p[1]), close: parseFloat(p[2]), high: parseFloat(p[3]), low: parseFloat(p[4]), volume: parseFloat(p[5]) || 0, amount: parseFloat(p[6]) || 0 }; })
-    };
-  } catch (e) { console.log('板块K线获取失败:', boardCode, e.message); return null; }
+  // 已移除东方财富接口（用户要求不再使用），板块K线暂不可用
+  return null;
 }
 
 // ==================== 板块四阶段诊断引擎 (JS版) ====================
@@ -361,36 +320,13 @@ async function fetchIndexData() {
 }
 
 async function fetchNorthboundFlow() {
-  let detail = ''; let trending = '--'; let signal = 'neutral';
-  try {
-    let url = 'https://push2.eastmoney.com/api/qt/kamt.kline/get?fields1=f1,f2,f3,f4&fields2=f51,f52&klt=101&lmt=5';
-    let resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    let d = await resp.json();
-    let kls = d.data && d.data.klines ? d.data.klines : [];
-    let totalNet = 0, dates = [];
-    for (let l of kls.slice(-5)) { let p = l.split(','); dates.push(p[0]); totalNet += safeNum(p[1]); }
-    detail = '近5日净流入: ' + totalNet.toFixed(0) + '亿 | ' + dates[0] + '~' + dates[dates.length - 1];
-    if (totalNet > 50) { signal = 'green'; trending = '持续流入'; }
-    else if (totalNet > 0) { signal = 'yellow'; trending = '小幅流入'; }
-    else { signal = 'red'; trending = '净流出'; }
-  } catch (e) { detail = '(暂不可用)'; }
-  return { detail, trending, signal };
+  // 已移除东方财富接口（北向资金实时数据亦已停止披露）
+  return { detail: '(北向资金已停止披露)', trending: '--', signal: 'neutral' };
 }
 
 async function fetchMarketBreadth() {
-  try {
-    let url = 'https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&invt=2&fields=f2,f3,f8,f9,f12,f14&secids=1.000001,0.399001,0.399006';
-    let resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    let d = await resp.json(); let diffs = d.data && d.data.diff ? d.data.diff : [];
-    let totalUp = 0, totalDown = 0;
-    for (let item of diffs) { totalUp += safeNum(item.f8); totalDown += safeNum(item.f9); }
-    let upRatio = totalUp + totalDown > 0 ? parseFloat((totalUp / (totalUp + totalDown) * 100).toFixed(1)) : 50;
-    let signal = upRatio > 55 ? 'green' : upRatio > 45 ? 'yellow' : 'red';
-    let trending = upRatio > 55 ? '普涨' : upRatio > 45 ? '分化' : '普跌';
-    return { signal, trending, upRatio, detail: '涨' + totalUp + '/跌' + totalDown + ' (' + upRatio + '%上涨)' };
-  } catch (e) { return { signal: 'neutral', trending: '--', upRatio: 0, detail: '(暂不可用)' }; }
+  // 已移除东方财富接口（用户要求不再使用），市场宽度暂不可用
+  return { signal: 'neutral', trending: '--', upRatio: 0, detail: '(暂不可用)' };
 }
 
 function analyzeMacro(indexData) {
@@ -570,27 +506,8 @@ async function analyzeMeso(stock, stockCandles, indexData) {
 // ==================== 微观：资金面 + 四维技术（同v3） ====================
 
 async function fetchStockFlow(code) {
-  let results = { fundFlow: [], northboundSignal: 'neutral', northboundDetail: '', fundFlowDetail: '', stockFlowType: '' };
-  try {
-    let extCode = code.startsWith('6') ? '1.' + code : '0.' + code;
-    let url = 'https://push2.eastmoney.com/api/qt/stock/fflow/daykline/get?lmt=10&secid=' + extCode + '&fields1=f1,f2,f3,f7&fields2=f51,f52,f53,f54';
-    let resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    let d = await resp.json();
-    let kls = d.data && d.data.klines ? d.data.klines : [];
-    let totalNet = 0;
-    for (let l of kls.slice(-5)) {
-      let parts = l.split(',');
-      let mainNet = safeNum(parts[1]) + safeNum(parts[2]);
-      results.fundFlow.push({ date: parts[0], mainNet: parseFloat((mainNet / 1e8).toFixed(2)) });
-      totalNet += mainNet;
-    }
-    if (totalNet > 1e8) { results.northboundSignal = 'green'; results.northboundDetail = '近5日主力资金持续流入'; }
-    else if (totalNet > 0) { results.northboundSignal = 'yellow'; results.northboundDetail = '近5日主力资金小幅净流入'; }
-    else { results.northboundSignal = 'red'; results.northboundDetail = '近5日主力资金净流出'; }
-    results.fundFlowDetail = results.fundFlow.map(f => f.date + ': ' + (f.mainNet > 0 ? '+' : '') + f.mainNet + '亿').join(' | ');
-  } catch (e) { results.fundFlowDetail = '(暂不可用)'; }
-  return results;
+  // 已移除东方财富接口（用户要求不再使用），个股资金流暂不可用
+  return { fundFlow: [], northboundSignal: 'neutral', northboundDetail: '', fundFlowDetail: '(暂不可用)', stockFlowType: '' };
 }
 
 // ==================== 微观技术面四维（保持v3） ====================
