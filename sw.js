@@ -38,6 +38,7 @@ self.addEventListener('fetch', (event) => {
   // API请求不走SW
   if (url.hostname.includes('qt.gtimg.cn') ||
       url.hostname.includes('eastmoney.com') ||
+      url.hostname.includes('proxy.finance.qq.com') ||
       url.hostname.includes('hq.sinajs.cn') ||
       url.hostname.includes('ifzq.gtimg.cn') ||
       url.hostname.includes('web.ifzq.gtimg.cn') ||

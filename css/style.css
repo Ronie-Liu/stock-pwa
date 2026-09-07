@@ -524,7 +524,7 @@ body {
   line-height: 1.7;
 }
 
-/* ===== 环境页 · 流动性晴雨表（手动打分） ===== */
+/* ===== 环境页 · 流动性晴雨表（自动打分） ===== */
 .liq-page {
   display: flex;
   flex-direction: column;
@@ -537,6 +537,14 @@ body {
   justify-content: space-between;
   gap: 8px;
   flex-wrap: wrap;
+}
+.liq-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 26px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 .liq-band-card {
   display: flex;
@@ -573,33 +581,16 @@ body {
   font-size: 13px;
   color: var(--text);
 }
-.liq-form {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.liq-date-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-}
-.liq-date-input {
-  background: var(--bg-input);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 5px 8px;
-  font-size: 13px;
-}
-.liq-msg {
-  font-size: 12px;
+.liq-date {
+  font-size: 11px;
   color: var(--text-muted);
 }
-.liq-msg.success { color: var(--accent); }
-.liq-msg.error { color: var(--danger); }
+.liq-warn {
+  font-size: 11px;
+  color: var(--warning);
+  line-height: 1.5;
+  margin-top: 2px;
+}
 .liq-items {
   display: flex;
   flex-direction: column;
@@ -616,7 +607,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 .liq-item-name {
   font-size: 13px;
@@ -640,45 +631,22 @@ body {
   color: var(--text-muted);
   font-weight: 400;
 }
-.liq-item-basis {
+.liq-bar {
+  height: 7px;
+  background: var(--bg-input);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.liq-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width .4s ease;
+}
+.liq-item-desc {
   font-size: 11px;
   color: var(--text-secondary);
+  margin-top: 6px;
   line-height: 1.5;
-  margin-bottom: 8px;
-}
-.liq-slider {
-  width: 100%;
-  accent-color: var(--accent);
-  margin: 4px 0 8px;
-}
-.liq-tier-row {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.liq-tier-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  padding: 4px 8px;
-  font-size: 10px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--bg-input);
-  color: var(--text);
-  cursor: pointer;
-  line-height: 1.2;
-  flex: 1 1 40%;
-  min-width: 70px;
-}
-.liq-tier-btn b {
-  font-size: 11px;
-  font-family: var(--font-mono);
-  font-weight: 700;
-}
-.liq-tier-btn.active {
-  background: rgba(255,255,255,0.08);
 }
 .liq-note {
   font-size: 10px;
@@ -721,6 +689,9 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 10px;
+}
+.liq-row-date {
+  font-size: 12px;
 }
 .liq-row-total {
   font-family: var(--font-mono);

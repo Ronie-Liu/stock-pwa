@@ -499,3 +499,13 @@ async function getAllLiquidityRecords() {
     req.onerror = () => resolve([]);
   });
 }
+
+async function deleteLiquidityRecord(date) {
+  await openDB();
+  return new Promise((resolve) => {
+    let store = getStore(LIQUIDITY_STORE, 'readwrite');
+    let req = store.delete(date);
+    req.onsuccess = () => resolve(true);
+    req.onerror = () => resolve(false);
+  });
+}
