@@ -37,7 +37,7 @@ async function fetchJSON(path, hosts, timeoutMs = 7000) {
   throw lastErr || new Error('请求失败');
 }
 
-const EM_HOSTS = ['https://push2delay.eastmoney.com', 'https://push2.eastmoney.com'];
+const SENT_EM_HOSTS = ['https://push2delay.eastmoney.com', 'https://push2.eastmoney.com'];
 
 /** datacenter-web 无 CORS，用 JSONP；带超时与清理 */
 function fetchJSONP(url, timeoutMs = 9000) {
@@ -106,7 +106,7 @@ function sentBand(total) {
 async function fetchBreadth() {
   // 上证指数 + 深证成指 的市场涨跌家数统计（f104=上涨 f105=下跌 f106=平盘）
   let url = '/api/qt/ulist.np/get?fltt=2&invt=2&fields=f104,f105,f106,f12&secids=1.000001,0.399001';
-  let json = await fetchJSON(url, EM_HOSTS);
+  let json = await fetchJSON(url, SENT_EM_HOSTS);
   let diff = (json && json.data && json.data.diff) || [];
   let up = 0, down = 0, flat = 0;
   for (let d of diff) {
@@ -164,7 +164,7 @@ async function fetchLimitStats() {
 /** 指标3：昨日涨停概念板块今日涨幅（BK0815 昨日涨停；BK1050 含一字参考） */
 async function fetchYesterdayLimitBoard() {
   let url = '/api/qt/ulist.np/get?fltt=2&invt=2&fields=f3,f12,f14&secids=90.BK0815,90.BK1050';
-  let json = await fetchJSON(url, EM_HOSTS);
+  let json = await fetchJSON(url, SENT_EM_HOSTS);
   let diff = (json && json.data && json.data.diff) || [];
   let main = null, incl = null;
   for (let d of diff) {
@@ -201,7 +201,7 @@ async function fetchExternal() {
   let out = {};
   let secids = ['100.DJIA', '100.XIN9', '133.USDCNH'];
   let url = '/api/qt/ulist.np/get?fltt=2&invt=2&fields=f3,f12,f14&secids=' + secids.join(',');
-  let json = await fetchJSON(url, EM_HOSTS);
+  let json = await fetchJSON(url, SENT_EM_HOSTS);
   let diff = (json && json.data && json.data.diff) || [];
   for (let d of diff) {
     if (String(d.f12) === 'DJIA') out.djia = Number(d.f3);
@@ -213,7 +213,7 @@ async function fetchExternal() {
   for (let key of Object.keys(singleMap)) {
     if (out[key] != null) continue;
     try {
-      let j = await fetchJSON('/api/qt/ulist.np/get?fltt=2&invt=2&fields=f3,f12,f14&secids=' + singleMap[key], EM_HOSTS);
+      let j = await fetchJSON('/api/qt/ulist.np/get?fltt=2&invt=2&fields=f3,f12,f14&secids=' + singleMap[key], SENT_EM_HOSTS);
       let d2 = (j.data && j.data.diff) || [];
       if (d2[0]) out[key] = Number(d2[0].f3);
     } catch (e) { /* 继续补齐其他项 */ }
