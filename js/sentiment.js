@@ -7,6 +7,20 @@ const SENTIMENT_WEIGHTS = [20, 20, 20, 20, 20]; // 5项各20分，总分100
 const SENTIMENT_N = 30; // 走势图最多显示近N日
 let sentimentChart = null; // 走势图实例
 
+// ===== 全市场多空分档推移（新图） =====
+const SENT_MB_N = 7;           // 推移图保留最近N个交易日
+const SENT_MB_CONCURRENCY = 6; // 拉全市场时的并发页数
+let sentimentBandChart = null; // 多空分布图实例
+
+// 档位定义（涨幅 %，展示用），颜色：看空最深绿 -> 看多最深红
+const SENT_MB_BANDS = [
+  { key: 'bear', label: '看空', range: '<-6%', color: '#16a34a' },
+  { key: 'short', label: '做空', range: '-6%~-2%', color: '#65a30d' },
+  { key: 'watch', label: '观望', range: '-2%~2%', color: '#94a3b8' },
+  { key: 'long', label: '做多', range: '2%~6%', color: '#f97316' },
+  { key: 'bull', label: '看多', range: '>6%', color: '#dc2626' }
+];
+
 // ===== 基础工具 =====
 
 /** 带超时的 fetch，超时即抛错（防止个别域名挂起导致页面卡死） */
@@ -361,6 +375,7 @@ async function computeSentimentScore() {
 
 function disposeSentiment() {
   if (sentimentChart) { sentimentChart.dispose(); sentimentChart = null; }
+  if (sentimentBandChart) { sentimentBandChart.dispose(); sentimentBandChart = null; }
 }
 
 async function renderSentimentBody(container) {
@@ -369,6 +384,16 @@ async function renderSentimentBody(container) {
       <div class="sentiment-toolbar">
         <div style="font-size:15px;font-weight:700;">情绪偏好打分（每日一次 · 满分100）</div>
         <button class="btn btn-sm" id="btn-sent-refresh">🔄 刷新打分</button>
+      </div>
+      <div class="mb-section">
+        <div class="mb-head">
+          <span style="font-size:13px;font-weight:700;">全市场多空分布推移（近${SENT_MB_N}个交易日）</span>
+          <button class="btn btn-sm" id="btn-mb-refresh">🔄 更新今日</button>
+        </div>
+        <div class="mb-loading" id="mb-loading"><span class="spinner"></span> 正在拉取全市场实时行情统计...</div>
+        <div class="mb-meta" id="mb-meta"></div>
+        <div class="mb-chart" id="mb-chart"></div>
+        <div class="mb-note">口径：按当日涨跌幅对全市场A股（含北交所）分档 —— 看空＜-6%、做空-6%~-2%、观望-2%~2%、做多2%~6%、看多＞6%；占比=档内家数/当日有行情总数。打开页面若当日尚无快照会自动拉取保存；保留最近${SENT_MB_N}个交易日。</div>
       </div>
       <div class="sentiment-loading" id="sent-loading"><span class="spinner"></span> 正在拉取市场数据打分...</div>
       <div class="sentiment-result" id="sent-result" style="display:none"></div>
@@ -416,7 +441,13 @@ async function renderSentimentBody(container) {
   let btn = document.getElementById('btn-sent-refresh');
   if (btn) btn.addEventListener('click', refresh);
 
+  let mbBtn = document.getElementById('btn-mb-refresh');
+  if (mbBtn) mbBtn.addEventListener('click', () => renderSentimentMarketBands(true));
+
   await refresh();
+
+  // 市场多空分布（独立异步，不阻塞主打分；只在每次进页时渲染/补齐今日快照）
+  try { await renderSentimentMarketBands(false); } catch (e) { console.error('多空分布渲染失败:', e); }
 }
 
 function renderSentimentResult(el, rec) {
@@ -496,5 +527,202 @@ async function renderSentimentTrend() {
   } catch (e) {
     console.error('走势渲染失败:', e);
     chartEl.innerHTML = '<div class="empty-state">走势加载失败: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+// ===== 全市场多空分布（clist 分页拉全市场实时行情 → 按档计数 → 7日推移堆叠图） =====
+
+/** 涨跌幅(%) -> 档位 key；边界约定避免重叠：看多>6、做多(2,6]、观望[-2,2]、做空[-6,-2)、看空<-6 */
+function sentMbClassify(chg) {
+  if (chg > 6) return 'bull';
+  if (chg > 2) return 'long';
+  if (chg >= -2) return 'watch';
+  if (chg >= -6) return 'short';
+  return 'bear';
+}
+
+/** 当日快照日期：优先用上证指数最新交易日，失败回退今天 */
+async function sentMbDateStr() {
+  try {
+    if (typeof fetchTencentKLineRaw === 'function') {
+      let raw = await fetchTencentKLineRaw('sh000001', 3, 'day');
+      if (raw && raw.length) return String(raw[raw.length - 1][0]).slice(0, 10);
+    }
+  } catch (e) { /* 忽略 */ }
+  let d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+/** 东财 clist 全市场分页 URL（沪深京全部A股） */
+function sentMbClistUrl(pn, pz) {
+  let fs = 'm:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048';
+  return '/api/qt/clist/get?pn=' + pn + '&pz=' + pz + '&po=1&np=1&fltt=2&invt=2&fid=f3&fs=' + encodeURIComponent(fs) + '&fields=f2,f3,f5,f12,f14';
+}
+
+/** 抓一页 clist（多host容错），返回 data 或抛错 */
+async function sentMbFetchPage(pn, pz) {
+  let json = await fetchJSON(sentMbClistUrl(pn, pz), SENT_EM_HOSTS, 8000);
+  return json && json.data;
+}
+
+/** 拉全市场并按五档统计；返回 {date,total,listed,bands:{...},updated_at}，bands 存各档家数 */
+async function sentMbCompute() {
+  let first = await sentMbFetchPage(1, 100);
+  let totalListed = (first && first.total) || 0;
+  if (!first || !Array.isArray(first.diff)) throw new Error('全市场行情无数据');
+
+  let pages = Math.max(1, Math.ceil(totalListed / 100));
+  let bandCount = { bear: 0, short: 0, watch: 0, long: 0, bull: 0 };
+  let counted = 0; // 计入统计的有效家数（有涨跌幅且非停牌无成交）
+
+  function tally(list) {
+    for (let s of list) {
+      let chg = Number(s.f3);
+      let vol = Number(s.f5) || 0;
+      if (chg == null || isNaN(chg)) continue;           // 无涨跌幅（停牌/未上市等）
+      if (chg === 0 && vol === 0) continue;              // 疑似停牌无成交的0涨幅不参与
+      bandCount[sentMbClassify(chg)]++;
+      counted++;
+    }
+  }
+  tally(first.diff);
+
+  // 并发拉剩余页（限量并发，避免触发WAF）
+  let next = 2;
+  let running = 0;
+  await new Promise((resolve, reject) => {
+    let failed = null;
+    function pump() {
+      while (running < SENT_MB_CONCURRENCY && next <= pages) {
+        let pn = next++;
+        running++;
+        sentMbFetchPage(pn, 100).then((d) => {
+          if (d && Array.isArray(d.diff)) tally(d.diff);
+        }).catch((e) => { failed = failed || e; })
+        .finally(() => { running--; pump(); });
+      }
+      if (next > pages && running === 0) {
+        if (failed && counted === 0) reject(failed);
+        else resolve();
+      }
+    }
+    pump();
+  });
+
+  let date = await sentMbDateStr();
+  return {
+    date: date,
+    total: counted,        // 计入统计的有效家数（分母）
+    listed: totalListed,   // 全市场列表总数
+    bands: bandCount,
+    updated_at: new Date().toISOString()
+  };
+}
+
+/** 渲染入口：force=true 强制重新抓取当日；否则今日已有快照就直接展示 */
+async function renderSentimentMarketBands(force) {
+  let chartEl = document.getElementById('mb-chart');
+  let loading = document.getElementById('mb-loading');
+  let metaEl = document.getElementById('mb-meta');
+  if (!chartEl || !loading) return;
+
+  async function draw(records) {
+    // records 已按 date 降序
+    let list = records.slice(0, SENT_MB_N).reverse(); // 升序，今天在右
+    if (list.length === 0) {
+      chartEl.innerHTML = '<div class="empty-state" style="padding:20px 12px">暂无快照，点击「更新今日」立即生成第一天数据</div>';
+      return;
+    }
+    if (typeof echarts === 'undefined') { await loadECharts(); }
+    chartEl.innerHTML = '';
+    let isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    let textColor = isLight ? '#333' : '#e0e0e0';
+    let dates = list.map(r => r.date.slice(5)); // MM-DD
+
+    if (sentimentBandChart) { sentimentBandChart.dispose(); sentimentBandChart = null; }
+
+    // 堆叠顺序自下而上：看空->做空->观望->做多->看多（红多在上，绿空在下）
+    let order = ['bear', 'short', 'watch', 'long', 'bull'];
+    let series = order.map((key, i) => {
+      let def = SENT_MB_BANDS.find(b => b.key === key);
+      return {
+        name: def.label + ' ' + def.range,
+        type: 'bar', stack: 'mb', barMaxWidth: 60,
+        itemStyle: { color: def.color },
+        data: list.map(r => {
+          let total = r.total || 1;
+          let cnt = (r.bands && r.bands[key]) || 0;
+          return { value: Math.round(cnt / total * 1000) / 10, cnt: cnt, total: total };
+        })
+      };
+    });
+
+    sentimentBandChart = echarts.init(chartEl);
+    sentimentBandChart.setOption({
+      backgroundColor: 'transparent',
+      animation: false,
+      tooltip: {
+        trigger: 'axis',
+        formatter: function(params) {
+          let p0 = params[0];
+          let total = (p0 && p0.data) ? p0.data.total : 0;
+          let lines = ['<b>' + (params[0] ? params[0].axisValueLabel : '') + '</b>　样本 ' + total + ' 家'];
+          // 按堆叠显示顺序整理
+          for (let p of params) {
+            if (p && p.value != null) {
+              lines.push('<span style="display:inline-block;width:10px;height:10px;background:' + p.color + ';margin-right:4px"></span>' +
+                p.seriesName + '：<b>' + p.data.cnt + '</b> 家（' + p.value + '%）');
+            }
+          }
+          return lines.join('<br>');
+        }
+      },
+      legend: { bottom: 0, left: 'center', textStyle: { color: textColor, fontSize: 9 }, itemWidth: 12, itemHeight: 8 },
+      grid: { left: 36, right: 10, top: 10, bottom: 56 },
+      xAxis: { type: 'category', data: dates, axisLabel: { color: textColor, fontSize: 10 }, axisLine: { lineStyle: { color: '#2a2a2a' } } },
+      yAxis: { type: 'value', min: 0, max: 100, interval: 20, axisLabel: { color: textColor, fontSize: 9, formatter: '{value}%' } },
+      series: series
+    });
+  }
+
+  function showError(msg) {
+    loading.style.display = 'none';
+    chartEl.innerHTML = '<div class="empty-state" style="padding:20px 12px">拉取失败：' + escapeHtml(msg) +
+      '<br><button class="btn btn-sm" style="margin-top:10px" id="mb-retry">重试</button></div>';
+    let retry = document.getElementById('mb-retry');
+    if (retry) retry.onclick = () => renderSentimentMarketBands(true);
+  }
+
+  if (loading) { loading.style.display = 'flex'; loading.innerHTML = '<span class="spinner"></span> 正在拉取全市场实时行情统计...'; }
+  if (metaEl) metaEl.innerHTML = '';
+  let refreshBtn = document.getElementById('btn-mb-refresh');
+  if (refreshBtn) refreshBtn.disabled = true;
+
+  try {
+    let records = await getAllMarketBandRecords(SENT_MB_N + 1);
+    let todayStr = await sentMbDateStr();
+    let hasToday = records.some(r => r.date === todayStr);
+    if (force || !hasToday) {
+      let rec = await sentMbCompute();
+      await saveMarketBandRecord(rec);
+      records = await getAllMarketBandRecords(SENT_MB_N + 1);
+    }
+    if (loading) loading.style.display = 'none';
+    if (metaEl && records.length) {
+      let latest = records[0];
+      let shown = Object.keys(latest.bands || {}).map(k => {
+        let def = SENT_MB_BANDS.find(b => b.key === k);
+        let pct = latest.total ? (latest.bands[k] / latest.total * 100).toFixed(1) : '0';
+        return '<span style="color:' + def.color + ';font-weight:600">' + def.label + ' ' + pct + '%</span>';
+      });
+      metaEl.innerHTML = '最新 ' + escapeHtml(latest.date) + '：样本 ' + latest.total + ' / 全市场 ' + (latest.listed || '--') +
+        ' 家　' + shown.join('　');
+    }
+    await draw(records);
+  } catch (e) {
+    console.error('多空分布计算失败:', e);
+    showError(e.message || String(e));
+  } finally {
+    if (refreshBtn) refreshBtn.disabled = false;
   }
 }

@@ -68,6 +68,11 @@ function openDB() {
         let liqStore = database.createObjectStore(LIQUIDITY_STORE, { keyPath: 'date' });
         liqStore.createIndex('date_idx', 'date', { unique: true });
       }
+      // market_band_daily（全市场多空档位每日分布）
+      if (!database.objectStoreNames.contains(MARKET_BAND_STORE)) {
+        let mbs = database.createObjectStore(MARKET_BAND_STORE, { keyPath: 'date' });
+        mbs.createIndex('date_idx', 'date', { unique: true });
+      }
     };
     request.onsuccess = (e) => {
       db = e.target.result;
@@ -504,6 +509,43 @@ async function deleteLiquidityRecord(date) {
   await openDB();
   return new Promise((resolve) => {
     let store = getStore(LIQUIDITY_STORE, 'readwrite');
+    let req = store.delete(date);
+    req.onsuccess = () => resolve(true);
+    req.onerror = () => resolve(false);
+  });
+}
+
+// ===== 全市场多空档位每日分布 =====
+
+async function saveMarketBandRecord(record) {
+  await openDB();
+  return new Promise((resolve) => {
+    let store = getStore(MARKET_BAND_STORE, 'readwrite');
+    let req = store.put(record);
+    req.onsuccess = () => resolve(true);
+    req.onerror = () => resolve(false);
+  });
+}
+
+async function getAllMarketBandRecords(limit = 30) {
+  await openDB();
+  return new Promise((resolve) => {
+    let store = getStore(MARKET_BAND_STORE);
+    let results = [];
+    let req = store.index('date_idx').openCursor(null, 'prev');
+    req.onsuccess = (e) => {
+      let cursor = e.target.result;
+      if (cursor && results.length < limit) { results.push(cursor.value); cursor.continue(); }
+      else { resolve(results); }
+    };
+    req.onerror = () => resolve([]);
+  });
+}
+
+async function deleteMarketBandRecord(date) {
+  await openDB();
+  return new Promise((resolve) => {
+    let store = getStore(MARKET_BAND_STORE, 'readwrite');
     let req = store.delete(date);
     req.onsuccess = () => resolve(true);
     req.onerror = () => resolve(false);
