@@ -1,8 +1,7 @@
 // ===== 情绪偏好每日打分（环境页子功能） =====
-// 数据源：东方财富实时统计接口（push2/push2ex）+ 数据中心(JSONP)
+// 数据源：东方财富实时统计接口（push2/push2ex/push2delay）+ 数据中心(JSONP)
 // 口径：涨跌比 / 涨停跌停家数 / 昨日涨停板块涨幅 / 融资买入额偏离10日均 / 外部情绪(美股·A50·人民币)
-// 说明：第4项由于无法稳定取得两市成交额日度历史，
-//       以「当日融资买入额 vs 近10个交易日均值偏离」作为占比偏离的近似口径。
+// 容错：所有请求带超时，5项指标逐项容错；单项失败不阻塞整页，页面始终可渲染。
 
 const SENTIMENT_WEIGHTS = [20, 20, 20, 20, 20]; // 5项各20分，总分100
 const SENTIMENT_N = 30; // 走势图最多显示近N日
@@ -10,17 +9,26 @@ let sentimentChart = null; // 走势图实例
 
 // ===== 基础工具 =====
 
-/** 在多个 base host 上重试同一 path（东财 push2delay/push2 互相容错） */
-async function fetchJSON(path, hosts, timeoutMs = 10000) {
+/** 带超时的 fetch，超时即抛错（防止个别域名挂起导致页面卡死） */
+async function fetchWithTimeout(url, timeoutMs = 7000) {
+  let controller = new AbortController();
+  let timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    let resp = await fetch(url, { signal: controller.signal, headers: { 'Accept': 'application/json' } });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    let text = await resp.text();
+    return text;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** 依次尝试多个 base host 的同一 path（东财多域名容错） */
+async function fetchJSON(path, hosts, timeoutMs = 7000) {
   let lastErr = null;
   for (let base of hosts) {
     try {
-      let controller = new AbortController();
-      let timer = setTimeout(() => controller.abort(), timeoutMs);
-      let resp = await fetch(base + path, { signal: controller.signal, headers: { 'Accept': 'application/json' } });
-      clearTimeout(timer);
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      let text = await resp.text();
+      let text = await fetchWithTimeout(base + path, timeoutMs);
       return JSON.parse(text);
     } catch (e) {
       lastErr = e;
@@ -31,23 +39,37 @@ async function fetchJSON(path, hosts, timeoutMs = 10000) {
 
 const EM_HOSTS = ['https://push2delay.eastmoney.com', 'https://push2.eastmoney.com'];
 
-/** datacenter-web 无 CORS，但支持 JSONP callback */
-function fetchJSONP(url, timeoutMs = 12000) {
+/** datacenter-web 无 CORS，用 JSONP；带超时与清理 */
+function fetchJSONP(url, timeoutMs = 9000) {
   return new Promise((resolve, reject) => {
     let cbName = 'sent_cb_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
     let sep = url.indexOf('?') >= 0 ? '&' : '?';
     let script = document.createElement('script');
     let timer = null;
-    window[cbName] = (data) => { cleanup(); resolve(data); };
+    let done = false;
     function cleanup() {
+      if (done) return;
+      done = true;
       clearTimeout(timer);
       delete window[cbName];
       if (script.parentNode) script.parentNode.removeChild(script);
     }
-    timer = setTimeout(() => { cleanup(); reject(new Error('JSONP超时')); }, timeoutMs);
+    window[cbName] = (data) => { cleanup(); resolve(data); };
+    timer = setTimeout(() => { cleanup(); reject(new Error('融资数据超时')); }, timeoutMs);
+    script.onerror = () => { cleanup(); reject(new Error('融资数据加载失败')); };
     script.src = url + sep + 'callback=' + cbName;
-    script.onerror = () => { cleanup(); reject(new Error('JSONP加载失败')); };
     document.head.appendChild(script);
+  });
+}
+
+/** 给 Promise 加总超时（最终兜底，杜绝整页无限等待） */
+function withTimeout(promise, ms, label) {
+  return new Promise((resolve, reject) => {
+    let timer = setTimeout(() => reject(new Error((label || '') + '超时')), ms);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); }
+    );
   });
 }
 
@@ -68,18 +90,19 @@ const SENT_BANDS = [
   { min: 60, label: '情绪回暖', tip: '可积极参与', color: '#f97316' },
   { min: 40, label: '情绪中性', tip: '中性观望', color: '#94a3b8' },
   { min: 20, label: '情绪退潮', tip: '防守为主', color: '#38bdf8' },
-  { min: -Infinity, label: '情绪冰点', tip: '等待止跌信号', color: '#8b5cf6' }
+  { min: 0, label: '情绪冰点', tip: '等待止跌信号', color: '#8b5cf6' }
 ];
 function sentBand(total) {
+  if (total == null || isNaN(total)) return SENT_BANDS[SENT_BANDS.length - 1];
   for (let b of SENT_BANDS) {
     if (total >= b.min) return b;
   }
   return SENT_BANDS[SENT_BANDS.length - 1];
 }
 
-// ===== 数据获取 =====
+// ===== 数据获取（每项独立容错，返回 {ok, data?, error?}） =====
 
-/** 指标1+2：全市场涨跌家数、涨跌比 */
+/** 指标1：全市场涨跌家数、涨跌比 */
 async function fetchBreadth() {
   // 上证指数 + 深证成指 的市场涨跌家数统计（f104=上涨 f105=下跌 f106=平盘）
   let url = '/api/qt/ulist.np/get?fltt=2&invt=2&fields=f104,f105,f106,f12&secids=1.000001,0.399001';
@@ -95,11 +118,14 @@ async function fetchBreadth() {
   return { up, down, flat, ratio: down > 0 ? up / down : (up > 0 ? 99 : 0) };
 }
 
-/** 指标2：涨停/跌停家数（含北交所由接口自动汇总） */
-function latestTradeDateCandidates() {
+/** 涨停/跌停池接口：带超时 + 自动回溯到最近交易日（最多7天） */
+const EM_PUSH2EX = 'https://push2ex.eastmoney.com';
+const EM_UT = '7eea3edcaed734bea9cbfc24409ed989';
+
+function recentDateCandidates(limit = 3) {
   let arr = [];
   let d = new Date();
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < limit; i++) {
     let y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
     arr.push(y + m + day);
     d.setDate(d.getDate() - 1);
@@ -107,41 +133,35 @@ function latestTradeDateCandidates() {
   return arr;
 }
 
-/** 指标2：涨停/跌停家数（东财 push2ex 涨停/跌停池 tc 字段） */
-async function fetchLimitStats() {
-  const HOST = 'https://push2ex.eastmoney.com';
-  let zt = null;
-  for (let date of latestTradeDateCandidates()) {
-    try {
-      let url = HOST + '/getTopicZTPool?ut=7eea3edcaed734bea9cbfc24409ed989&dpt=wz.ztzt&Pageindex=0&pagesize=1&sort=fbt%3Aasc&date=' + date;
-      let resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
-      if (!resp.ok) continue;
-      let json = await resp.json();
-      if (json && json.data && typeof json.data.tc === 'number' && String(json.data.qdate) === date) {
-        zt = { date: date, tc: json.data.tc };
-        break;
-      }
-    } catch (e) { /* 尝试更早日期 */ }
+async function queryLimitPool(type, date) {
+  let endpoint = type === 'zt' ? 'getTopicZTPool' : 'getTopicDTPool';
+  let sort = type === 'zt' ? 'fbt%3Aasc' : 'fund%3Aasc';
+  let url = EM_PUSH2EX + '/' + endpoint + '?ut=' + EM_UT + '&dpt=wz.ztzt&Pageindex=0&pagesize=1&sort=' + sort + '&date=' + date;
+  let text = await fetchWithTimeout(url, 6000);
+  let json = JSON.parse(text);
+  if (json && json.data && typeof json.data.tc === 'number' && String(json.data.qdate) === date) {
+    return json.data.tc;
   }
-  if (!zt) throw new Error('涨停池获取失败');
-
-  let dt = 0;
-  for (let date of [zt.date, ...latestTradeDateCandidates()]) {
-    try {
-      let url = HOST + '/getTopicDTPool?ut=7eea3edcaed734bea9cbfc24409ed989&dpt=wz.ztzt&Pageindex=0&pagesize=1&sort=fund%3Aasc&date=' + date;
-      let resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
-      if (!resp.ok) continue;
-      let json = await resp.json();
-      if (json && json.data && typeof json.data.tc === 'number' && String(json.data.qdate) === date) {
-        dt = json.data.tc;
-        break;
-      }
-    } catch (e) { }
-  }
-  return { date: zt.date, zt: zt.tc, dt: dt };
+  throw new Error('无数据');
 }
 
-/** 指标3：昨日涨停概念板块今日涨幅（东财 BK0815 昨日涨停；BK1050 含一字作参考） */
+/** 指标2：涨停/跌停家数 */
+async function fetchLimitStats() {
+  let zt = null, ztDate = null;
+  for (let date of recentDateCandidates(7)) {
+    try { let v = await queryLimitPool('zt', date); zt = v; ztDate = date; break; }
+    catch (e) { /* 尝试更早日期 */ }
+  }
+  if (zt == null) throw new Error('涨停池获取失败');
+  let dt = 0;
+  for (let date of [ztDate, ...recentDateCandidates(7)]) {
+    try { dt = await queryLimitPool('dt', date); break; }
+    catch (e) { /* 尝试更早日期 */ }
+  }
+  return { date: ztDate, zt: zt, dt: dt };
+}
+
+/** 指标3：昨日涨停概念板块今日涨幅（BK0815 昨日涨停；BK1050 含一字参考） */
 async function fetchYesterdayLimitBoard() {
   let url = '/api/qt/ulist.np/get?fltt=2&invt=2&fields=f3,f12,f14&secids=90.BK0815,90.BK1050';
   let json = await fetchJSON(url, EM_HOSTS);
@@ -188,20 +208,15 @@ async function fetchExternal() {
     if (String(d.f12) === 'XIN9') out.a50 = Number(d.f3);
     if (String(d.f12) === 'USDCNH') out.usdcnh = Number(d.f3);
   }
-  if (out.djia == null) {
-    let j2 = await fetchJSON('/api/qt/ulist.np/get?fltt=2&invt=2&fields=f3,f12,f14&secids=100.DJIA', EM_HOSTS);
-    let d2 = (j2.data && j2.data.diff) || [];
-    if (d2[0]) out.djia = Number(d2[0].f3);
-  }
-  if (out.a50 == null) {
-    let j3 = await fetchJSON('/api/qt/ulist.np/get?fltt=2&invt=2&fields=f3,f12,f14&secids=100.XIN9', EM_HOSTS);
-    let d3 = (j3.data && j3.data.diff) || [];
-    if (d3[0]) out.a50 = Number(d3[0].f3);
-  }
-  if (out.usdcnh == null) {
-    let j4 = await fetchJSON('/api/qt/ulist.np/get?fltt=2&invt=2&fields=f3,f12,f14&secids=133.USDCNH', EM_HOSTS);
-    let d4 = (j4.data && j4.data.diff) || [];
-    if (d4[0]) out.usdcnh = Number(d4[0].f3);
+  // 分批补齐缺失项
+  let singleMap = { DJIA: '100.DJIA', XIN9: '100.XIN9', USDCNH: '133.USDCNH' };
+  for (let key of Object.keys(singleMap)) {
+    if (out[key] != null) continue;
+    try {
+      let j = await fetchJSON('/api/qt/ulist.np/get?fltt=2&invt=2&fields=f3,f12,f14&secids=' + singleMap[key], EM_HOSTS);
+      let d2 = (j.data && j.data.diff) || [];
+      if (d2[0]) out[key] = Number(d2[0].f3);
+    } catch (e) { /* 继续补齐其他项 */ }
   }
   if (out.djia == null || out.a50 == null || out.usdcnh == null) throw new Error('外部行情获取不完整');
   // 人民币升值(USDCNH下跌)视为正面
@@ -254,43 +269,90 @@ function scoreExternal(pos) {
   return [0, 1, 2, 3].includes(pos) ? [3, 8, 13, 18][pos] : 8; // 三负/一正/两正/三正 中值
 }
 
-// ===== 汇总打分 =====
+// ===== 汇总打分（单项容错） =====
+
+const SENT_FETCHERS = [
+  { key: 'breadth', name: '涨跌比', fetch: () => fetchBreadth() },
+  { key: 'limit', name: '涨停/跌停家数', fetch: () => fetchLimitStats() },
+  { key: 'yestboard', name: '昨日涨停今日表现', fetch: () => fetchYesterdayLimitBoard() },
+  { key: 'margin', name: '融资买入额占比偏离度', fetch: () => fetchMargin() },
+  { key: 'external', name: '外部情绪传导', fetch: () => fetchExternal() }
+];
 
 async function computeSentimentScore() {
-  let [b, lp, yb, mf, ext] = await Promise.all([
-    fetchBreadth(),
-    fetchLimitStats(),
-    fetchYesterdayLimitBoard(),
-    fetchMargin(),
-    fetchExternal()
-  ]);
+  // 并发请求，每项内部已容错并带超时
+  let results = await Promise.all(SENT_FETCHERS.map(async (item) => {
+    try {
+      let data = await item.fetch();
+      return { key: item.key, name: item.name, ok: true, data: data, error: null };
+    } catch (e) {
+      return { key: item.key, name: item.name, ok: false, data: null, error: e.message || String(e) };
+    }
+  }));
 
-  let s1 = scoreBreadth(b.ratio);
-  let s2 = scoreLimit(lp.zt, lp.dt);
-  let s3 = scoreYestBoard(yb.main.pct);
-  let s4 = scoreMargin(mf.deviation);
-  let s5 = scoreExternal(ext.positives);
-  let total = Math.round((s1 + s2 + s3 + s4 + s5) * 10) / 10;
+  let okItems = results.filter(r => r.ok);
+  let okKeys = okItems.map(r => r.key);
+
+  // 逐项算分
+  let scored = [];
+  for (let r of results) {
+    let score = null, desc = '';
+    if (r.ok) {
+      try {
+        if (r.key === 'breadth') {
+          score = scoreBreadth(r.data.ratio);
+          desc = '上涨' + r.data.up + ' / 下跌' + r.data.down + '，比值 ' + r.data.ratio.toFixed(2);
+        } else if (r.key === 'limit') {
+          score = scoreLimit(r.data.zt, r.data.dt);
+          desc = '涨停 ' + r.data.zt + ' 家 / 跌停 ' + r.data.dt + ' 家';
+        } else if (r.key === 'yestboard') {
+          score = scoreYestBoard(r.data.main.pct);
+          desc = (r.data.main.name || '昨日涨停') + ' 板块 ' + pctSign(r.data.main.pct) +
+            (r.data.incl && r.data.incl.pct != null ? '（含一字 ' + pctSign(r.data.incl.pct) + '）' : '');
+        } else if (r.key === 'margin') {
+          score = scoreMargin(r.data.deviation);
+          desc = '当日 ' + fmtAmt(r.data.today) + ' 元 / 10日均 ' + fmtAmt(r.data.mean) + ' 元，偏离 ' +
+            pctSign(r.data.deviation) + '（占比口径近似：当日融资买入额相对10日均偏离）';
+        } else if (r.key === 'external') {
+          score = scoreExternal(r.data.positives);
+          desc = '美股 ' + pctSign(r.data.djia) + ' / A50 ' + pctSign(r.data.a50) + ' / 人民币' +
+            (r.data.usdcnh < 0 ? '升值' : '贬值') + '(' + pctSign(r.data.usdcnh) + ')，正面 ' + r.data.positives + ' 项';
+        }
+      } catch (e) {
+        score = null;
+        desc = '打分异常: ' + (e.message || e);
+      }
+    } else {
+      desc = '数据获取失败：' + r.error;
+    }
+    scored.push({ key: r.key, name: r.name, score: score, desc: desc, ok: r.ok });
+  }
+
+  let complete = okKeys.length === SENT_FETCHERS.length;
+  let total = complete ? Math.round(scored.reduce((a, s) => a + s.score, 0) * 10) / 10 : null;
   let band = sentBand(total);
 
-  // 日期统一为 YYYY-MM-DD（存储与走势图展示）
-  let rawDate = lp.date || String(mf.date || '').replace(/-/g, '');
+  // 日期：涨停池回溯到的最近交易日优先；否则融资数据日期；否则今天
+  let rawDate = '';
+  let lp = results.find(r => r.key === 'limit');
+  if (lp && lp.ok && lp.data.date) rawDate = lp.data.date;
+  if (!rawDate) {
+    let mf = results.find(r => r.key === 'margin');
+    if (mf && mf.ok && mf.data.date) rawDate = String(mf.data.date).replace(/-/g, '');
+  }
+  if (!rawDate) {
+    let d = new Date();
+    rawDate = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+  }
   let dateStr = rawDate.length === 8 ? rawDate.slice(0, 4) + '-' + rawDate.slice(4, 6) + '-' + rawDate.slice(6, 8) : rawDate;
 
   return {
+    complete: complete,
     date: dateStr,
     total: total,
     band: band,
-    items: [
-      { key: 'breadth', name: '涨跌比', score: s1, desc: '上涨' + b.up + ' / 下跌' + b.down + '，比值 ' + b.ratio.toFixed(2) },
-      { key: 'limit', name: '涨停/跌停家数', score: s2, desc: '涨停 ' + lp.zt + ' 家 / 跌停 ' + lp.dt + ' 家' },
-      { key: 'yestboard', name: '昨日涨停今日表现', score: s3, desc: (yb.main.name || '昨日涨停') + ' 板块 ' + pctSign(yb.main.pct) + (yb.incl && yb.incl.pct != null ? '（含一字 ' + pctSign(yb.incl.pct) + '）' : '') },
-      { key: 'margin', name: '融资买入额占比偏离度', score: s4, desc: '当日 ' + fmtAmt(mf.today) + ' 元 / 10日均 ' + fmtAmt(mf.mean) + ' 元，偏离 ' + pctSign(mf.deviation) + '（占比口径近似：当日融资买入额相对10日均偏离）' },
-      { key: 'external', name: '外部情绪传导', score: s5, desc: '美股 ' + pctSign(ext.djia) + ' / A50 ' + pctSign(ext.a50) + ' / 人民币' + (ext.usdcnh < 0 ? '升值' : '贬值') + '(' + pctSign(ext.usdcnh) + ')，正面 ' + ext.positives + ' 项' }
-    ],
-    detail: {
-      breadth: b, limit: lp, yestBoard: yb, margin: mf, external: ext
-    },
+    items: scored,
+    failed: results.filter(r => !r.ok).map(r => r.name + '(' + (r.error || '') + ')'),
     updated_at: new Date().toISOString()
   };
 }
@@ -315,27 +377,39 @@ async function renderSentimentBody(container) {
       <div class="sentiment-note">口径说明：涨跌比=上涨/下跌家数；涨停跌停家数为当日封板统计；昨日涨停今日表现直接取「昨日涨停」概念板块当日涨幅；融资买入额偏离度=当日融资买入额相对近10个交易日均值的偏离（因无稳定的两市成交额日度历史，作为“占比偏离”的近似）；外部情绪=美股(道指)+富时A50+离岸人民币，人民币升值记为正面。盘中查看为实时快照，建议收盘后刷新为当日定版。</div>
     </div>`;
 
+  let loading = document.getElementById('sent-loading');
+  let resultEl = document.getElementById('sent-result');
+
   async function refresh() {
-    let loading = document.getElementById('sent-loading');
-    let resultEl = document.getElementById('sent-result');
-    if (loading) loading.style.display = 'flex';
-    if (resultEl) resultEl.style.display = 'none';
+    if (loading) { loading.style.display = 'flex'; loading.innerHTML = '<span class="spinner"></span> 正在拉取市场数据打分...'; }
+    if (resultEl) { resultEl.style.display = 'none'; resultEl.innerHTML = ''; }
+    let btn = document.getElementById('btn-sent-refresh');
+    if (btn) btn.disabled = true;
     try {
-      let rec = await computeSentimentScore();
-      await saveSentimentRecord(rec);
-      if (loading) loading.style.display = 'none';
-      if (resultEl) {
-        renderSentimentResult(resultEl, rec);
-        resultEl.style.display = 'block';
+      // 整体 30s 兜底，确保不会无限等待
+      let rec = await withTimeout(computeSentimentScore(), 30000, '整体打分');
+      if (rec.complete) {
+        await saveSentimentRecord({
+          date: rec.date, total: rec.total, band: rec.band,
+          items: rec.items, updated_at: rec.updated_at
+        });
       }
-      renderSentimentTrend();
+      renderSentimentResult(resultEl, rec);
+      if (resultEl) resultEl.style.display = 'block';
+      if (loading) loading.style.display = 'none';
     } catch (e) {
       console.error('情绪打分失败:', e);
       if (loading) {
+        loading.style.display = 'flex';
         loading.innerHTML = '<span style="color:var(--danger)">打分失败: ' + escapeHtml(e.message) + '</span>　<button class="btn btn-sm" id="btn-sent-retry" style="margin-left:8px">重试</button>';
         let retry = document.getElementById('btn-sent-retry');
         if (retry) retry.onclick = refresh;
       }
+    } finally {
+      let b2 = document.getElementById('btn-sent-refresh');
+      if (b2) b2.disabled = false;
+      // 无论打分结果如何，都尝试渲染历史走势
+      try { renderSentimentTrend(); } catch (e2) { console.error('走势渲染失败:', e2); }
     }
   }
 
@@ -346,25 +420,32 @@ async function renderSentimentBody(container) {
 }
 
 function renderSentimentResult(el, rec) {
-  let band = rec.band;
+  if (!el) return;
+  let band = sentBand(rec.total);
+  let totalHtml = rec.complete && rec.total != null
+    ? '<div class="sent-total" style="color:' + band.color + '">' + rec.total.toFixed(1) + '</div>'
+    : '<div class="sent-total" style="color:#8b5cf6">--</div>';
+
   let html = `
     <div class="sent-band-card" style="border-left:6px solid ${band.color}">
-      <div class="sent-total" style="color:${band.color}">${rec.total.toFixed(1)}</div>
+      ${totalHtml}
       <div class="sent-band-meta">
         <div class="sent-band-label" style="background:${band.color}">${band.label}</div>
         <div class="sent-band-tip">${band.tip}</div>
-        <div class="sent-date">数据日 ${rec.date}（东财实时统计）</div>
+        <div class="sent-date">数据日 ${escapeHtml(rec.date)}（东财实时统计）</div>
+        ${!rec.complete ? '<div class="sent-warn">部分数据源不可用，总分暂缺：' + escapeHtml(rec.failed.join('；')) + '，可点刷新重试</div>' : ''}
       </div>
     </div>
     <div class="sent-items">
       ${rec.items.map(it => {
-        let pctW = clamp(it.score / 20 * 100, 0, 100);
-        let color = it.score >= 16 ? '#ef4444' : it.score >= 11 ? '#f97316' : it.score >= 6 ? '#94a3b8' : '#38bdf8';
+        let scoreTxt = (it.ok && it.score != null) ? it.score.toFixed(1) : '--';
+        let color = (it.ok && it.score != null) ? (it.score >= 16 ? '#ef4444' : it.score >= 11 ? '#f97316' : it.score >= 6 ? '#94a3b8' : '#38bdf8') : '#8b5cf6';
+        let pctW = (it.ok && it.score != null) ? clamp(it.score / 20 * 100, 0, 100) : 0;
         return `
         <div class="sent-item">
           <div class="sent-item-head">
             <span class="sent-item-name">${escapeHtml(it.name)}</span>
-            <span class="sent-item-score" style="color:${color}">${it.score.toFixed(1)}<i>/20</i></span>
+            <span class="sent-item-score" style="color:${color}">${scoreTxt}<i>/20</i></span>
           </div>
           <div class="sent-bar"><div class="sent-bar-fill" style="width:${pctW}%;background:${color}"></div></div>
           <div class="sent-item-desc">${escapeHtml(it.desc)}</div>
@@ -387,7 +468,7 @@ async function renderSentimentTrend() {
     let isLight = document.documentElement.getAttribute('data-theme') === 'light';
     let textColor = isLight ? '#333' : '#e0e0e0';
     let dates = records.map(r => r.date);
-    let totals = records.map(r => r.total);
+    let totals = records.map(r => (r.total != null ? r.total : null));
 
     if (sentimentChart) { sentimentChart.dispose(); sentimentChart = null; }
 
@@ -412,7 +493,6 @@ async function renderSentimentTrend() {
         areaStyle: { color: 'rgba(249,115,22,0.10)' }
       }]
     });
-    window.addEventListener('resize', () => { if (sentimentChart) sentimentChart.resize(); });
   } catch (e) {
     console.error('走势渲染失败:', e);
     chartEl.innerHTML = '<div class="empty-state">走势加载失败: ' + escapeHtml(e.message) + '</div>';

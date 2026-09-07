@@ -19,6 +19,8 @@ function openDB() {
     let request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = (e) => {
       let database = e.target.result;
+      // 仅在旧版本低于4时迁移删除老三板表；之后版本升级不再删缓存
+      let needTbMigrate = e.oldVersion < 4;
       // stocks 表
       if (!database.objectStoreNames.contains(STOCKS_STORE)) {
         let store = database.createObjectStore(STOCKS_STORE, { keyPath: 'id', autoIncrement: true });
@@ -39,18 +41,22 @@ function openDB() {
         let mktStore = database.createObjectStore(MARKET_STORE, { keyPath: 'date' });
         mktStore.createIndex('date_idx', 'date', { unique: true });
       }
-      // third_board 表（迁移：v4清空旧CSV数据重新在线采集）
-      if (database.objectStoreNames.contains(THIRD_BOARD_STORE)) {
+      // third_board 表（仅首次创建或旧版本迁移时重建，避免升级清空缓存）
+      if (needTbMigrate && database.objectStoreNames.contains(THIRD_BOARD_STORE)) {
         database.deleteObjectStore(THIRD_BOARD_STORE);
       }
-      let tbStore = database.createObjectStore(THIRD_BOARD_STORE, { keyPath: 'id' });
-      tbStore.createIndex('date_idx', 'date', { unique: false });
-      tbStore.createIndex('code_idx', 'code', { unique: false });
+      if (!database.objectStoreNames.contains(THIRD_BOARD_STORE)) {
+        let tbStore = database.createObjectStore(THIRD_BOARD_STORE, { keyPath: 'id' });
+        tbStore.createIndex('date_idx', 'date', { unique: false });
+        tbStore.createIndex('code_idx', 'code', { unique: false });
+      }
       // tb_shares_cache（股本缓存，单键 code）
-      if (database.objectStoreNames.contains(TB_SHARES_CACHE)) {
+      if (needTbMigrate && database.objectStoreNames.contains(TB_SHARES_CACHE)) {
         database.deleteObjectStore(TB_SHARES_CACHE);
       }
-      let sharesStore = database.createObjectStore(TB_SHARES_CACHE, { keyPath: 'code' });
+      if (!database.objectStoreNames.contains(TB_SHARES_CACHE)) {
+        let sharesStore = database.createObjectStore(TB_SHARES_CACHE, { keyPath: 'code' });
+      }
       // sentiment_daily（情绪偏好每日打分）
       if (!database.objectStoreNames.contains(SENTIMENT_STORE)) {
         let sentStore = database.createObjectStore(SENTIMENT_STORE, { keyPath: 'date' });

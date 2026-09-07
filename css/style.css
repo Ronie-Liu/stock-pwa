@@ -350,7 +350,6 @@ body {
   font-size: 14px;
   color: var(--up-color);
 }
-}
 
 /* --- 空状态 --- */
 .empty-state {
@@ -449,6 +448,12 @@ body {
 .sent-date {
   font-size: 11px;
   color: var(--text-muted);
+}
+.sent-warn {
+  font-size: 11px;
+  color: var(--warning);
+  line-height: 1.5;
+  margin-top: 2px;
 }
 .sent-items {
   display: flex;
