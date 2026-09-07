@@ -2,13 +2,14 @@
 // 本地存储：stocks表、app_settings表、task_logs表
 
 const DB_NAME = 'StockMonitorDB';
-const DB_VERSION = 11;
+const DB_VERSION = 12;
 const STOCKS_STORE = 'stocks';
 const SETTINGS_STORE = 'app_settings';
 const LOGS_STORE = 'task_logs';
 const MARKET_STORE = 'market_data';
 const THIRD_BOARD_STORE = 'third_board';
 const TB_SHARES_CACHE = 'tb_shares_cache';  // 老三板股本缓存 (key=code)
+const SENTIMENT_STORE = 'sentiment_daily';  // 情绪偏好每日打分 (key=date YYYY-MM-DD)
 
 let db = null;
 
@@ -50,6 +51,11 @@ function openDB() {
         database.deleteObjectStore(TB_SHARES_CACHE);
       }
       let sharesStore = database.createObjectStore(TB_SHARES_CACHE, { keyPath: 'code' });
+      // sentiment_daily（情绪偏好每日打分）
+      if (!database.objectStoreNames.contains(SENTIMENT_STORE)) {
+        let sentStore = database.createObjectStore(SENTIMENT_STORE, { keyPath: 'date' });
+        sentStore.createIndex('date_idx', 'date', { unique: true });
+      }
     };
     request.onsuccess = (e) => {
       db = e.target.result;
@@ -425,5 +431,32 @@ async function saveCachedShares(code, freeShares, totalShares) {
     });
     req.onsuccess = () => resolve();
     req.onerror = () => resolve();
+  });
+}
+
+// ===== 情绪偏好每日打分 =====
+
+async function saveSentimentRecord(record) {
+  await openDB();
+  return new Promise((resolve) => {
+    let store = getStore(SENTIMENT_STORE, 'readwrite');
+    let req = store.put(record);
+    req.onsuccess = () => resolve(true);
+    req.onerror = () => resolve(false);
+  });
+}
+
+async function getAllSentimentRecords() {
+  await openDB();
+  return new Promise((resolve) => {
+    let store = getStore(SENTIMENT_STORE);
+    let results = [];
+    let req = store.index('date_idx').openCursor(null, 'prev');
+    req.onsuccess = (e) => {
+      let cursor = e.target.result;
+      if (cursor) { results.push(cursor.value); cursor.continue(); }
+      else { resolve(results); }
+    };
+    req.onerror = () => resolve([]);
   });
 }
