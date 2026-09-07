@@ -532,6 +532,7 @@ async function renderEnvironmentTab() {
   if (!container) return;
 
   if (typeof disposeSentiment === 'function') disposeSentiment();
+  if (typeof disposeLiquidity === 'function') disposeLiquidity();
   container.innerHTML = buildEnvSubNav();
 
   if (envSubTab === 'trend') {
@@ -557,6 +558,20 @@ async function renderEnvironmentTab() {
     } catch (e) {
       console.error('情绪偏好页渲染异常:', e);
       body.innerHTML = '<div class="empty-state">情绪偏好页加载失败: ' + escapeHtml(e.message) + '<br><button class="btn btn-sm" style="margin-top:10px" onclick="renderEnvironmentTab()">重试</button></div>';
+    }
+  } else if (envSubTab === 'liquidity') {
+    let body = document.createElement('div');
+    body.id = 'env-body';
+    container.appendChild(body);
+    try {
+      if (typeof renderLiquidityBody === 'function') {
+        await renderLiquidityBody(body);
+      } else {
+        body.innerHTML = '<div class="empty-state">流动性模块未加载，请强制刷新（Ctrl+Shift+R）后重试</div>';
+      }
+    } catch (e) {
+      console.error('流动性页渲染异常:', e);
+      body.innerHTML = '<div class="empty-state">流动性页加载失败: ' + escapeHtml(e.message) + '<br><button class="btn btn-sm" style="margin-top:10px" onclick="renderEnvironmentTab()">重试</button></div>';
     }
   } else {
     container.innerHTML += renderEnvPlaceholder(envSubTab);
@@ -1123,7 +1138,7 @@ function registerSW() {
   navigator.serviceWorker.getRegistrations().then((regs) => {
     return Promise.all(regs.map(r => r.unregister()));
   }).then(() => {
-    return navigator.serviceWorker.register('/sw.js?v=20260906n');
+    return navigator.serviceWorker.register('/sw.js?v=20260906o');
   }).then((reg) => {
     console.log('SW 注册成功:', reg.scope);
 
