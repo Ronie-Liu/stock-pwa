@@ -11,6 +11,7 @@ const THIRD_BOARD_STORE = 'third_board';
 const TB_SHARES_CACHE = 'tb_shares_cache';  // 老三板股本缓存 (key=code)
 const SENTIMENT_STORE = 'sentiment_daily';  // 情绪偏好每日打分 (key=date YYYY-MM-DD)
 const LIQUIDITY_STORE = 'liquidity_daily';  // 流动性每周打分 (key=date YYYY-MM-DD)
+const MARKET_BAND_STORE = 'market_band_daily';  // 全市场多空档位每日分布 (key=date YYYY-MM-DD)
 
 let db = null;
 
