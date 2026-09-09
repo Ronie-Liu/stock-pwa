@@ -1,8 +1,8 @@
 // ===== 全A顶部or底部（趋势周期孙页面） =====
-// 数据源: legulegu.com 全部A股 创新高/新低个股数量（剔除停牌股），由 scripts/collect_high_low.js 采集为静态JSON
-// 说明: 该接口同源直连、无CORS，浏览器无法跨域直连，故历史数据以静态文件形式随仓库发布。
+// 数据源: legulegu.com 全部A股 创新高/新低个股数量（剔除停牌股）。
+//   基期历史(2005-02-01起)由 scripts/collect_high_low.js 采集，之后每个交易日由 scripts/update_high_low.py 增量追加。
 // 口径: 创60日新高 = 收盘价 > 过去60个交易日最高收盘价（前复权），创新低同理；家数=符合条件个股数量。
-// 注意: raw.githubusercontent.com 在国内网络常超时，故优先走 jsDelivr 镜像，并带 GitHub 源与本地缓存兜底。
+// 加载策略: 页面同源内置 data/high_low_data.js(随仓库发布、离线可用) 优先，其次在线镜像，最后本地缓存。
 
 const HL_SOURCE_URLS = [
   'https://cdn.jsdelivr.net/gh/Ronie-Liu/stock-pwa@main/data/high_low_history.json',
@@ -33,11 +33,43 @@ function disposeHighLow() {
   if (highLowChart) { try { highLowChart.dispose(); } catch (e) {} highLowChart = null; }
 }
 
-/** 从多个静态镜像源加载数据（带内存/本地缓存） */
+/** 采用页面内置数据（同源 data/high_low_data.js，随仓库发布，离线可用） */
+function hlAdoptInline() {
+  const d = window.HL_HISTORY_DATA;
+  if (!d || !d.dates || !d.series) return false;
+  highLowData = d;
+  highLowData._from = '内置数据';
+  highLowData._loadedAt = d.generated_at || '';
+  return true;
+}
+
+function hlFromLocalStorage() {
+  try {
+    const cached = localStorage.getItem(HL_CACHE_KEY);
+    if (cached) {
+      const d = JSON.parse(cached);
+      if (d && d.dates && d.series) return d;
+    }
+  } catch (e) {}
+  return null;
+}
+
+function hlSaveLocal(data) {
+  try { localStorage.setItem(HL_CACHE_KEY, JSON.stringify(data)); } catch (e) {}
+}
+
+/** 加载数据：内置数据(同源) → 在线镜像 → 本地缓存 */
 async function loadHighLowData(force) {
   if (highLowData && !force) return highLowData;
 
-  // 依次尝试网络镜像源；任一成功即缓存并返回
+  if (!force) {
+    // 常规加载：同源内置数据零网络依赖，直接可用
+    if (hlAdoptInline()) { highLowData._stale = false; return highLowData; }
+    const ls = hlFromLocalStorage();
+    if (ls) { ls._stale = true; highLowData = ls; return highLowData; }
+  }
+
+  // 强制刷新或缺少内置/缓存：依次尝试在线镜像源获取最新发布数据
   let lastErr = null;
   for (const url of HL_SOURCE_URLS) {
     try {
@@ -47,24 +79,17 @@ async function loadHighLowData(force) {
       if (!data || !data.dates || !data.series) throw new Error('数据格式异常');
       highLowData = data;
       highLowData._stale = false;
-      highLowData._loadedAt = new Date().toISOString();
-      try { localStorage.setItem(HL_CACHE_KEY, JSON.stringify(highLowData)); } catch (e) {}
+      highLowData._loadedAt = data.generated_at || new Date().toISOString();
+      highLowData._from = '在线数据';
+      hlSaveLocal(data);
       return highLowData;
     } catch (e) { lastErr = e; }
   }
 
-  // 网络源全部失败 → 回退到本地缓存（离线兜底，标注过期）
-  try {
-    const cached = localStorage.getItem(HL_CACHE_KEY);
-    if (cached) {
-      const data = JSON.parse(cached);
-      if (data && data.dates && data.series) {
-        highLowData = data;
-        highLowData._stale = true;
-        return highLowData;
-      }
-    }
-  } catch (e) {}
+  // 在线全部失败：本地缓存 → 内置数据兜底
+  const ls = hlFromLocalStorage();
+  if (ls) { ls._stale = true; highLowData = ls; return highLowData; }
+  if (hlAdoptInline()) { highLowData._stale = true; return highLowData; }
 
   throw lastErr || new Error('无法连接数据源，请检查网络后重试');
 }
@@ -188,13 +213,16 @@ function renderSignal(el, data) {
 }
 
 function renderMeta(el, data) {
+  const gen = data._loadedAt ? new Date(data._loadedAt) : null;
+  const genText = gen && !isNaN(gen.getTime()) ? gen.toLocaleString('zh-CN', { hour12: false }) : '';
   const staleNote = data._stale
-    ? '（当前为本地缓存，非最新；请联网后点右上角刷新重试）'
-    : (data._loadedAt ? '（更新于 ' + new Date(data._loadedAt).toLocaleString('zh-CN') + '）' : '');
+    ? '（本地缓存，非最新；请联网后点右上角刷新）'
+    : (genText ? '（更新于 ' + genText + '）' : '');
   el.innerHTML = '数据截至 <b style="color:var(--text);">' + escapeHtml(data.last_date || '--') + '</b>，共 ' +
-    hlFmt((data.dates || []).length) + ' 个交易日（' + escapeHtml(data.dates ? data.dates[0] : '') + ' 起）' + staleNote +
-    '。来源：<a href="' + escapeHtml(data.source_url || 'https://legulegu.com/stockdata/charts/985') + '" target="_blank" rel="noopener" style="color:var(--accent);">乐咕乐股·全部A股创新高/新低</a>；' +
-    '历史数据随仓库静态发布，刷新数据请运行 <code style="font-size:10px;">scripts/collect_high_low.js</code>。';
+    hlFmt((data.dates || []).length) + ' 个交易日（' + escapeHtml(data.dates ? data.dates[0] : '') + ' 起）' +
+    (data._from ? '｜' + escapeHtml(data._from) : '') + staleNote +
+    '。来源：<a href="' + escapeHtml(data.source_url || 'https://legulegu.com/stockdata/high-low-statistics') + '" target="_blank" rel="noopener" style="color:var(--accent);">乐咕乐股·创新高/新低统计</a>；' +
+    '每日收盘后运行 <code style="font-size:10px;">python scripts/update_high_low.py</code> 可自动续更。';
 }
 
 function drawChart(chartEl, data) {
