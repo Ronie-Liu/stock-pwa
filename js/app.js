@@ -959,11 +959,14 @@ async function renderMarketBody(body) {
     let contentHtml = '';
     if (marketSubTab === 'third_board') {
       contentHtml = await renderThirdBoardSubTab();
+    } else if (marketSubTab === 'high_low') {
+      contentHtml = renderHighLowSubTab();
     } else {
       contentHtml = renderMarketPage(records, realtimeQuote, false, custom, latestRecord);
     }
     body.innerHTML = '<div class="market-header" style="padding:8px 12px 0;">' + headerHtml + '</div>' + contentHtml;
     bindMarketEvents(body, records, realtimeQuote, custom, latestRecord);
+    if (marketSubTab === 'high_low' && typeof initHighLow === 'function') await initHighLow(body);
   } catch (e) {
     body.innerHTML = '<div class="empty-state">加载失败: ' + escapeHtml(e.message) + '<br><button class="btn btn-sm" onclick="switchTab(\'environment\')">重试</button></div>';
   }
