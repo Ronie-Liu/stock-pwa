@@ -1,0 +1,40 @@
+name: 全A顶底数据更新
+
+on:
+  schedule:
+    # GitHub Actions 的 cron 为 UTC；每日 19:15 北京时间(UTC+8)运行
+    - cron: '15 11 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-high-low:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install deps
+        run: pip install akshare pandas
+
+      - name: Run updater
+        run: python scripts/update_high_low.py
+
+      - name: Commit and push if updated
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/high_low_history.json data/high_low_data.js index.html
+          if git diff --cached --quiet; then
+            echo '无新数据，跳过提交'
+            exit 0
+          fi
+          git commit -m "全A顶底数据自动更新至 $(date -u -d '+8 hours' +%F)"
+          git push

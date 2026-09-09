@@ -52,7 +52,18 @@ self.addEventListener('fetch', (event) => {
     fetch(event.request, { cache: 'no-cache' }).then((response) => {
       if (response && response.status === 200) {
         let clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, clone);
+          // 内置数据文件每天换版本号(如 ?v=20260911)，清理旧版本避免缓存无限膨胀
+          if (url.pathname === '/data/high_low_data.js') {
+            cache.keys().then((keys) => {
+              return Promise.all(keys.filter((k) => {
+                const ku = new URL(k.url);
+                return ku.pathname === url.pathname && ku.search !== url.search;
+              }).map((k) => cache.delete(k)));
+            }).catch(() => {});
+          }
+        });
       }
       return response;
     }).catch(() => {

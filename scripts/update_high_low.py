@@ -12,7 +12,9 @@
 """
 import json
 import os
+import re
 import sys
+import datetime
 
 try:
     import akshare as ak
@@ -24,6 +26,7 @@ except Exception as e:  # pragma: no cover
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_JSON = os.path.normpath(os.path.join(HERE, '..', 'data', 'high_low_history.json'))
 DATA_JS = os.path.normpath(os.path.join(HERE, '..', 'data', 'high_low_data.js'))
+IDX_HTML = os.path.normpath(os.path.join(HERE, '..', 'index.html'))
 KEYS = ['high60', 'low60', 'high120', 'low120']
 
 
@@ -81,6 +84,17 @@ def main():
           'window.HL_HISTORY_DATA=' + json.dumps(cur, ensure_ascii=False, separators=(',', ':')) + ';\n')
     with open(DATA_JS, 'w', encoding='utf-8') as f:
         f.write(js)
+
+    # ---- 顺手把 index.html 里内置数据脚本的版本号改为当天日期(北京时间)，强制各端拉到新数据 ----
+    try:
+        today = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).strftime('%Y%m%d')
+        html = open(IDX_HTML, encoding='utf-8').read()
+        html2 = re.sub(r'(/data/high_low_data\.js\?v=)\d+', lambda m: m.group(1) + today, html)
+        if html2 != html:
+            open(IDX_HTML, 'w', encoding='utf-8').write(html2)
+            print('index.html 数据版本已更新为', today)
+    except Exception as e:
+        print('index.html 版本更新失败(可忽略):', e)
 
     print('OK: 追加 %d 个交易日 %s ~ %s，现共 %d 日，最新 %s'
           % (n, tail['date'].iloc[0], tail['date'].iloc[-1], len(dates), cur['last_date']))
