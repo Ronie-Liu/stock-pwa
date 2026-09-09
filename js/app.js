@@ -533,6 +533,7 @@ async function renderEnvironmentTab() {
 
   if (typeof disposeSentiment === 'function') disposeSentiment();
   if (typeof disposeLiquidity === 'function') disposeLiquidity();
+  if (typeof disposeHighLow === 'function') disposeHighLow();
   container.innerHTML = buildEnvSubNav();
 
   if (envSubTab === 'trend') {
@@ -974,11 +975,12 @@ function buildMarketSubNav() {
       <div style="display:flex;align-items:center;gap:2px;">
         <button class="market-sub-tab" data-sub="index" style="padding:6px 14px;font-size:13px;font-weight:600;border:none;border-radius:7px 7px 0 0;cursor:pointer;background:${marketSubTab==='index'?'var(--bg-card)':'transparent'};color:${marketSubTab==='index'?'var(--text)':'var(--text-muted)'};">上证大盘</button>
         <button class="market-sub-tab" data-sub="third_board" style="padding:6px 14px;font-size:13px;font-weight:600;border:none;border-radius:7px 7px 0 0;cursor:pointer;background:${marketSubTab==='third_board'?'var(--bg-card)':'transparent'};color:${marketSubTab==='third_board'?'var(--text)':'var(--text-muted)'};">老三板</button>
+        <button class="market-sub-tab" data-sub="high_low" style="padding:6px 10px;font-size:13px;font-weight:600;border:none;border-radius:7px 7px 0 0;cursor:pointer;background:${marketSubTab==='high_low'?'var(--bg-card)':'transparent'};color:${marketSubTab==='high_low'?'var(--text)':'var(--text-muted)'};">全A顶部or底部</button>
       </div>
       <div style="display:flex;gap:6px;align-items:center;">
         ${marketSubTab==='index'?`<button class="btn btn-sm" id="btn-edit-custom" title="编辑自定义" style="padding:5px 10px;font-size:12px;border-radius:7px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>`:''}
         <button class="btn btn-sm" id="btn-refresh-market" title="刷新" style="padding:5px 10px;font-size:12px;border-radius:7px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg></button>
-        <button class="btn btn-sm btn-primary" id="btn-export-csv" title="导出CSV" style="padding:5px 10px;font-size:12px;border-radius:7px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+        ${marketSubTab!=='high_low'?`<button class="btn btn-sm btn-primary" id="btn-export-csv" title="导出CSV" style="padding:5px 10px;font-size:12px;border-radius:7px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>`:''}
       </div>
     </div>`;
 }
@@ -1019,6 +1021,7 @@ function bindMarketEvents(container, records, realtimeQuote, custom, latestRecor
     container.innerHTML = '<div class="loading-indicator"><span class="spinner"></span> 刷新中…</div>';
     try {
       if (marketSubTab === 'third_board') await initThirdBoardData();
+      else if (marketSubTab === 'high_low') { if (typeof loadHighLowData === 'function') await loadHighLowData(true); }
       else await initMarketData();
       await renderMarketBody(container);
     } catch(e) { container.innerHTML = '<div class="empty-state">刷新失败: ' + escapeHtml(e.message) + '</div>'; }
@@ -1138,7 +1141,7 @@ function registerSW() {
   navigator.serviceWorker.getRegistrations().then((regs) => {
     return Promise.all(regs.map(r => r.unregister()));
   }).then(() => {
-    return navigator.serviceWorker.register('/sw.js?v=20260906r');
+    return navigator.serviceWorker.register('/sw.js?v=20260910a');
   }).then((reg) => {
     console.log('SW 注册成功:', reg.scope);
 

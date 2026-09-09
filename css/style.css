@@ -388,6 +388,35 @@ body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ===== 全A顶部or底部（趋势周期孙页面） ===== */
+.hl-chip {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid;
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+  line-height: 1.2;
+}
+.hl-range {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-muted);
+}
+.hl-signal-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
 /* ===== 环境页 · 情绪偏好打分 ===== */
 .sentiment-page {
   display: flex;
