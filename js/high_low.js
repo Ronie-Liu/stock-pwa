@@ -2,8 +2,14 @@
 // 数据源: legulegu.com 全部A股 创新高/新低个股数量（剔除停牌股），由 scripts/collect_high_low.js 采集为静态JSON
 // 说明: 该接口同源直连、无CORS，浏览器无法跨域直连，故历史数据以静态文件形式随仓库发布。
 // 口径: 创60日新高 = 收盘价 > 过去60个交易日最高收盘价（前复权），创新低同理；家数=符合条件个股数量。
+// 注意: raw.githubusercontent.com 在国内网络常超时，故优先走 jsDelivr 镜像，并带 GitHub 源与本地缓存兜底。
 
-const HL_SOURCE_URL = 'https://raw.githubusercontent.com/Ronie-Liu/stock-pwa/main/data/high_low_history.json';
+const HL_SOURCE_URLS = [
+  'https://cdn.jsdelivr.net/gh/Ronie-Liu/stock-pwa@main/data/high_low_history.json',
+  'https://raw.githubusercontent.com/Ronie-Liu/stock-pwa/main/data/high_low_history.json',
+  'https://raw.gitmirror.com/Ronie-Liu/stock-pwa/main/data/high_low_history.json'
+];
+const HL_CACHE_KEY = 'hl_history_cache_v1';
 const HL_SERIES_DEFS = [
   { key: 'high60',  label: '创60日新高', color: '#e74c3c' },
   { key: 'low60',   label: '创60日新低', color: '#2ecc71' },
@@ -27,15 +33,40 @@ function disposeHighLow() {
   if (highLowChart) { try { highLowChart.dispose(); } catch (e) {} highLowChart = null; }
 }
 
-/** 从GitHub静态文件加载数据（带缓存） */
+/** 从多个静态镜像源加载数据（带内存/本地缓存） */
 async function loadHighLowData(force) {
   if (highLowData && !force) return highLowData;
-  let resp = await fetch(HL_SOURCE_URL, { signal: AbortSignal.timeout(12000) });
-  if (!resp.ok) throw new Error('数据源 HTTP ' + resp.status);
-  let data = await resp.json();
-  if (!data || !data.dates || !data.series) throw new Error('数据格式异常');
-  highLowData = data;
-  return data;
+
+  // 依次尝试网络镜像源；任一成功即缓存并返回
+  let lastErr = null;
+  for (const url of HL_SOURCE_URLS) {
+    try {
+      const resp = await fetch(url, { signal: AbortSignal.timeout(12000) });
+      if (!resp.ok) { lastErr = new Error('数据源 HTTP ' + resp.status); continue; }
+      const data = await resp.json();
+      if (!data || !data.dates || !data.series) throw new Error('数据格式异常');
+      highLowData = data;
+      highLowData._stale = false;
+      highLowData._loadedAt = new Date().toISOString();
+      try { localStorage.setItem(HL_CACHE_KEY, JSON.stringify(highLowData)); } catch (e) {}
+      return highLowData;
+    } catch (e) { lastErr = e; }
+  }
+
+  // 网络源全部失败 → 回退到本地缓存（离线兜底，标注过期）
+  try {
+    const cached = localStorage.getItem(HL_CACHE_KEY);
+    if (cached) {
+      const data = JSON.parse(cached);
+      if (data && data.dates && data.series) {
+        highLowData = data;
+        highLowData._stale = true;
+        return highLowData;
+      }
+    }
+  } catch (e) {}
+
+  throw lastErr || new Error('无法连接数据源，请检查网络后重试');
 }
 
 /** 计算 v 在 arr 中的分位（0~100，累计占比） */
@@ -157,9 +188,12 @@ function renderSignal(el, data) {
 }
 
 function renderMeta(el, data) {
+  const staleNote = data._stale
+    ? '（当前为本地缓存，非最新；请联网后点右上角刷新重试）'
+    : (data._loadedAt ? '（更新于 ' + new Date(data._loadedAt).toLocaleString('zh-CN') + '）' : '');
   el.innerHTML = '数据截至 <b style="color:var(--text);">' + escapeHtml(data.last_date || '--') + '</b>，共 ' +
-    hlFmt((data.dates || []).length) + ' 个交易日（' + escapeHtml(data.dates ? data.dates[0] : '') + ' 起）。' +
-    '来源：<a href="' + escapeHtml(data.source_url || 'https://legulegu.com/stockdata/charts/985') + '" target="_blank" rel="noopener" style="color:var(--accent);">乐咕乐股·全部A股创新高/新低</a>；' +
+    hlFmt((data.dates || []).length) + ' 个交易日（' + escapeHtml(data.dates ? data.dates[0] : '') + ' 起）' + staleNote +
+    '。来源：<a href="' + escapeHtml(data.source_url || 'https://legulegu.com/stockdata/charts/985') + '" target="_blank" rel="noopener" style="color:var(--accent);">乐咕乐股·全部A股创新高/新低</a>；' +
     '历史数据随仓库静态发布，刷新数据请运行 <code style="font-size:10px;">scripts/collect_high_low.js</code>。';
 }
 
