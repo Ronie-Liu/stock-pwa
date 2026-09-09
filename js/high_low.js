@@ -274,14 +274,14 @@ function drawChart(chartEl, data) {
     ? [
         { type: 'category', data: xData, boundaryGap: false, gridIndex: 0,
           axisLine: { lineStyle: { color: axisColor } }, axisTick: { show: false },
-          axisLabel: { show: false }, splitLine: { show: false } },
+          axisLabel: { show: false }, splitLine: { show: false }, axisPointer: { show: true } },
         { type: 'category', data: xData, boundaryGap: false, gridIndex: 1,
           axisLine: { lineStyle: { color: axisColor } }, axisTick: { show: false },
-          axisLabel: { color: textColor, fontSize: 9, formatter: (v) => hlAxisDateFmt(v, range) } }
+          axisLabel: { color: textColor, fontSize: 9, formatter: (v) => hlAxisDateFmt(v, range) }, axisPointer: { show: true } }
       ]
     : [{ type: 'category', data: xData, boundaryGap: false,
          axisLine: { lineStyle: { color: axisColor } }, axisTick: { show: false },
-         axisLabel: { color: textColor, fontSize: 9, formatter: (v) => hlAxisDateFmt(v, range) } }];
+         axisLabel: { color: textColor, fontSize: 9, formatter: (v) => hlAxisDateFmt(v, range) }, axisPointer: { show: true } }];
 
   const yAxes = dual
     ? [{ type: 'value', gridIndex: 0, name: '家', nameTextStyle: { color: textColor, fontSize: 9 },
@@ -364,7 +364,6 @@ function drawChart(chartEl, data) {
     animation: false,
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'line', link: [{ xAxisIndex: 'all' }] },
       backgroundColor: isLight ? '#fff' : '#262b34',
       borderColor: isLight ? '#e5e5e5' : '#3a3f4a',
       textStyle: { color: textColor, fontSize: 11 },
@@ -382,6 +381,12 @@ function drawChart(chartEl, data) {
         }
         return lines.join('<br>');
       }
+    },
+    axisPointer: {
+      type: 'line',
+      link: [{ xAxisIndex: dual ? [0, 1] : [0] }],
+      label: { show: false },
+      lineStyle: { color: isLight ? '#999999' : '#8a8f98', type: 'dashed', width: 1 }
     },
     grid: grids,
     dataZoom: [{ type: 'inside', xAxisIndex: dual ? [0, 1] : 0, throttle: 50 }],
