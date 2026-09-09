@@ -988,6 +988,7 @@ function buildMarketSubNav() {
 function bindMarketEvents(container, records, realtimeQuote, custom, latestRecord) {
   container.querySelectorAll('.market-sub-tab').forEach(btn => {
     btn.addEventListener('click', async () => {
+      if (typeof disposeHighLow === 'function') disposeHighLow();
       marketSubTab = btn.dataset.sub;
       await renderMarketBody(container);
     });
@@ -1141,7 +1142,7 @@ function registerSW() {
   navigator.serviceWorker.getRegistrations().then((regs) => {
     return Promise.all(regs.map(r => r.unregister()));
   }).then(() => {
-    return navigator.serviceWorker.register('/sw.js?v=20260910d');
+    return navigator.serviceWorker.register('/sw.js?v=20260910e');
   }).then((reg) => {
     console.log('SW 注册成功:', reg.scope);
 
