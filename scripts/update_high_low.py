@@ -129,18 +129,18 @@ def main():
     with open(DATA_JS, 'w', encoding='utf-8') as f:
         f.write(js)
 
-    changed = n > 0 or not had_shindex
-    if changed:
-        # 内置数据文件版本号改为当天日期(北京时间)，强制各端拉到新数据
-        try:
-            today = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).strftime('%Y%m%d')
-            html = open(IDX_HTML, encoding='utf-8').read()
-            html2 = re.sub(r'(/data/high_low_data\.js\?v=)\d+', lambda m: m.group(1) + today, html)
-            if html2 != html:
-                open(IDX_HTML, 'w', encoding='utf-8').write(html2)
-                print('index.html 数据版本已更新为', today)
-        except Exception as e:
-            print('index.html 版本更新失败(可忽略):', e)
+    # 内置数据文件版本号 = 内容哈希：内容一变 URL 就变，强制各端(含 Service Worker 缓存)拉到新数据。
+    # 每次运行都对齐一次，即使本次没有新增交易日，也能修正版本号。
+    try:
+        import hashlib
+        ver = hashlib.md5(js.encode('utf-8')).hexdigest()[:10]
+        html = open(IDX_HTML, encoding='utf-8').read()
+        html2 = re.sub(r'(/data/high_low_data\.js\?v=)[0-9a-zA-Z_]+', lambda m: m.group(1) + ver, html)
+        if html2 != html:
+            open(IDX_HTML, 'w', encoding='utf-8').write(html2)
+            print('index.html 数据版本已更新为', ver)
+    except Exception as e:
+        print('index.html 版本更新失败(可忽略):', e)
 
     if n:
         print('OK: 追加 %d 个交易日 %s ~ %s，现共 %d 日，最新 %s'

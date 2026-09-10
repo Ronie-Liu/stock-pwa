@@ -54,7 +54,7 @@ self.addEventListener('fetch', (event) => {
         let clone = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, clone);
-          // 内置数据文件每天换版本号(如 ?v=20260911)，清理旧版本避免缓存无限膨胀
+          // 内置数据文件用内容哈希做版本号，内容一变版本就变，清理旧版本避免缓存无限膨胀
           if (url.pathname === '/data/high_low_data.js') {
             cache.keys().then((keys) => {
               return Promise.all(keys.filter((k) => {

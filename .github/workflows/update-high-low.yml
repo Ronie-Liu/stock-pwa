@@ -2,8 +2,10 @@ name: 全A顶底数据更新
 
 on:
   schedule:
-    # GitHub Actions 的 cron 为 UTC；每日 19:15 北京时间(UTC+8)运行
-    - cron: '15 11 * * 1-5'
+    # GitHub Actions 的 cron 为 UTC（北京时间 = UTC+8）。
+    # 收盘后高频轮询：北京时间 15:05~22:35 每 30 分钟一次，共 16 次。
+    # 脚本是幂等的——没有新数据就直接退出、不产生提交，所以一天最多只有 1 次更新提交。
+    - cron: '5,35 7-14 * * 1-5'
   workflow_dispatch:
 
 permissions:

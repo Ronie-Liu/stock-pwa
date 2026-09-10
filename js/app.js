@@ -1025,7 +1025,10 @@ function bindMarketEvents(container, records, realtimeQuote, custom, latestRecor
     container.innerHTML = '<div class="loading-indicator"><span class="spinner"></span> 刷新中…</div>';
     try {
       if (marketSubTab === 'third_board') await initThirdBoardData();
-      else if (marketSubTab === 'high_low') { if (typeof loadHighLowData === 'function') await loadHighLowData(true); }
+      else if (marketSubTab === 'high_low') {
+        // 强制重拉顶底数据；上证指数实时点位由 initHighLow 重新获取
+        if (typeof loadHighLowData === 'function') await loadHighLowData(true);
+      }
       else await initMarketData();
       await renderMarketBody(container);
     } catch(e) { container.innerHTML = '<div class="empty-state">刷新失败: ' + escapeHtml(e.message) + '</div>'; }
