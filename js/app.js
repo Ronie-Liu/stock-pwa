@@ -37,6 +37,9 @@ async function initApp() {
   // 启动定时检查（每分钟检查一次）
   startScheduledCheck();
 
+  // 后台预热个股标签表（空闲时下载，避免首次展开卡片才等待）
+  if (typeof preloadStockTags === 'function') preloadStockTags();
+
   // 后台初始化大盘数据（不阻塞UI）
   initMarketData().catch(e => console.log('大盘数据初始化失败:', e));
   // 后台初始化老三板数据，完成后自动刷新老三板页面
@@ -266,6 +269,9 @@ async function refreshWatchlistQuotes() {
   // 渲染卡片
   listContainer.innerHTML = renderStockList(sorted, watchlistQuotes, false);
 
+  // 回填个股标签
+  if (typeof hydrateStockTags === 'function') hydrateStockTags(listContainer);
+
   // 重新绑定卡片事件
   bindCardEvents(listContainer, false);
 }
@@ -365,6 +371,9 @@ async function refreshHoldingsQuotes() {
 
   let sorted = sortHoldingsStocks(holdingsStocks, holdingsQuotes);
   listContainer.innerHTML = renderStockList(sorted, holdingsQuotes, true);
+
+  // 回填个股标签
+  if (typeof hydrateStockTags === 'function') hydrateStockTags(listContainer);
 
   bindCardEvents(listContainer, true);
 }

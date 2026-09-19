@@ -231,6 +231,7 @@ function renderStockCard(stock, quote, index, total, isHoldings) {
           </div>
         </div>
       </div>
+      ${typeof renderStockTags === 'function' ? renderStockTags(stock.code, 'card') : ''}
       ${dataRowHtml}
       <div class="card-footer-compact">
         ${timeHtml}
@@ -411,6 +412,7 @@ function showDetailPage(stock, quote) {
         </div>
       </div>
       <div class="detail-body">
+        ${typeof renderStockTags === 'function' ? renderStockTags(stock.code, 'detail') : ''}
         <div class="chart-before">
           <div class="minute-section">
             <div class="minute-info" id="minute-info">
@@ -443,6 +445,9 @@ function showDetailPage(stock, quote) {
   `;
 
   document.getElementById('app').insertAdjacentHTML('beforeend', html);
+
+  // 回填个股标签（母线-一级簇-二级簇-二级簇属性，一行一条）
+  if (typeof hydrateStockTags === 'function') hydrateStockTags(document.getElementById('detail-page'));
 
   // 绑定事件
   document.getElementById('detail-back').addEventListener('click', () => {

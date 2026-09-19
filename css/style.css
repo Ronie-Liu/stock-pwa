@@ -306,6 +306,45 @@ body {
 }
 .data-value.bold { font-weight: 700; }
 
+/* ===== 个股标签（母线-一级簇-二级簇-二级簇属性，一行一条） ===== */
+.stock-tags {
+  margin: 6px 0 2px;
+  padding: 6px 8px;
+  background: var(--bg-input);
+  border-radius: 8px;
+  border-left: 2px solid var(--accent);
+}
+.stock-tags--detail {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border-left: 3px solid var(--accent);
+}
+.stock-tag-line {
+  font-size: 11px;
+  line-height: 1.6;
+  font-family: var(--font-mono);
+  color: var(--text);
+  word-break: break-all;
+}
+.stock-tags--detail .stock-tag-line {
+  font-size: 12px;
+  line-height: 1.75;
+}
+.stock-tag-attr { font-weight: 700; }
+.stock-tag-sep { color: var(--text-muted); }
+.stock-tag-loading,
+.stock-tag-empty {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.stock-tag-more {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
 /* 底部 */
 .card-footer-compact {
   display: flex;
