@@ -12,6 +12,10 @@
        window.TAG_ATTR  = ["核心锚","中军","弹性","跟风","边缘"]      // 属性字典
        window.TAG_DICT  = ["母线|一级簇|二级簇", ...]                 // 簇字典(下标即 id)
        window.STOCK_TAGS= {"000001":[[12,1],[45,1],...], ...}         // 每只股票的 [簇id, 属性id]
+  3) data/stock_names.js   —— 代码 <-> 名称 索引（约 110KB），供「输入代码或名称」添加股票时查询
+     结构:
+       window.STOCK_NAME_META = {generated, count}
+       window.STOCK_NAMES     = {"600519":"贵州茅台", ...}
 用法: python scripts/build_stock_tags.py [原始json路径]
 依赖: 无（标准库）
 """
@@ -23,6 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..'))
 OUT_FULL = os.path.join(ROOT, 'data', 'tag_system.json')
 OUT_JS = os.path.join(ROOT, 'data', 'stock_tags.js')
+OUT_NAMES = os.path.join(ROOT, 'data', 'stock_names.js')
 
 DEFAULT_SRC = (r'c:\Users\28670\.trae-cn\attachments\6a1bafa1d33f96294df4bab3'
                r'\992fc963-d39e-44fb-b399-9c82b14f1125_ed02dd4e-8bc8-49f3-8223-697d9582c6f4'
@@ -110,6 +115,29 @@ def main():
     with open(OUT_JS, 'w', encoding='utf-8') as f:
         f.write(js)
     print('已生成前端查表 -> data/stock_tags.js (%.0f KB)' % (os.path.getsize(OUT_JS) / 1024.0))
+
+    # 3) 代码 <-> 名称 索引（供添加股票时"输入代码或名称"解析）
+    codes = {}
+    dup = 0
+    for code, obj in stocks.items():
+        nm = ((obj or {}).get('名称') or '').strip()
+        if not nm:
+            continue
+        if nm in codes and codes[nm] != code:
+            dup += 1          # 同名(如 A/B 股)，保留先出现的
+            continue
+        codes[nm] = code
+    names = {c: ((stocks[c] or {}).get('名称') or '').strip() for c in stocks}
+    njs = ('// 股票代码 <-> 名称 索引（由 scripts/build_stock_tags.py 自动生成，勿手改）\n'
+           'window.STOCK_NAME_META=' + json.dumps(
+               {'generated': meta.get('生成时间', ''), 'count': len(names)}, ensure_ascii=False,
+               separators=(',', ':')) + ';\n'
+           'window.STOCK_NAMES=' + json.dumps(names, ensure_ascii=False, separators=(',', ':')) + ';\n'
+           'window.STOCK_NAME2CODE=' + json.dumps(codes, ensure_ascii=False, separators=(',', ':')) + ';\n')
+    with open(OUT_NAMES, 'w', encoding='utf-8') as f:
+        f.write(njs)
+    print('已生成代码名称索引 -> data/stock_names.js (%.0f KB, %d 只, 重名跳过 %d)'
+          % (os.path.getsize(OUT_NAMES) / 1024.0, len(names), dup))
     return 0
 
 

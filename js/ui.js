@@ -276,12 +276,10 @@ function showAddStockModal(isHoldings) {
   let title = isHoldings ? '添加持仓股' : '添加自选股';
   let html = renderModal(title, `
     <div class="form-group">
-      <label>股票代码</label>
-      <input type="text" id="add-code" placeholder="如 600519 或 000001.SZ" autocomplete="off">
-    </div>
-    <div class="form-group">
-      <label>股票名称</label>
-      <input type="text" id="add-name" placeholder="如 贵州茅台" autocomplete="off">
+      <label>股票代码或名称</label>
+      <input type="text" id="add-query" placeholder="如 600519 / 贵州茅台 / 茅台（任一即可）" autocomplete="off">
+      <div class="lookup-hint" id="add-query-hint">输入 6 位代码或股票名称，自动匹配；名称模糊输入会给出候选</div>
+      <div class="lookup-list" id="add-query-list"></div>
     </div>
     <div class="form-group">
       <label>买入价格（可选）</label>
@@ -308,15 +306,38 @@ function showAddStockModal(isHoldings) {
   `);
   document.getElementById('app').insertAdjacentHTML('beforeend', html);
 
-  document.getElementById('btn-confirm-add').addEventListener('click', () => {
-    let code = document.getElementById('add-code').value.trim();
-    let name = document.getElementById('add-name').value.trim();
-    if (!code) { showToast('请输入股票代码', 'error'); return; }
-    if (!name) { showToast('请输入股票名称', 'error'); return; }
+  bindStockQueryInput(document.getElementById('add-query'));
+
+  document.getElementById('btn-confirm-add').addEventListener('click', async () => {
+    const queryEl = document.getElementById('add-query');
+    const confirmBtn = document.getElementById('btn-confirm-add');
+    let query = (queryEl ? queryEl.value : '').trim();
+    // 下拉里选中的项优先（用户点了候选但没改输入框内容的情况）
+    if (!query && _pickedStock) query = _pickedStock.code;
+    if (!query) { showToast('请输入股票代码或名称', 'error'); return; }
+
+    confirmBtn.disabled = true;
+    const oldText = confirmBtn.textContent;
+    confirmBtn.textContent = '解析中…';
+    let res = (typeof stockLookupResolve === 'function') ? await stockLookupResolve(query) : null;
+    // 输入框里就是刚选中的代码时，直接用选中项，免去重复解析
+    if ((!res || !res.ok) && _pickedStock && extractDigits(_pickedStock.code) === extractDigits(query)) {
+      res = { ok: true, code: _pickedStock.code, name: _pickedStock.name };
+    }
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = oldText;
+
+    if (!res || !res.ok) {
+      if (res && res.reason === 'ambiguous' && res.candidates && res.candidates.length) {
+        renderStockQueryList(document.getElementById('add-query-list'), res.candidates);
+      }
+      showToast((typeof stockLookupErrorText === 'function') ? stockLookupErrorText(res) : '添加失败', 'error');
+      return;
+    }
 
     let stock = {
-      code: normalizeCode(code),
-      name: name,
+      code: normalizeCode(res.code),
+      name: res.name,
       buy_price: parseFloat(document.getElementById('add-price').value) || null,
       buy_time: document.getElementById('add-time').value.trim() || null,
       personal_note: document.getElementById('add-note').value.trim() || null,
@@ -324,12 +345,96 @@ function showAddStockModal(isHoldings) {
       target_price: isHoldings ? (parseFloat(document.getElementById('add-target')?.value) || null) : null
     };
 
+    _pickedStock = null;
     closeModal();
     if (typeof onAddStock === 'function') {
       onAddStock(stock);
     }
   });
 }
+
+// ===== 添加股票：代码/名称 单一输入框的联想与选中 =====
+
+let _pickedStock = null;        // 下拉中选中的股票
+let _lookupTimer = null;
+
+function bindStockQueryInput(inputEl) {
+  if (!inputEl) return;
+  const listEl = document.getElementById('add-query-list');
+  const hintEl = document.getElementById('add-query-hint');
+  inputEl.focus();
+
+  const setHint = (text, color) => {
+    if (!hintEl) return;
+    hintEl.textContent = text;
+    hintEl.style.color = color || 'var(--text-muted)';
+  };
+
+  inputEl.addEventListener('input', () => {
+    _pickedStock = null;
+    if (listEl) listEl.innerHTML = '';
+    const q = inputEl.value.trim();
+    if (!q) { setHint('输入 6 位代码或股票名称，自动匹配；名称模糊输入会给出候选'); return; }
+    if (_lookupTimer) clearTimeout(_lookupTimer);
+    _lookupTimer = setTimeout(async () => {
+      if (typeof stockLookupSearch !== 'function') return;
+      if (!stockNameIndexReady()) {
+        setHint('正在加载股票名录…');
+        await loadStockNameIndex();
+      }
+      if (inputEl.value.trim() !== q) return;
+      const hits = stockLookupSearch(q);
+      // 唯一命中 -> 直接提示已匹配，无需下拉
+      if (hits.length === 1) {
+        _pickedStock = hits[0];
+        setHint('已匹配：' + hits[0].code + ' ' + hits[0].name, 'var(--accent)');
+        return;
+      }
+      if (!hits.length) {
+        _pickedStock = null;
+        setHint('未找到匹配股票，请检查输入', 'var(--warning)');
+        return;
+      }
+      setHint('匹配到 ' + hits.length + ' 只，点击选择：');
+      renderStockQueryList(listEl, hits);
+    }, 140);
+  });
+
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (listEl && listEl.firstChild && !_pickedStock) {
+        listEl.firstChild.click();       // 回车选中第一个候选
+      } else {
+        document.getElementById('btn-confirm-add')?.click();
+      }
+    }
+  });
+}
+
+function renderStockQueryList(listEl, items) {
+  if (!listEl) return;
+  listEl.innerHTML = items.map(it =>
+    `<div class="lookup-item" data-code="${escapeHtml(it.code)}" data-name="${escapeHtml(it.name)}">` +
+    `<span class="lookup-code">${escapeHtml(it.code)}</span>` +
+    `<span class="lookup-name">${escapeHtml(it.name)}</span></div>`
+  ).join('');
+  listEl.querySelectorAll('.lookup-item').forEach(node => {
+    node.addEventListener('click', () => {
+      const code = node.dataset.code, name = node.dataset.name;
+      _pickedStock = { code: code, name: name };
+      const inputEl = document.getElementById('add-query');
+      if (inputEl) inputEl.value = code;
+      listEl.innerHTML = '';
+      const hintEl = document.getElementById('add-query-hint');
+      if (hintEl) {
+        hintEl.textContent = '已选择：' + code + ' ' + name;
+        hintEl.style.color = 'var(--accent)';
+      }
+    });
+  });
+}
+
 
 function showEditStockModal(stock, isHoldings) {
   let title = '编辑股票信息';

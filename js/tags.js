@@ -5,7 +5,7 @@
 // 展示口径: 每条标签一行，文本为「母线名-一级簇名-二级簇名-二级簇属性」
 
 const STOCK_TAGS_URL = '/data/stock_tags.js';
-const STOCK_TAGS_VER = '20260919a';      // 与 index.html 中脚本版本保持一致
+const STOCK_TAGS_VER = '20260919b';      // 与 index.html 中脚本版本保持一致
 const STOCK_TAG_ATTR_COLOR = {
   '核心锚': '#ef4444',
   '中军': '#f59e0b',
