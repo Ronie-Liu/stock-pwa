@@ -162,3 +162,68 @@ function stdToTencent(code) {
   if (code.includes('.BJ') || code.match(/^(920|830|831|832|833|834|835|836|837|838|839|870|871|872|873)/)) return 'bj' + digits;
   return 'sz' + digits;
 }
+
+// ===== JSONP 通用传输层 =====
+// 背景：部分第三方接口（如东财 push2 系列）不带 CORS 响应头，
+// 且其 WAF 会对携带 Origin/Referer 的“非白名单来源”直接断开连接（浏览器表现为 ERR_EMPTY_RESPONSE）。
+// 方案：用 <script> 发起 JSONP，并显式设置 referrerPolicy='no-referrer'，
+// 使请求既不携带 Origin 也不携带 Referer，从而绕过拦截；同时天然规避 CORS。
+
+/**
+ * 通用 JSONP 请求
+ * @param {string} url 完整地址（会被追加回调参数）
+ * @param {object} [opts]
+ * @param {number} [opts.timeout] 超时毫秒，默认 9000
+ * @param {string} [opts.callbackParam] 回调参数名，默认 'cb'（东财 datacenter 用 'callback'）
+ * @param {string} [opts.callbackName] 自定义全局回调名（一般无需传）
+ * @returns {Promise<any>} 接口返回的 JSON 对象
+ */
+function jsonpGet(url, opts) {
+  opts = opts || {};
+  const timeoutMs = opts.timeout || 9000;
+  const cbParam = opts.callbackParam || 'cb';
+  const cbName = opts.callbackName || ('jp_cb_' + Date.now() + '_' + Math.floor(Math.random() * 1e6));
+  const sep = url.indexOf('?') >= 0 ? '&' : '?';
+  const finalUrl = url + sep + cbParam + '=' + cbName + (opts.extra ? '&' + opts.extra : '');
+
+  return new Promise(function (resolve, reject) {
+    const script = document.createElement('script');
+    let done = false;
+    let timer = null;
+
+    function cleanup() {
+      if (done) return;
+      done = true;
+      if (timer) clearTimeout(timer);
+      try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[cbName] = function (data) { cleanup(); resolve(data); };
+    timer = setTimeout(function () { cleanup(); reject(new Error('JSONP 请求超时')); }, timeoutMs);
+    script.onerror = function () { cleanup(); reject(new Error('JSONP 网络错误')); };
+    // 关键：去掉 Referer，避免被接口方 WAF 拦截
+    try { script.referrerPolicy = 'no-referrer'; } catch (e) { /* 老浏览器忽略 */ }
+    script.src = finalUrl;
+    document.head.appendChild(script);
+  });
+}
+
+/**
+ * JSONP 多域名容错：依次尝试多个 base host 的同一 path
+ * @param {string} path 以 / 开头的接口路径（含 query）
+ * @param {string[]} hosts base host 数组
+ * @param {object} [opts] 透传给 jsonpGet
+ * @returns {Promise<any>}
+ */
+async function jsonpGetHosts(path, hosts, opts) {
+  let lastErr = null;
+  for (let i = 0; i < hosts.length; i++) {
+    try {
+      return await jsonpGet(hosts[i] + path, opts);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('JSONP 请求失败');
+}

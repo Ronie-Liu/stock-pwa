@@ -37,9 +37,17 @@ async function fetchWithTimeout(url, timeoutMs = 7000) {
   }
 }
 
-/** 依次尝试多个 base host 的同一 path（东财多域名容错） */
+/** 依次尝试多个 base host 的同一 path（东财多域名容错）
+ *  注意：东财 push2 系列的 WAF 会拒绝带 Origin/Referer 的浏览器请求（ERR_EMPTY_RESPONSE），
+ *  因此优先用 JSONP + referrerPolicy='no-referrer'（见 utils.js 的 jsonpGet），
+ *  失败再退回普通 fetch，兼容本地调试 / 白名单域名场景。 */
 async function fetchJSON(path, hosts, timeoutMs = 7000) {
   let lastErr = null;
+  try {
+    return await jsonpGetHosts(path, hosts, { timeout: timeoutMs });
+  } catch (e) {
+    lastErr = e;
+  }
   for (let base of hosts) {
     try {
       let text = await fetchWithTimeout(base + path, timeoutMs);
@@ -53,27 +61,9 @@ async function fetchJSON(path, hosts, timeoutMs = 7000) {
 
 const SENT_EM_HOSTS = ['https://push2delay.eastmoney.com', 'https://push2.eastmoney.com'];
 
-/** datacenter-web 无 CORS，用 JSONP；带超时与清理 */
+/** datacenter-web 无 CORS，走 JSONP（callback 参数名与 push2 的 cb 不同）；带超时与清理 */
 function fetchJSONP(url, timeoutMs = 9000) {
-  return new Promise((resolve, reject) => {
-    let cbName = 'sent_cb_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
-    let sep = url.indexOf('?') >= 0 ? '&' : '?';
-    let script = document.createElement('script');
-    let timer = null;
-    let done = false;
-    function cleanup() {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    }
-    window[cbName] = (data) => { cleanup(); resolve(data); };
-    timer = setTimeout(() => { cleanup(); reject(new Error('融资数据超时')); }, timeoutMs);
-    script.onerror = () => { cleanup(); reject(new Error('融资数据加载失败')); };
-    script.src = url + sep + 'callback=' + cbName;
-    document.head.appendChild(script);
-  });
+  return jsonpGet(url, { callbackParam: 'callback', timeout: timeoutMs });
 }
 
 /** 给 Promise 加总超时（最终兜底，杜绝整页无限等待） */

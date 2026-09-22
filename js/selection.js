@@ -179,7 +179,7 @@ async function fetchQuotesFromHost(host) {
       `&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23` +
       `&fields=f2,f3,f5,f8,f12,f13,f14,f15,f16,f17,f18`;
 
-    let json = await fetchWithRetry(url);
+    let json = await fetchQuotePage(url);
     if (!json || json.data == null) {
       throw new Error('行情源返回异常(rc=' + (json && json.rc != null ? json.rc : 'null') + ')');
     }
@@ -197,6 +197,18 @@ async function fetchQuotesFromHost(host) {
   let rows = all.map(mapEastMoneyRow).filter(r => r != null);
   if (rows.length === 0) throw new Error('未获取到任何行情数据');
   return rows;
+}
+
+/**
+ * 单页行情获取：优先走 JSONP（referrerPolicy='no-referrer' 可绕过东财 WAF 对
+ * 非白名单 Origin/Referer 的拦截），失败再退回普通 fetch 重试。
+ */
+async function fetchQuotePage(url) {
+  try {
+    let j = await jsonpGet(url, { timeout: 15000 });
+    if (j && j.data != null) return j;
+  } catch (e) { /* 退回 fetch */ }
+  return await fetchWithRetry(url);
 }
 
 async function fetchWithRetry(url, retries = 3) {
