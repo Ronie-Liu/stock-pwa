@@ -1,6 +1,6 @@
 // Service Worker - 自选股价格监控 PWA
 // 🔄 网络优先策略：确保每次打开都获取最新代码
-const CACHE_NAME = 'stock-monitor-v31';
+const CACHE_NAME = 'stock-monitor-v32';
 
 // 需要缓存的路径（离线回退用）
 const CACHE_WHITELIST = [
@@ -55,7 +55,7 @@ self.addEventListener('fetch', (event) => {
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, clone);
           // 内置数据文件用内容哈希做版本号，内容一变版本就变，清理旧版本避免缓存无限膨胀
-          if (url.pathname === '/data/high_low_data.js') {
+          if (url.pathname === '/data/high_low_data.js' || url.pathname === '/data/resonance_data.js') {
             cache.keys().then((keys) => {
               return Promise.all(keys.filter((k) => {
                 const ku = new URL(k.url);

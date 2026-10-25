@@ -543,9 +543,16 @@ async function renderEnvironmentTab() {
   if (typeof disposeSentiment === 'function') disposeSentiment();
   if (typeof disposeLiquidity === 'function') disposeLiquidity();
   if (typeof disposeHighLow === 'function') disposeHighLow();
+  if (typeof disposeResonance === 'function') disposeResonance();
   container.innerHTML = buildEnvSubNav();
 
-  if (envSubTab === 'trend') {
+  if (envSubTab === 'resonance') {
+    let body = document.createElement('div');
+    body.id = 'env-body';
+    body.innerHTML = renderResonanceSubTab();
+    container.appendChild(body);
+    await initResonance(body);
+  } else if (envSubTab === 'trend') {
     let body = document.createElement('div');
     body.id = 'env-body';
     container.appendChild(body);
