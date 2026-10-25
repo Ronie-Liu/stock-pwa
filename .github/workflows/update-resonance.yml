@@ -50,4 +50,5 @@ jobs:
             exit 0
           fi
           git commit -m "共振数据自动更新 $(TZ=Asia/Shanghai date +'%F %H:%M')"
-          git push
+          # 与「全A顶底」工作流可能同时推送，失败时先 rebase 再推一次
+          git push || (sleep 15 && git pull --rebase origin main && git push)
