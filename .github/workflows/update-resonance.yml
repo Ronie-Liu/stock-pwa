@@ -4,7 +4,7 @@ on:
   schedule:
     # GitHub Actions cron 为 UTC（北京时间 = UTC+8）。只在工作日跑。
     # 盘中 8 个时点各跑一次「快照」（约 56 次请求，很轻）：
-    #   10:00 10:30 11:00 11:30 13:30 14:00 14:30 15:00
+    #   北京 10:00 10:30 11:00 11:30 13:30 14:00 14:30 15:00
     - cron: '0 2 * * 1-5'
     - cron: '30 2 * * 1-5'
     - cron: '0 3 * * 1-5'
@@ -13,16 +13,12 @@ on:
     - cron: '0 6 * * 1-5'
     - cron: '30 6 * * 1-5'
     - cron: '0 7 * * 1-5'
-    # 收盘后 15:45：用 5 分钟 K 线逐股精确复盘，覆盖盘中快照（约 5500 次请求，约 3 分钟）
+    # 收盘后 15:45（北京）：用 5 分钟 K 线逐股精确复盘，覆盖盘中快照
     - cron: '45 7 * * 1-5'
   workflow_dispatch:
 
 permissions:
   contents: write
-
-concurrency:
-  group: update-resonance
-  cancel-in-progress: false
 
 jobs:
   update-resonance:
