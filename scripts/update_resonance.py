@@ -377,21 +377,33 @@ def run_backfill(store, limit=0, workers=8):
         print('未获得任何 K 线统计数据')
         return 0
 
+    now = now_bj()
+    today = now.strftime('%Y-%m-%d')
+    now_min = now.hour * 60 + now.minute
+
     keep = sorted(agg.keys())[-KEEP_DAYS:]
     for d in keep:
         day = find_day(store, d)
         day['total'] = agg[d]['total']
         day['coverage'] = round(coverage, 4)
         for slot in SLOTS:
+            if d == today:
+                sh, sm = map(int, slot.split(':'))
+                if sh * 60 + sm + 3 > now_min:
+                    continue          # 今日尚未走到的时点不写入，前端留空而非画 0
             arr = agg[d]['slots'][slot]
             day['slots'][slot] = slot_record(arr, agg[d]['total'], 'kline', slot, 0)
 
     print('复盘覆盖日期: %s' % ', '.join(keep))
     for d in keep:
         b = agg[d]
-        last = b['slots']['15:00']
-        print('  %s 交易 %5d 家 | 做多 %4d 做空 %4d | 上方阻力 %4d 下方支撑 %4d'
-              % (d, b['total'], last[0] + last[1], last[2] + last[3], last[4], last[5]))
+        last_slot = '15:00'
+        for s in SLOTS:
+            if any(b['slots'][s]):
+                last_slot = s
+        last = b['slots'][last_slot]
+        print('  %s 交易 %5d 家（截至 %s）| 做多 %4d 做空 %4d | 上方阻力 %4d 下方支撑 %4d'
+              % (d, b['total'], last_slot, last[0] + last[1], last[2] + last[3], last[4], last[5]))
     return len(keep)
 
 
