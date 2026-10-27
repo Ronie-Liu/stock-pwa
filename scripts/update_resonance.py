@@ -46,6 +46,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..'))
 DATA_JSON = os.path.join(ROOT, 'data', 'resonance_history.json')
 DATA_JS = os.path.join(ROOT, 'data', 'resonance_data.js')
+UNIVERSE_JSON = os.path.join(ROOT, 'data', 'universe.json')
 IDX_HTML = os.path.join(ROOT, 'index.html')
 
 TZ = datetime.timezone(datetime.timedelta(hours=8))
@@ -53,11 +54,14 @@ SLOTS = ['10:00', '10:30', '11:00', '11:30', '13:30', '14:00', '14:30', '15:00']
 SLOT_SET = set(SLOTS)
 KEEP_DAYS = 5
 SHADOW_PCT = 4.0          # 影线阈值（百分点，相对昨收）
+MIN_UNIVERSE = 4500       # 股票池低于该值视为数据源异常，拒绝写盘
+MIN_TRADED = 4500         # 当日有成交家数低于该值视为异常，拒绝写盘
 
 SINA_LIST = ('https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/'
              'Market_Center.getHQNodeData')
 SINA_K5 = ('https://quotes.sina.cn/cn/api/json_v2.php/CN_MarketDataService.getKLineData')
 TX_K5_REAL = 'https://ifzq.gtimg.cn/appstock/app/kline/mkline'
+TX_QUOTE = 'https://qt.gtimg.cn/q='
 
 UA = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
                    '(KHTML, like Gecko) Chrome/124.0 Safari/537.36',
@@ -115,47 +119,136 @@ def prune(store):
     return store
 
 
-# ---------- 股票池（新浪 hs_a，含北交所） ----------
+# ---------- 股票池（缓存 + 新浪分页重建） ----------
 
-def fetch_universe(limit=0):
-    """分页拉全市场。返回 [{symbol, code, name, price, prev, open, high, low, vol}]
-    symbol 已带 sh/sz/bj 前缀，可直接用于 K 线接口。"""
+def fetch_universe_raw(limit=0):
+    """分页拉全市场股票池（仅取代码/名称）。单页失败会重试，绝不在半途静默截断。"""
     out = []
+    seen = set()
     page = 1
     while True:
+        if limit and len(out) >= limit:
+            out = out[:limit]
+            break
         url = '%s?page=%d&num=100&sort=symbol&asc=1&node=hs_a' % (SINA_LIST, page)
-        try:
-            arr = json.loads(http_get(url, timeout=25, retries=3, headers=SINA_REF))
-        except Exception as e:
-            print('  列表页 %d 拉取失败: %s' % (page, e))
-            if out:
-                break                    # 已有部分数据，尽力继续
-            raise
+        arr = None
+        for attempt in range(4):
+            try:
+                arr = json.loads(http_get(url, timeout=25, retries=2, headers=SINA_REF))
+                break
+            except Exception as e:
+                print('  列表页 %d 第 %d 次失败: %s' % (page, attempt + 1, e))
+                time.sleep(1.5 * (attempt + 1))
+        if arr is None:
+            print('  列表页 %d 彻底失败，股票池不完整' % page)
+            break
         if not arr:
             break
         for r in arr:
             sym = str(r.get('symbol') or '')
-            if len(sym) < 8:
+            if len(sym) < 8 or sym in seen:
                 continue
-            out.append({
-                'symbol': sym,
-                'code': str(r.get('code') or sym[-6:]),
-                'name': r.get('name') or '',
-                'price': fnum(r.get('trade')),
-                'prev': fnum(r.get('settlement')),
-                'open': fnum(r.get('open')),
-                'high': fnum(r.get('high')),
-                'low': fnum(r.get('low')),
-                'vol': fnum(r.get('volume')),
-            })
-        if limit and len(out) >= limit:
-            out = out[:limit]
-            break
+            seen.add(sym)
+            out.append({'symbol': sym, 'code': str(r.get('code') or sym[-6:]),
+                        'name': r.get('name') or ''})
         if len(arr) < 100:
             break
         page += 1
         time.sleep(0.05)
-    print('全市场股票池: %d 只（%d 页）' % (len(out), page))
+    print('股票池拉取: %d 只（%d 页）' % (len(out), page))
+    return out
+
+
+def load_universe(limit=0, force=False):
+    """优先读 data/universe.json 缓存（避免每次都打 56 次分页请求触发限流）。
+    缓存缺失/过旧/数量不足时才重建；重建失败则回退到旧缓存（只警告不中断）。"""
+    cached = None
+    if os.path.exists(UNIVERSE_JSON):
+        try:
+            with open(UNIVERSE_JSON, encoding='utf-8') as f:
+                cached = json.load(f)
+        except Exception as e:
+            print('股票池缓存读取失败:', e)
+
+    need_rebuild = force or not cached or len(cached.get('stocks') or []) < MIN_UNIVERSE
+    if not need_rebuild:
+        ts = cached.get('updated_at') or ''
+        try:
+            age_d = (now_bj() - datetime.datetime.fromisoformat(ts)).days
+        except Exception:
+            age_d = 99
+        if age_d >= 3:                      # 3 天刷新一次（覆盖新股上市 / 退市）
+            need_rebuild = True
+
+    if need_rebuild:
+        fresh = fetch_universe_raw(limit)
+        if len(fresh) >= MIN_UNIVERSE:
+            try:
+                with open(UNIVERSE_JSON, 'w', encoding='utf-8') as f:
+                    json.dump({'updated_at': now_bj().isoformat(), 'stocks': fresh},
+                              f, ensure_ascii=False, separators=(',', ':'))
+            except Exception as e:
+                print('股票池缓存写入失败:', e)
+            cached = {'updated_at': now_bj().isoformat(), 'stocks': fresh}
+        else:
+            print('警告: 本次股票池仅 %d 只（<%d），沿用缓存，不覆盖' % (len(fresh), MIN_UNIVERSE))
+
+    stocks = (cached or {}).get('stocks') or []
+    print('股票池: %d 只（缓存）' % len(stocks))
+    return stocks[:limit] if limit else stocks
+
+
+# ---------- 盘中行情（腾讯批量，100 只/请求） ----------
+
+def _tx_quote_fields(text, symbol):
+    """解析腾讯批量返回的单只股票；返回 dict 或 None"""
+    try:
+        f = text.split('~')
+        if len(f) < 35:
+            return None
+        price = fnum(f[3])
+        prev = fnum(f[4])
+        open_p = fnum(f[5])
+        vol = fnum(f[6])
+        high = fnum(f[33])
+        low = fnum(f[34])
+        if price <= 0 or prev <= 0 or open_p <= 0:
+            return None
+        return {'symbol': symbol, 'price': price, 'prev': prev, 'open': open_p,
+                'high': high, 'low': low, 'vol': vol}
+    except Exception:
+        return None
+
+
+def fetch_quotes_tencent(symbols, batch=100, workers=6):
+    """按代码批量取实时行情，返回 [{symbol, price, prev, open, high, low, vol}]"""
+    chunks = [symbols[i:i + batch] for i in range(0, len(symbols), batch)]
+
+    def work(chunk):
+        url = TX_QUOTE + ','.join(chunk)
+        try:
+            req = urllib.request.Request(url, headers=UA)
+            with urllib.request.urlopen(req, timeout=20) as r:
+                txt = r.read().decode('gbk', 'ignore')
+        except Exception:
+            return []
+        rows = []
+        for seg in txt.split(';'):
+            seg = seg.strip()
+            if not seg or '=' not in seg:
+                continue
+            key, val = seg.split('=', 1)
+            sym = key.replace('v_', '').strip()
+            row = _tx_quote_fields(val.strip('"'), sym)
+            if row:
+                rows.append(row)
+        return rows
+
+    out = []
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        for rows in ex.map(work, chunks):
+            out.extend(rows)
+    print('行情抓取: %d / %d 只（%d 批）' % (len(out), len(symbols), len(chunks)))
     return out
 
 
@@ -202,30 +295,48 @@ def nearest_slot(now):
 
 # ---------- 模式一：盘中快照 ----------
 
-def run_snap(store, limit=0):
+def run_snap(store, limit=0, slot=None):
     now = now_bj()
-    slot, drift = nearest_slot(now)
+    if slot:
+        sh, sm = map(int, slot.split(':'))
+        drift = int((now - now.replace(hour=sh, minute=sm, second=0, microsecond=0)).total_seconds() // 60)
+    else:
+        slot, drift = nearest_slot(now)
     if slot is None:
         print('当前 %s 尚未到首个时点 %s，快照跳过' % (now.strftime('%H:%M'), SLOTS[0]))
         return 0
+
+    date = now.strftime('%Y-%m-%d')
+    day = find_day(store, date)
+    old = day['slots'].get(slot)
+    if old and old.get('src') == 'kline':
+        print('%s %s 已有 K 线复盘数据（权威口径），快照不覆盖' % (date, slot))
+        return 0
+
     print('盘中快照：目标时点 %s（实际 %s，偏移 %d 分钟）'
           % (slot, now.strftime('%H:%M'), drift))
+    stocks = load_universe(limit)
+    if len(stocks) < MIN_UNIVERSE:
+        print('股票池仅 %d 只（<%d），拒绝出数' % (len(stocks), MIN_UNIVERSE))
+        return 0
 
-    stocks = fetch_universe(limit)
+    quotes = fetch_quotes_tencent([s['symbol'] for s in stocks])
     counts = [0] * 6
     traded = 0
-    for s in stocks:
-        if s['vol'] <= 0 or s['price'] <= 0:
+    for q in quotes:
+        if q['vol'] <= 0:
             continue                            # 当日未产生交易 / 停牌
-        cls = classify(s['open'], s['price'], s['high'], s['low'], s['prev'])
+        cls = classify(q['open'], q['price'], q['high'], q['low'], q['prev'])
         if cls is None:
             continue
         traded += 1
         for i, v in enumerate(cls):
             counts[i] += v
 
-    date = now.strftime('%Y-%m-%d')
-    day = find_day(store, date)
+    if traded < MIN_TRADED:
+        print('有成交仅 %d 家（<%d），数据源异常，拒绝写盘' % (traded, MIN_TRADED))
+        return 0
+
     day['slots'][slot] = slot_record(counts, traded, 'snap', now.strftime('%H:%M'), drift)
     day['total'] = traded
     print('快照完成：%s %s 交易家数 %d | c1..c6=%s' % (date, slot, traded, counts))
@@ -321,9 +432,12 @@ def compute_day_points(days, date, prev_close):
 def run_backfill(store, limit=0, workers=8):
     t0 = time.time()
     print('收盘复盘：5 分钟 K 线逐股重算')
-    stocks = fetch_universe(limit)
+    stocks = load_universe(limit)
     if not stocks:
         print('股票池为空，终止')
+        return 0
+    if len(stocks) < MIN_UNIVERSE:
+        print('股票池仅 %d 只（<%d），拒绝复盘' % (len(stocks), MIN_UNIVERSE))
         return 0
     print('待处理: %d 只，并发 %d' % (len(stocks), workers))
 
@@ -441,6 +555,7 @@ def write_files(store):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--mode', choices=['auto', 'snap', 'backfill'], default='auto')
+    ap.add_argument('--slot', default=None, help='快照目标时点，如 11:00（默认取最近已过时点）')
     ap.add_argument('--limit', type=int, default=0, help='只处理前 N 只（调试，默认不写文件）')
     ap.add_argument('--write', action='store_true', help='配合 --limit 强制写文件')
     ap.add_argument('--workers', type=int, default=8)
@@ -457,7 +572,7 @@ def main():
             return 0
 
     store = load_store()
-    n = run_snap(store, args.limit) if mode == 'snap' else run_backfill(store, args.limit, args.workers)
+    n = run_snap(store, args.limit, args.slot) if mode == 'snap' else run_backfill(store, args.limit, args.workers)
 
     if n:
         if args.limit and not args.write:
