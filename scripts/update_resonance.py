@@ -521,8 +521,46 @@ def run_backfill(store, limit=0, workers=8):
     return len(keep)
 
 
-# ---------- 写文件 ----------
+# ---------- 模式三：按远端缺失自动补齐 ----------
 
+def remote_store():
+    """读取 origin/main 上的历史文件（判断已发布到线上的时点，避免本地残留误判）"""
+    try:
+        import subprocess
+        out = subprocess.check_output(
+            ['git', '-C', ROOT, 'show', 'origin/main:data/resonance_history.json'],
+            stderr=subprocess.DEVNULL)
+        return json.loads(out.decode('utf-8'))
+    except Exception as e:
+        print('远端历史读取失败（改用本地）:', e)
+        return None
+
+
+def run_ensure(store):
+    """对比远端已有时点与当前时间，自动决定补 1 个（snap）还是重建全部（backfill）"""
+    now = now_bj()
+    today = now.strftime('%Y-%m-%d')
+    now_min = now.hour * 60 + now.minute
+    remote = remote_store() or store
+    day = next((d for d in remote.get('days', []) if d.get('date') == today), None)
+    have = set(((day or {}).get('slots') or {}).keys())
+
+    missing = []
+    for s in SLOTS:
+        sh, sm = map(int, s.split(':'))
+        if now_min >= sh * 60 + sm + 2 and s not in have:
+            missing.append(s)
+
+    print('远端已有: %s | 待补: %s' % (','.join(sorted(have)) or '-', ','.join(missing) or '-'))
+    if not missing:
+        return 0
+    if len(missing) >= 2:
+        print('缺 %d 个时点，用 K 线重建' % len(missing))
+        return run_backfill(store)
+    return run_snap(store, 0, missing[0])
+
+
+# ---------- 写文件 ----------
 def write_files(store):
     store['slots'] = SLOTS
     prune(store)
@@ -554,7 +592,7 @@ def write_files(store):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--mode', choices=['auto', 'snap', 'backfill'], default='auto')
+    ap.add_argument('--mode', choices=['auto', 'snap', 'backfill', 'ensure'], default='auto')
     ap.add_argument('--slot', default=None, help='快照目标时点，如 11:00（默认取最近已过时点）')
     ap.add_argument('--limit', type=int, default=0, help='只处理前 N 只（调试，默认不写文件）')
     ap.add_argument('--write', action='store_true', help='配合 --limit 强制写文件')
@@ -572,7 +610,12 @@ def main():
             return 0
 
     store = load_store()
-    n = run_snap(store, args.limit, args.slot) if mode == 'snap' else run_backfill(store, args.limit, args.workers)
+    if mode == 'snap':
+        n = run_snap(store, args.limit, args.slot)
+    elif mode == 'ensure':
+        n = run_ensure(store)
+    else:
+        n = run_backfill(store, args.limit, args.workers)
 
     if n:
         if args.limit and not args.write:
