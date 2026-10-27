@@ -554,10 +554,14 @@ def run_ensure(store):
     print('远端已有: %s | 待补: %s' % (','.join(sorted(have)) or '-', ','.join(missing) or '-'))
     if not missing:
         return 0
-    if len(missing) >= 2:
-        print('缺 %d 个时点，用 K 线重建' % len(missing))
-        return run_backfill(store)
-    return run_snap(store, 0, missing[0])
+    # 只有「缺的就是刚过去的那个时点、且只晚了 10 分钟以内」才用快照；
+    # 否则当前价格已经不能代表那个时点，必须用 K 线精确复盘
+    if len(missing) == 1:
+        sh, sm = map(int, missing[0].split(':'))
+        if now_min - (sh * 60 + sm) <= 10:
+            return run_snap(store, 0, missing[0])
+    print('缺 %d 个时点（%s 或已过时），用 K 线重建' % (len(missing), ','.join(missing)))
+    return run_backfill(store)
 
 
 # ---------- 写文件 ----------
