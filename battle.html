@@ -33,6 +33,7 @@
     .subtab.active { background: #17242f; color: #d3e4f2; }
     .subtab[data-status]::after { content: attr(data-status); color: #54677c; font-size: 9px; }
     .chips { display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto; }
+    .chips + .chips { margin-left: 0; }
     .chips button { padding: 3px 8px; border: 1px solid #22303f; border-radius: 6px; background: #111b26; color: #9fb0c2; font: 11px/1.4 inherit; cursor: pointer; }
     .chips button:hover { border-color: #31465b; color: #d3e4f2; }
     .chips button.selected { border-color: #3f6b58; background: #1d3a31; color: #d6efe2; }
@@ -122,6 +123,12 @@
         <button type="button" data-days="120">近120日</button>
         <button type="button" data-days="250">近250日</button>
       </div>
+      <div class="chips" id="period-chips">
+        <button type="button" data-period="5m" class="selected">5分钟</button>
+        <button type="button" data-period="15m">15分钟</button>
+        <button type="button" data-period="30m">30分钟</button>
+        <button type="button" data-period="60m">60分钟</button>
+      </div>
     </div>
     <section class="module-view" id="view-battle">
       <div class="pane daily">
@@ -205,8 +212,15 @@
   const subChart = echarts.init(document.getElementById('sub-chart'), null, { renderer: 'canvas' });
   [dailyChart, mainChart, subChart].forEach((chart) => { chart.group = 'battle'; });
   echarts.connect('battle');
+  mainChart.on('dataZoom', () => {
+    const option = mainChart.getOption();
+    const zoom = option && option.dataZoom && option.dataZoom[0];
+    if (zoom && Number.isFinite(zoom.start) && Number.isFinite(zoom.end)) {
+      state.zoom = { start: zoom.start, end: zoom.end };
+    }
+  });
 
-  const state = { days: 5, period: '5m', intraday: [], daily: [], start: null, end: null, module: 'battle' };
+  const state = { days: 5, period: '5m', intraday: [], daily: [], start: null, end: null, module: 'battle', zoom: null };
   let cloudPayload = null;
   let busy = false;
 
@@ -274,7 +288,7 @@
   }
 
   function alignDaily(points, daily) {
-    const empty = { bull: [], bear: [], index: [], stepped: false };
+    const empty = { bull: [], bear: [], index: [] };
     if (!points.length) return empty;
     const bull = new Array(points.length).fill(null);
     const bear = new Array(points.length).fill(null);
@@ -290,22 +304,16 @@
         const row = byDay.get(point.time.slice(0, 10));
         if (row) fill(position, row);
       });
-      return { bull, bear, index, stepped: false };
+      return { bull, bear, index };
     }
-    const first = {};
+    /* 日线值只落在当日最后一个时点（收盘 15:00），不在整日铺平，避免出现横线误导。 */
     const last = {};
-    points.forEach((point, position) => {
-      const day = point.time.slice(0, 10);
-      if (first[day] === undefined) first[day] = position;
-      last[day] = position;
-    });
+    points.forEach((point, position) => { last[point.time.slice(0, 10)] = position; });
     daily.forEach((row) => {
-      const day = row.time.slice(0, 10);
-      if (first[day] === undefined) return;
-      fill(first[day], row);
-      if (last[day] !== first[day]) fill(last[day], row);
+      const position = last[row.time.slice(0, 10)];
+      if (position !== undefined) fill(position, row);
     });
-    return { bull, bear, index, stepped: true };
+    return { bull, bear, index };
   }
 
   function gridPad(width) {
@@ -344,19 +352,29 @@
       splitLine: { show: false }
     };
     const aligned = alignDaily(points, state.daily);
-    const dailyExtra = aligned.stepped ? { step: 'middle' } : {};
     const dailyLine = (name, data, color, extra) => ({
       name, type: 'line', data, showSymbol: true, symbolSize: 3, connectNulls: true,
-      lineStyle: { width: 1.5, color }, itemStyle: { color }, animation: false, ...dailyExtra, ...extra
+      lineStyle: { width: 1.5, color }, itemStyle: { color }, animation: false, ...extra
     });
     const line = (name, data, color, extra) => ({
       name, type: 'line', data, showSymbol: false, connectNulls: false,
       lineStyle: { width: 1.5, color }, itemStyle: { color }, animation: false, ...extra
     });
+    /* 三图共用同一份分类轴，缩放通过 echarts.connect 同步，保证拖动后日期仍对齐。 */
+    const zoom = state.zoom || { start: 0, end: 100 };
+    const insideZoom = { type: 'inside', xAxisIndex: [0], filterMode: 'none', start: zoom.start, end: zoom.end };
+    const sliderZoom = {
+      type: 'slider', xAxisIndex: [0], filterMode: 'none', start: zoom.start, end: zoom.end,
+      bottom: 1, height: 12,
+      left: pad.left, right: pad.right, borderColor: '#22303f', backgroundColor: '#0a121b',
+      fillerColor: '#3b5a5033', handleStyle: { color: '#5b8a77' },
+      textStyle: { color: '#6f8095', fontSize: 9 }, showDetail: false, brushSelect: false
+    };
 
     dailyChart.setOption({
       animation: false, tooltip: tipStyle(dailyTip),
       grid: { left: pad.left, right: pad.right, top: 8, bottom: 18 },
+      dataZoom: [insideZoom],
       xAxis: axis,
       yAxis: [valueAxis, indexAxis],
       series: [
@@ -368,7 +386,8 @@
 
     mainChart.setOption({
       animation: false, tooltip: tipStyle(mainTip),
-      grid: { left: pad.left, right: pad.right, top: 8, bottom: 20 },
+      grid: { left: pad.left, right: pad.right, top: 8, bottom: 40 },
+      dataZoom: [insideZoom, sliderZoom],
       xAxis: axis,
       yAxis: [valueAxis, indexAxis],
       series: [
@@ -381,6 +400,7 @@
     subChart.setOption({
       animation: false, tooltip: tipStyle(subTip),
       grid: { left: pad.left, right: pad.right, top: 6, bottom: 18 },
+      dataZoom: [insideZoom],
       xAxis: axis,
       yAxis: [valueAxis],
       series: [
@@ -424,8 +444,9 @@
   }
 
   async function loadLocal() {
-    document.getElementById('meta').textContent = '加载中…';
-    const response = await fetch(`/api/v1/window?days=${state.days}`, { cache: 'no-store' });
+    const slow = state.period !== '1d' && state.days > 30;
+    document.getElementById('meta').textContent = slow ? '分钟数据聚合中，首次加载稍慢…' : '加载中…';
+    const response = await fetch(`/api/v1/window?days=${state.days}&period=${state.period}`, { cache: 'no-store' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     applyWindow(await response.json());
   }
@@ -433,21 +454,26 @@
   function renderCloud() {
     if (!cloudPayload) return;
     const ranges = cloudPayload.ranges || {};
-    const prefer = state.days <= 10 ? 'm5' : state.days <= 30 ? 'h60' : 'daily';
-    let pack = ranges[prefer] || ranges.daily || null;
+    const KEY = { '5m': 'm5', '15m': 'm15', '30m': 'm30', '60m': 'h60' };
+    const pack = ranges[KEY[state.period]] || null;
     let intraday;
     let daily;
     let period;
-    if (pack) {
+    let note = '';
+    if (pack && pack.points && pack.points.length) {
       intraday = sliceDays(pack.points, state.days);
       daily = sliceDays((ranges.daily || pack).points, state.days);
-      period = pack.period || '1d';
+      period = pack.period || state.period;
+      const covered = new Set(pack.points.map((point) => point.time.slice(0, 10))).size;
+      if (covered < state.days) note = `云端该周期仅含近 ${covered} 个交易日`;
     } else {
       intraday = sliceDays(cloudPayload.points, state.days);
       daily = intraday;
       period = '5m';
+      note = '云端暂无该周期数据';
     }
     applyWindow({ intraday, daily, period });
+    if (note) document.getElementById('meta').textContent += ` · ${note}`;
   }
 
   async function loadCloud() {
@@ -472,8 +498,21 @@
 
   function selectDays(days) {
     state.days = days;
+    state.zoom = null;
     document.querySelectorAll('#range-chips button').forEach((button) => {
       button.classList.toggle('selected', Number(button.dataset.days) === days);
+    });
+    if (state.module !== 'battle') return;
+    if (!IS_LOCAL && cloudPayload) renderCloud();
+    else refresh();
+  }
+
+  function selectPeriod(period) {
+    if (state.period === period && state.intraday.length) return;
+    state.period = period;
+    state.zoom = null;
+    document.querySelectorAll('#period-chips button').forEach((button) => {
+      button.classList.toggle('selected', button.dataset.period === period);
     });
     if (state.module !== 'battle') return;
     if (!IS_LOCAL && cloudPayload) renderCloud();
@@ -520,6 +559,9 @@
   });
   document.querySelectorAll('#range-chips button').forEach((button) => {
     button.addEventListener('click', () => selectDays(Number(button.dataset.days)));
+  });
+  document.querySelectorAll('#period-chips button').forEach((button) => {
+    button.addEventListener('click', () => selectPeriod(button.dataset.period));
   });
 
   window.addEventListener('resize', resizeAll);
