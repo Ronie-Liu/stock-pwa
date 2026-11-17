@@ -1,7 +1,7 @@
 // ===== 主应用控制器 =====
 
 // 全局状态
-let currentTab = 'watchlist';
+let currentTab = 'battle';
 let envSubTab = 'trend';      // 环境页子功能: resonance | liquidity | sentiment | trend | settings
 let marketSubTab = 'index';   // 趋势周期子导航: index | third_board
 let watchlistStocks = [];
@@ -26,7 +26,7 @@ async function initApp() {
   await loadAllData();
 
   // 渲染初始页面
-  await switchTab('watchlist');
+  await switchTab('battle');
 
   // 注册Service Worker
   registerSW();
