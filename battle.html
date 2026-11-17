@@ -54,7 +54,7 @@
       yAxis: [
         { type: 'log', logBase: 10, min: 1, splitNumber: 3, axisLabel: { color: '#6f8095', fontSize: 10 }, splitLine: { lineStyle: { color: '#1c2632', type: 'dashed' } } },
         { type: 'value', position: 'right', scale: true, axisLabel: { color: '#6f8095', fontSize: 10 }, splitLine: { show: false } },
-        { type: 'value', gridIndex: 1, min: 0, max: 1, splitNumber: 1, axisLabel: { show: false }, splitLine: { show: false } }
+        { type: 'value', gridIndex: 1, min: 0, axisLabel: { show: false }, splitLine: { show: false } }
       ],
       series: [
         { name: '多头', type: 'line', data: points.map((p) => p.bull || null), lineStyle: { width: 1.6, color: '#ef6b78' }, itemStyle: { color: '#ef6b78' }, showSymbol: false },
