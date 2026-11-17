@@ -172,6 +172,7 @@
 <script>
   (function boot() {
     const local = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+    if (new URLSearchParams(location.search).get('embed') === '1') document.body.classList.add('embed');
     const script = document.createElement('script');
     script.src = local ? '/echarts.min.js' : 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/echarts.min.js';
     script.onload = () => main();
@@ -184,7 +185,6 @@
   if (!window.echarts) { document.getElementById('meta').textContent = '图表组件不可用'; return; }
   const DATA_URL = 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/today.json';
   const IS_LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
-  if (new URLSearchParams(location.search).get('embed') === '1') document.body.classList.add('embed');
 
   const COLORS = { bull: '#ef6b78', bear: '#3fc39b', index: '#8d99a8', resistance: '#e3a25c', support: '#6ba6f2' };
   const PERIOD_LABEL = { '5m': '5 分钟', '30m': '30 分钟', '60m': '60 分钟', '1d': '日线' };
