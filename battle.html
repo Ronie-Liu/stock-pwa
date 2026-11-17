@@ -40,7 +40,7 @@
     .module-view[hidden] { display: none; }
     .pane { display: flex; flex-direction: column; min-height: 0; }
     .pane.daily { flex: 0 0 24%; }
-    .pane.main { flex: 1 1 auto; }
+    .pane.primary { flex: 1 1 auto; }
     .pane.sub { flex: 0 0 20%; }
     .pane-head { display: flex; align-items: center; gap: 10px; padding: 0 2px; }
     .pane-title { color: #9db3c8; font-size: 11px; white-space: nowrap; }
@@ -75,7 +75,7 @@
       .nav-item[data-status]::after { display: none; }
       .main { min-height: calc(100vh - 48px); padding: 6px 8px 8px; }
       .pane.daily { flex: 0 0 150px; }
-      .pane.main { flex: 0 0 300px; }
+      .pane.primary { flex: 0 0 300px; }
       .pane.sub { flex: 0 0 120px; }
       .chips { width: 100%; margin-left: 0; }
       .pane-head .legend { display: none; }
@@ -136,7 +136,7 @@
         </div>
         <div class="pane-body" id="daily-chart"></div>
       </div>
-      <div class="pane main">
+      <div class="pane primary">
         <div class="pane-head">
           <span class="pane-title" id="main-title">多空博弈 · 指数对照</span>
           <span class="legend">
