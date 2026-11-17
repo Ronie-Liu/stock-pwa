@@ -60,7 +60,7 @@
     .tip-row span { color: #8b9caf; }
     .tip-row b { color: #dfe8f2; font-weight: 500; }
     body.embed .side, body.embed .topbar, body.embed .subtabs { display: none; }
-    body.embed .main { padding: 4px 6px 2px; }
+    body.embed .main { padding: 4px 6px 2px; min-height: 100vh; }
     body.embed .subbar { justify-content: flex-end; margin-bottom: 2px; }
     @media (max-width: 780px) {
       html, body { height: auto; min-height: 100%; }
@@ -74,9 +74,9 @@
       .nav-item { width: auto; padding: 5px 8px; white-space: nowrap; }
       .nav-item[data-status]::after { display: none; }
       .main { min-height: calc(100vh - 48px); padding: 6px 8px 8px; }
-      .pane.daily { flex: 0 0 150px; }
-      .pane.primary { flex: 0 0 300px; }
-      .pane.sub { flex: 0 0 120px; }
+      .pane.daily { flex: 0 0 24%; min-height: 110px; }
+      .pane.primary { flex: 1 1 auto; min-height: 200px; }
+      .pane.sub { flex: 0 0 20%; min-height: 90px; }
       .chips { width: 100%; margin-left: 0; }
       .pane-head .legend { display: none; }
     }
