@@ -45,9 +45,13 @@
     .pane.sub { flex: 0 0 20%; }
     .rot-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 2px 4px; }
     .rot-head .pane-meta { margin-left: auto; }
+    .rot-select { padding: 3px 6px; border: 1px solid #22303f; border-radius: 6px; background: #111b26; color: #d3e4f2; font: 11px/1.4 inherit; max-width: 190px; }
+    .rot-scale { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-left: auto; }
+    .rot-scale span { display: inline-flex; align-items: center; gap: 3px; color: #6f8095; font-size: 9px; white-space: nowrap; }
+    .rot-scale i { display: inline-block; width: 12px; height: 9px; border-radius: 2px; }
     .pane.rot-heat { flex: 1 1 auto; }
     .pane.rot-heat .pane-body { overflow: auto; }
-    .pane.rot-trend { flex: 0 0 30%; }
+    .pane.rot-trend { flex: 0 0 32%; }
     .pane-head { display: flex; align-items: center; gap: 10px; padding: 0 2px; }
     .pane-title { color: #9db3c8; font-size: 11px; white-space: nowrap; }
     .pane-meta { margin-left: auto; color: #5b6c80; font-size: 10px; white-space: nowrap; }
@@ -179,7 +183,17 @@
           <button type="button" class="subtab active" data-level="theme">主题</button>
           <button type="button" class="subtab" data-level="segment">细分</button>
         </div>
-        <div class="chips" id="rot-days">
+        <select class="rot-select" id="rot-theme" aria-label="选择主题" hidden></select>
+        <div class="subtabs" id="rot-buckets">
+          <button type="button" class="subtab active" data-bucket="30m">30分钟</button>
+          <button type="button" class="subtab" data-bucket="1d">日线</button>
+        </div>
+        <div class="chips" id="rot-days-30m">
+          <button type="button" data-days="3">近3日</button>
+          <button type="button" data-days="5" class="selected">近5日</button>
+          <button type="button" data-days="10">近10日</button>
+        </div>
+        <div class="chips" id="rot-days-1d" hidden>
           <button type="button" data-days="10">近10日</button>
           <button type="button" data-days="20">近20日</button>
           <button type="button" data-days="30">近30日</button>
@@ -190,10 +204,7 @@
       <div class="pane primary rot-heat">
         <div class="pane-head">
           <span class="pane-title" id="rot-heat-title">多空净强度热力</span>
-          <span class="legend">
-            <span><i style="background:#a83f4b"></i>多头占优</span>
-            <span><i style="background:#2f7a5f"></i>空头占优</span>
-          </span>
+          <span class="rot-scale" id="rot-scale"></span>
           <span class="pane-meta" id="rot-heat-meta">—</span>
         </div>
         <div class="pane-body" id="rot-heat"></div>
@@ -202,9 +213,9 @@
         <div class="pane-head">
           <span class="pane-title" id="rot-trend-title">多空趋势</span>
           <span class="legend">
-            <span><i style="background:#ef6b78"></i>多头</span>
-            <span><i style="background:#3fc39b"></i>空头</span>
-            <span><i style="background:#8d99a8;height:1px"></i>净强度</span>
+            <span><i style="background:#d8525f"></i>净强度&gt;0</span>
+            <span><i style="background:#2f9c7a"></i>净强度&lt;0</span>
+            <span><i style="background:#8d99a8;height:1px"></i>等权指数</span>
           </span>
           <span class="pane-meta" id="rot-trend-meta">—</span>
         </div>
@@ -461,8 +472,7 @@
     if (!document.getElementById('view-rotation').hidden) {
       if (rotState.payload && rotState.payload.rows.length) {
         const host = document.getElementById('rot-heat');
-        const rows = rotState.payload.rows.length;
-        host.style.height = `${Math.max(host.parentElement.clientHeight, rows * 16 + 50, 200)}px`;
+        host.style.height = `${Math.max(host.parentElement.clientHeight, rotRows().length * 22 + 52, 180)}px`;
       }
       rotHeatChart.resize();
       rotTrendChart.resize();
@@ -575,7 +585,26 @@
     else refresh();
   }
 
-  const rotState = { level: 'theme', days: 0, selected: null, payload: null, lookup: new Map(), busy: false };
+  const rotState = { level: 'theme', bucket: '30m', days: 5, parent: null, selected: null,
+                     payload: null, lookup: new Map(), busy: false };
+  const ROT_SCALE = [
+    ['≤-10', '#155f42'], ['-10~-6', '#1f7a55'], ['-6~-3', '#2c9469'], ['-3~0', '#274a3f'],
+    ['0', '#141d27'], ['0~3', '#4a2b33'], ['3~6', '#93404b'], ['6~10', '#c04a57'], ['≥10', '#f06372']
+  ];
+  const ROT_RIGHT = 52;
+
+  function rotColor(value) {
+    if (!isNum(value)) return '#101822';
+    if (value <= -10) return '#155f42';
+    if (value <= -6) return '#1f7a55';
+    if (value <= -3) return '#2c9469';
+    if (value < 0) return '#274a3f';
+    if (value === 0) return '#141d27';
+    if (value < 3) return '#4a2b33';
+    if (value < 6) return '#93404b';
+    if (value < 10) return '#c04a57';
+    return '#f06372';
+  }
 
   function rotKey(row) {
     return `${row.parent || ''}|${row.name}`;
@@ -587,24 +616,95 @@
       + '</div>';
   }
 
-  function renderRotationTrend(payload, row) {
-    const dates = payload.dates || [];
-    const position = new Map(dates.map((day, index) => [day, index]));
-    const bull = new Array(dates.length).fill(null);
-    const bear = new Array(dates.length).fill(null);
-    const ratio = new Array(dates.length).fill(null);
-    row.points.forEach((point) => {
-      const index = position.get(point.date);
-      if (index === undefined) return;
-      bull[index] = point.bull;
-      bear[index] = point.bear;
-      ratio[index] = point.ratio;
+  function rotRows() {
+    const rows = (rotState.payload && rotState.payload.rows) || [];
+    if (rotState.level === 'segment' && rotState.parent) {
+      return rows.filter((row) => row.parent === rotState.parent);
+    }
+    return rows;
+  }
+
+  function rotLeft() {
+    const rows = rotRows();
+    const longest = rows.length ? Math.max(...rows.map((row) => `${row.name}`.length)) : 6;
+    return Math.min(170, Math.max(88, longest * 11 + 16));
+  }
+
+  function rotAxis(payload) {
+    const times = payload.times || [];
+    const daily = payload.bucket === '1d';
+    const starts = new Set([0]);
+    times.forEach((time, index) => {
+      if (index && time.slice(0, 10) !== times[index - 1].slice(0, 10)) starts.add(index);
     });
-    const partsByDate = new Map(row.points.map((point) => [point.date, point.parts || {}]));
-    const pad = gridPad(document.getElementById('rot-trend').clientWidth);
-    document.getElementById('rot-trend-title').textContent = `${row.name} · 多空趋势`;
-    document.getElementById('rot-trend-meta').textContent = row.parent
-      ? `${row.parent} · ${dates.length} 个交易日` : `${dates.length} 个交易日`;
+    const format = (time, index) => {
+      if (daily) return time.slice(5);
+      return starts.has(index) ? `${time.slice(5, 10)} ${time.slice(11, 16)}` : time.slice(11, 16);
+    };
+    const bands = [];
+    if (!daily) {
+      let first = 0;
+      let count = 0;
+      for (let index = 1; index <= times.length; index += 1) {
+        if (index === times.length || times[index].slice(0, 10) !== times[first].slice(0, 10)) {
+          if (count % 2 === 1) bands.push([{ xAxis: times[first] }, { xAxis: times[index - 1] }]);
+          count += 1;
+          first = index;
+        }
+      }
+    }
+    return { times, daily, starts, format, bands };
+  }
+
+  function rotXAxis(axis) {
+    return {
+      type: 'category', data: axis.times, boundaryGap: true,
+      axisLine: { lineStyle: { color: '#1b262f' } }, axisTick: { show: false },
+      axisLabel: { color: '#6f8095', fontSize: 8, interval: 0, hideOverlap: true,
+        formatter: (value, index) => axis.format(value, index) },
+      splitLine: { show: true, interval: (index) => index > 0 && axis.starts.has(index),
+        lineStyle: { color: '#26394b', width: 1 } }
+    };
+  }
+
+  function rotBandSeries(axis) {
+    return {
+      name: '日分隔', type: 'line', data: [], silent: true, tooltip: { show: false },
+      markArea: { silent: true, itemStyle: { color: 'rgba(255,255,255,0.03)' }, data: axis.bands }
+    };
+  }
+
+  function renderRotationTrend(payload, row) {
+    const axis = rotAxis(payload);
+    const times = axis.times;
+    const position = new Map(times.map((time, index) => [time, index]));
+    const points = new Map(row.points.map((point) => [point.time, point]));
+    const ratio = new Array(times.length).fill(null);
+    const index = new Array(times.length).fill(null);
+    row.points.forEach((point) => {
+      const slot = position.get(point.time);
+      if (slot === undefined) return;
+      ratio[slot] = point.ratio;
+      index[slot] = point.index;
+    });
+    let peak = 0;
+    ratio.forEach((value) => { if (isNum(value)) peak = Math.max(peak, Math.abs(value)); });
+    const bound = Math.max(5, Math.ceil(peak / 5) * 5);
+    const strong = bound >= 10;
+    const guides = [{ yAxis: 0, lineStyle: { color: '#c3d2e2', width: 1.3 },
+      label: { show: true, position: 'start', formatter: '0', color: '#93a7bd', fontSize: 9 } }];
+    const zones = [];
+    if (strong) {
+      guides.push({ yAxis: 10, lineStyle: { color: 'rgba(216,82,95,0.5)', width: 1, type: 'dashed' },
+        label: { show: true, position: 'start', formatter: '+10', color: 'rgba(216,82,95,0.85)', fontSize: 9 } },
+      { yAxis: -10, lineStyle: { color: 'rgba(47,156,122,0.5)', width: 1, type: 'dashed' },
+        label: { show: true, position: 'start', formatter: '-10', color: 'rgba(47,156,122,0.85)', fontSize: 9 } });
+      zones.push([{ yAxis: 10, itemStyle: { color: 'rgba(216,82,95,0.10)' } }, { yAxis: bound }]);
+      zones.push([{ yAxis: -bound, itemStyle: { color: 'rgba(47,156,122,0.10)' } }, { yAxis: -10 }]);
+    }
+    const left = rotLeft();
+    document.getElementById('rot-trend-title').textContent = `${row.name} · ${payload.bucket_label}多空趋势`;
+    document.getElementById('rot-trend-meta').textContent = row.parent || payload.label || '';
     rotTrendChart.setOption({
       animation: false,
       tooltip: {
@@ -613,74 +713,116 @@
         axisPointer: { type: 'line', lineStyle: { color: '#3a4a5c' } },
         formatter: (params) => {
           if (!params.length) return '';
-          const index = params[0].dataIndex;
-          const day = dates[index];
-          return rotTipBox(`${day} · ${row.name}`, [
-            ['多头', `${bull[index] ?? 0} 只`],
-            ['空头', `${bear[index] ?? 0} 只`],
-            ['净强度', ratio[index] === null ? '—' : `${ratio[index] > 0 ? '+' : ''}${ratio[index]}%`],
-            ...Object.entries(partsByDate.get(day) || {}).map(([key, value]) => [key, `${value} 只`])
+          const time = times[params[0].dataIndex];
+          const point = points.get(time);
+          if (!point) return '';
+          return rotTipBox(`${time.slice(0, 16)} · ${row.name}`, [
+            ['多头', `${point.bull} 只`],
+            ['空头', `${point.bear} 只`],
+            ['净强度', `${point.ratio > 0 ? '+' : ''}${point.ratio}%`],
+            ['等权指数', isNum(point.index) ? `${point.index > 0 ? '+' : ''}${point.index}%` : '—'],
+            ['样本', `${point.total} 只`],
+            ...Object.entries(point.parts || {}).map(([key, value]) => [key, `${value} 只`])
           ]);
         }
       },
-      grid: { left: pad.left, right: pad.right, top: 8, bottom: 20 },
-      xAxis: {
-        type: 'category', data: dates, boundaryGap: true,
-        axisLine: { lineStyle: { color: '#1b262f' } }, axisTick: { show: false },
-        axisLabel: { color: '#6f8095', fontSize: 9, hideOverlap: true, formatter: (value) => value.slice(5) }
-      },
+      grid: { left, right: ROT_RIGHT, top: 14, bottom: 22 },
+      xAxis: rotXAxis(axis),
       yAxis: [
-        { type: 'value', axisLabel: { color: '#6f8095', fontSize: 9 },
+        { type: 'value', min: -bound, max: bound,
+          axisLabel: { color: '#6f8095', fontSize: 9 },
           splitLine: { lineStyle: { color: '#131e29' } } },
-        { type: 'value', position: 'right', axisLabel: { color: '#6f8095', fontSize: 9, formatter: '{value}%' },
+        { type: 'value', position: 'right', scale: true,
+          axisLabel: { color: '#8d99a8', fontSize: 9, formatter: '{value}%' },
           splitLine: { show: false } }
       ],
       series: [
-        { name: '多头', type: 'bar', data: bull, barMaxWidth: 7, itemStyle: { color: COLORS.bull }, animation: false },
-        { name: '空头', type: 'bar', data: bear, barMaxWidth: 7, itemStyle: { color: COLORS.bear }, animation: false },
-        { name: '净强度', type: 'line', yAxisIndex: 1, data: ratio, symbol: 'none', connectNulls: true,
-          lineStyle: { width: 1.2, color: '#c9d6e4' }, animation: false }
+        { name: '净强度', type: 'bar', barMaxWidth: 8, animation: false,
+          data: ratio.map((value) => ({
+            value,
+            itemStyle: { color: isNum(value) ? (value >= 0 ? '#d8525f' : '#2f9c7a') : '#2a3644' }
+          })),
+          markLine: {
+            silent: true, symbol: 'none',
+            data: guides
+          },
+          markArea: {
+            silent: true,
+            data: zones
+          } },
+        { name: '等权指数', type: 'line', yAxisIndex: 1, data: index, symbol: 'none', connectNulls: true,
+          animation: false, lineStyle: { width: 1.1, color: COLORS.index }, itemStyle: { color: COLORS.index } },
+        rotBandSeries(axis)
       ]
     }, { notMerge: true });
   }
 
   function renderRotation(payload) {
     rotState.payload = payload;
-    const rows = payload.rows || [];
-    const dates = payload.dates || [];
-    const last = dates[dates.length - 1] || payload.end;
-    document.getElementById('rot-meta').textContent =
-      `${payload.start} ~ ${last} · ${dates.length} 个交易日 · ${rows.length} 个${payload.label}`;
-    document.getElementById('meta').textContent =
-      `板块轮动 · 个股开盘/收盘相对昨收 · 数据截至 ${last}`;
-    document.getElementById('rot-heat-title').textContent = `${payload.label} · 多空净强度热力`;
-    if (!rows.length) {
+    const times = payload.times || [];
+    const axis = rotAxis(payload);
+    const select = document.getElementById('rot-theme');
+    if (payload.level === 'segment') {
+      const themes = payload.themes || [];
+      if (!themes.some((item) => item.name === rotState.parent)) {
+        rotState.parent = (payload.rows[0] && payload.rows[0].parent)
+          || (themes.length ? themes[0].name : null);
+      }
+      select.innerHTML = themes.map((item) => `<option value="${item.name}">${item.name}（${item.count}）</option>`).join('');
+      select.value = rotState.parent || '';
+      select.hidden = false;
+    } else {
+      select.hidden = true;
+      rotState.parent = null;
+    }
+    const rows = rotRows();
+    const last = times.length ? times[times.length - 1] : '';
+    document.getElementById('rot-heat-title').textContent =
+      payload.level === 'segment' && rotState.parent
+        ? `细分 · ${rotState.parent} · 多空净强度` : `${payload.label} · 多空净强度`;
+    document.getElementById('rot-meta').textContent = times.length
+      ? `${payload.start || ''} ~ ${last.slice(0, 10)} · ${times.length} 个时点 · ${rows.length} 个${payload.label}`
+      : '暂无数据';
+    document.getElementById('meta').textContent = times.length
+      ? `板块轮动 · ${payload.bucket_label} · 个股开盘/收盘相对昨收 · 截至 ${last.slice(0, 16)}`
+      : '板块轮动 · 暂无数据';
+    if (!rows.length || !times.length) {
       rotHeatChart.clear();
       rotTrendChart.clear();
       document.getElementById('rot-heat-meta').textContent = '暂无数据';
       return;
     }
     const lookup = new Map();
-    rows.forEach((row) => row.points.forEach((point) => lookup.set(`${rotKey(row)}|${point.date}`, point)));
+    rows.forEach((row) => row.points.forEach((point) => lookup.set(`${rotKey(row)}|${point.time}`, point)));
     rotState.lookup = lookup;
-    const position = new Map(dates.map((day, index) => [day, index]));
-    const cells = [];
-    let peak = 10;
-    rows.forEach((row, y) => row.points.forEach((point) => {
-      const x = position.get(point.date);
-      if (x === undefined) return;
-      cells.push([x, y, point.ratio]);
-      peak = Math.max(peak, Math.abs(point.ratio));
-    }));
     const selected = rows.find((row) => rotKey(row) === rotState.selected) || rows[0];
     rotState.selected = rotKey(selected);
 
-    const longest = Math.max(...rows.map((row) => `${row.name}`.length));
-    const labelWidth = Math.min(170, Math.max(66, longest * 11 + 14));
+    const left = rotLeft();
     const host = document.getElementById('rot-heat');
     const available = host.parentElement ? host.parentElement.clientHeight : 0;
-    host.style.height = `${Math.max(available, rows.length * 16 + 50, 200)}px`;
+    const rowHeight = 22;
+    host.style.height = `${Math.max(available, rows.length * rowHeight + 52, 180)}px`;
     rotHeatChart.resize();
+    const cellWidth = (Math.max(160, host.clientWidth) - left - ROT_RIGHT) / Math.max(1, times.length);
+    const showValue = cellWidth >= 24;
+    const cells = [];
+    rows.forEach((row, y) => {
+      const map = new Map(row.points.map((point) => [point.time, point]));
+      times.forEach((time, x) => {
+        const point = map.get(time);
+        if (!point) return;
+        const strong = Math.abs(point.ratio) >= 10;
+        cells.push({
+          value: [x, y, point.ratio],
+          itemStyle: {
+            color: rotColor(point.ratio),
+            borderColor: strong ? '#e8f0f8' : '#0a0f16',
+            borderWidth: strong ? 1.2 : 1
+          }
+        });
+      });
+    });
     rotHeatChart.setOption({
       animation: false,
       tooltip: {
@@ -689,37 +831,35 @@
         formatter: (params) => {
           const [x, y] = params.value;
           const row = rows[y];
-          const point = lookup.get(`${rotKey(row)}|${dates[x]}`);
+          const point = lookup.get(`${rotKey(row)}|${times[x]}`);
           if (!point) return '';
-          return rotTipBox(`${dates[x]} · ${row.name}`, [
+          return rotTipBox(`${times[x].slice(0, 16)} · ${row.name}`, [
             ['多头', `${point.bull} 只`], ['空头', `${point.bear} 只`],
-            ['净强度', `${point.ratio > 0 ? '+' : ''}${point.ratio}%`], ['样本', `${point.total} 只`],
+            ['净强度', `${point.ratio > 0 ? '+' : ''}${point.ratio}%`],
+            ['等权指数', isNum(point.index) ? `${point.index > 0 ? '+' : ''}${point.index}%` : '—'],
+            ['样本', `${point.total} 只`],
             ...Object.entries(point.parts || {}).map(([key, value]) => [key, `${value} 只`])
           ]);
         }
       },
-      grid: { left: labelWidth, right: 58, top: 24, bottom: 22 },
-      xAxis: {
-        type: 'category', data: dates, boundaryGap: true,
-        axisLine: { lineStyle: { color: '#1b262f' } }, axisTick: { show: false },
-        axisLabel: { color: '#6f8095', fontSize: 9, hideOverlap: true, formatter: (value) => value.slice(5) }
-      },
+      grid: { left, right: ROT_RIGHT, top: 26, bottom: 22 },
+      xAxis: rotXAxis(axis),
       yAxis: {
         type: 'category', data: rows.map((row) => row.name), inverse: true, triggerEvent: true,
         axisLine: { show: false }, axisTick: { show: false },
-        axisLabel: { color: '#9fb0c2', fontSize: 10, width: labelWidth - 10, overflow: 'truncate' }
+        axisLabel: { color: '#9fb0c2', fontSize: 10, width: left - 12, overflow: 'truncate' }
       },
-      visualMap: {
-        min: -peak, max: peak, orient: 'vertical', right: 6, top: 34,
-        itemWidth: 8, itemHeight: 90, text: ['多', '空'],
-        textStyle: { color: '#6f8095', fontSize: 9 },
-        inRange: { color: ['#2f7a5f', '#14202b', '#a83f4b'] }
-      },
-      series: [{
-        type: 'heatmap', data: cells, animation: false,
-        itemStyle: { borderColor: '#0a0f16', borderWidth: 1 },
-        emphasis: { itemStyle: { borderColor: '#dfe8f2', borderWidth: 1 } }
-      }]
+      series: [
+        { type: 'heatmap', data: cells, animation: false,
+          label: { show: showValue, fontSize: 8, color: '#e9f1f9',
+            formatter: (params) => {
+              const value = params.value[2];
+              return value > 0 ? `+${Math.round(value)}` : `${Math.round(value)}`;
+            } },
+          itemStyle: { borderColor: '#0a0f16', borderWidth: 1 },
+          emphasis: { itemStyle: { borderColor: '#dfe8f2', borderWidth: 1.4 } } },
+        rotBandSeries(axis)
+      ]
     }, { notMerge: true });
     rotHeatChart.off('click');
     rotHeatChart.on('click', (params) => {
@@ -731,7 +871,7 @@
       renderRotationTrend(payload, row);
     });
     document.getElementById('rot-heat-meta').textContent =
-      '点击任意行切换下方趋势 · 数值=净强度(多头-空头)/样本';
+      `点击行切换趋势 · 单元格数字=净强度%${showValue ? '' : '（放大窗口可见）'}`;
     renderRotationTrend(payload, selected);
   }
 
@@ -744,7 +884,9 @@
     rotState.busy = true;
     document.getElementById('rot-meta').textContent = '统计中…';
     try {
-      const response = await fetch(`/api/v1/rotation?level=${rotState.level}&days=${rotState.days}`, { cache: 'no-store' });
+      const response = await fetch(
+        `/api/v1/rotation?level=${rotState.level}&days=${rotState.days}&bucket=${rotState.bucket}`,
+        { cache: 'no-store' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       renderRotation(await response.json());
     } catch (error) {
@@ -752,6 +894,23 @@
     } finally {
       rotState.busy = false;
     }
+  }
+
+  function selectRotationBucket(bucket) {
+    if (rotState.bucket === bucket) return;
+    rotState.bucket = bucket;
+    rotState.days = bucket === '1d' ? 0 : 5;
+    rotState.selected = null;
+    rotState.parent = null;
+    document.querySelectorAll('#rot-buckets button').forEach((button) => {
+      button.classList.toggle('active', button.dataset.bucket === bucket);
+    });
+    document.getElementById('rot-days-30m').hidden = bucket === '1d';
+    document.getElementById('rot-days-1d').hidden = bucket !== '1d';
+    document.querySelectorAll('#rot-days-30m button, #rot-days-1d button').forEach((button) => {
+      button.classList.toggle('selected', Number(button.dataset.days) === rotState.days);
+    });
+    loadRotation();
   }
 
   function switchModule(key) {
@@ -816,21 +975,37 @@
       if (rotState.level === button.dataset.level) return;
       rotState.level = button.dataset.level;
       rotState.selected = null;
+      rotState.parent = null;
       document.querySelectorAll('#rot-levels button').forEach((item) => {
         item.classList.toggle('active', item === button);
       });
       loadRotation();
     });
   });
-  document.querySelectorAll('#rot-days button').forEach((button) => {
+  document.querySelectorAll('#rot-buckets button').forEach((button) => {
+    button.addEventListener('click', () => selectRotationBucket(button.dataset.bucket));
+  });
+  document.querySelectorAll('#rot-days-30m button, #rot-days-1d button').forEach((button) => {
     button.addEventListener('click', () => {
       rotState.days = Number(button.dataset.days);
-      document.querySelectorAll('#rot-days button').forEach((item) => {
+      rotState.selected = null;
+      document.querySelectorAll('#rot-days-30m button, #rot-days-1d button').forEach((item) => {
         item.classList.toggle('selected', item === button);
       });
       loadRotation();
     });
   });
+  document.getElementById('rot-theme').addEventListener('change', (event) => {
+    rotState.parent = event.target.value || null;
+    rotState.selected = null;
+    if (rotState.payload) renderRotation(rotState.payload);
+  });
+  rotScaleLegend();
+
+  function rotScaleLegend() {
+    document.getElementById('rot-scale').innerHTML = ROT_SCALE
+      .map(([label, color]) => `<span><i style="background:${color}"></i>${label}</span>`).join('');
+  }
 
   window.addEventListener('resize', resizeAll);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
@@ -841,6 +1016,18 @@
     rotState.level = initialLevel;
     document.querySelectorAll('#rot-levels button').forEach((button) => {
       button.classList.toggle('active', button.dataset.level === initialLevel);
+    });
+  }
+  if (params.get('bucket') === '1d') {
+    rotState.bucket = '1d';
+    rotState.days = 0;
+    document.querySelectorAll('#rot-buckets button').forEach((button) => {
+      button.classList.toggle('active', button.dataset.bucket === '1d');
+    });
+    document.getElementById('rot-days-30m').hidden = true;
+    document.getElementById('rot-days-1d').hidden = false;
+    document.querySelectorAll('#rot-days-30m button, #rot-days-1d button').forEach((button) => {
+      button.classList.toggle('selected', Number(button.dataset.days) === 0);
     });
   }
   const initial = params.get('module');
