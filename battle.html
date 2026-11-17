@@ -774,7 +774,7 @@
     document.getElementById('empty-title').textContent = `${info.name} · 建设中`;
     if (battle) {
       setTimeout(resizeAll, 0);
-      if (!state.intraday.length) refresh();
+      refresh();
     }
     if (rotation) {
       setTimeout(() => { rotHeatChart.resize(); rotTrendChart.resize(); }, 0);
