@@ -43,6 +43,11 @@
     .pane.daily { flex: 0 0 24%; }
     .pane.primary { flex: 1 1 auto; }
     .pane.sub { flex: 0 0 20%; }
+    .rot-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 2px 4px; }
+    .rot-head .pane-meta { margin-left: auto; }
+    .pane.rot-heat { flex: 1 1 auto; }
+    .pane.rot-heat .pane-body { overflow: auto; }
+    .pane.rot-trend { flex: 0 0 30%; }
     .pane-head { display: flex; align-items: center; gap: 10px; padding: 0 2px; }
     .pane-title { color: #9db3c8; font-size: 11px; white-space: nowrap; }
     .pane-meta { margin-left: auto; color: #5b6c80; font-size: 10px; white-space: nowrap; }
@@ -78,6 +83,7 @@
       .pane.daily { flex: 0 0 24%; min-height: 110px; }
       .pane.primary { flex: 1 1 auto; min-height: 200px; }
       .pane.sub { flex: 0 0 20%; min-height: 90px; }
+      .pane.rot-trend { flex: 0 0 auto; min-height: 150px; }
       .chips { width: 100%; margin-left: 0; }
       .pane-head .legend { display: none; }
     }
@@ -94,7 +100,7 @@
       <div class="nav-group">市场</div>
       <button type="button" class="nav-item active" data-module="battle">全市场多空博弈</button>
       <button type="button" class="nav-item" data-module="sentiment" data-status="待建">指数与情绪</button>
-      <button type="button" class="nav-item" data-module="sector" data-status="待建">板块轮动</button>
+      <button type="button" class="nav-item" data-module="rotation">板块轮动</button>
       <div class="nav-group">研究</div>
       <button type="button" class="nav-item" data-module="stock" data-status="待建">个股诊断</button>
       <button type="button" class="nav-item" data-module="review" data-status="待建">复盘日历</button>
@@ -108,11 +114,11 @@
       <div class="crumb"><span id="crumb-module">市场</span> / <b id="crumb-page">全市场多空博弈</b></div>
       <div class="meta" id="meta">加载中…</div>
     </div>
-    <div class="subbar">
+    <div class="subbar" id="subbar">
       <div class="subtabs" id="subtabs">
         <button type="button" class="subtab active" data-sub="all">全市场</button>
         <button type="button" class="subtab" data-sub="index" data-status="待建">指数对照</button>
-        <button type="button" class="subtab" data-sub="sector" data-status="待建">板块轮动</button>
+        <button type="button" class="subtab" data-sub="sector">板块轮动</button>
       </div>
       <div class="chips" id="range-chips">
         <button type="button" data-days="3">近3日</button>
@@ -167,6 +173,44 @@
         <div class="pane-body" id="sub-chart"></div>
       </div>
     </section>
+    <section class="module-view" id="view-rotation" hidden>
+      <div class="rot-head">
+        <div class="subtabs" id="rot-levels">
+          <button type="button" class="subtab active" data-level="theme">主题</button>
+          <button type="button" class="subtab" data-level="segment">细分</button>
+        </div>
+        <div class="chips" id="rot-days">
+          <button type="button" data-days="10">近10日</button>
+          <button type="button" data-days="20">近20日</button>
+          <button type="button" data-days="30">近30日</button>
+          <button type="button" data-days="0" class="selected">9月以来</button>
+        </div>
+        <span class="pane-meta" id="rot-meta">—</span>
+      </div>
+      <div class="pane primary rot-heat">
+        <div class="pane-head">
+          <span class="pane-title" id="rot-heat-title">多空净强度热力</span>
+          <span class="legend">
+            <span><i style="background:#a83f4b"></i>多头占优</span>
+            <span><i style="background:#2f7a5f"></i>空头占优</span>
+          </span>
+          <span class="pane-meta" id="rot-heat-meta">—</span>
+        </div>
+        <div class="pane-body" id="rot-heat"></div>
+      </div>
+      <div class="pane rot-trend">
+        <div class="pane-head">
+          <span class="pane-title" id="rot-trend-title">多空趋势</span>
+          <span class="legend">
+            <span><i style="background:#ef6b78"></i>多头</span>
+            <span><i style="background:#3fc39b"></i>空头</span>
+            <span><i style="background:#8d99a8;height:1px"></i>净强度</span>
+          </span>
+          <span class="pane-meta" id="rot-trend-meta">—</span>
+        </div>
+        <div class="pane-body" id="rot-trend"></div>
+      </div>
+    </section>
     <section class="module-view empty" id="view-empty" hidden>
       <div class="empty-card">
         <b id="empty-title">模块建设中</b>
@@ -198,7 +242,7 @@
   const MODULES = {
     battle: { group: '市场', name: '全市场多空博弈' },
     sentiment: { group: '市场', name: '指数与情绪' },
-    sector: { group: '市场', name: '板块轮动' },
+    rotation: { group: '市场', name: '板块轮动' },
     stock: { group: '研究', name: '个股诊断' },
     review: { group: '研究', name: '复盘日历' },
     ops: { group: '数据', name: '采集状态' }
@@ -210,6 +254,8 @@
   const dailyChart = echarts.init(document.getElementById('daily-chart'), null, { renderer: 'canvas' });
   const mainChart = echarts.init(document.getElementById('main-chart'), null, { renderer: 'canvas' });
   const subChart = echarts.init(document.getElementById('sub-chart'), null, { renderer: 'canvas' });
+  const rotHeatChart = echarts.init(document.getElementById('rot-heat'), null, { renderer: 'canvas' });
+  const rotTrendChart = echarts.init(document.getElementById('rot-trend'), null, { renderer: 'canvas' });
   [dailyChart, mainChart, subChart].forEach((chart) => { chart.group = 'battle'; });
   echarts.connect('battle');
   mainChart.on('dataZoom', () => {
@@ -412,6 +458,15 @@
 
   function resizeAll() {
     [dailyChart, mainChart, subChart].forEach((chart) => chart.resize());
+    if (!document.getElementById('view-rotation').hidden) {
+      if (rotState.payload && rotState.payload.rows.length) {
+        const host = document.getElementById('rot-heat');
+        const rows = rotState.payload.rows.length;
+        host.style.height = `${Math.max(host.parentElement.clientHeight, rows * 16 + 50, 200)}px`;
+      }
+      rotHeatChart.resize();
+      rotTrendChart.resize();
+    }
   }
 
   function applyWindow(payload) {
@@ -485,6 +540,7 @@
 
   async function refresh() {
     if (busy) return;
+    if (state.module !== 'battle') return;
     busy = true;
     try {
       if (IS_LOCAL) await loadLocal();
@@ -519,40 +575,232 @@
     else refresh();
   }
 
+  const rotState = { level: 'theme', days: 0, selected: null, payload: null, lookup: new Map(), busy: false };
+
+  function rotKey(row) {
+    return `${row.parent || ''}|${row.name}`;
+  }
+
+  function rotTipBox(title, rows) {
+    return `<div class="tip"><div class="tip-title">${title}</div>`
+      + rows.map(([label, value]) => `<div class="tip-row"><span>${label}</span><b>${value}</b></div>`).join('')
+      + '</div>';
+  }
+
+  function renderRotationTrend(payload, row) {
+    const dates = payload.dates || [];
+    const position = new Map(dates.map((day, index) => [day, index]));
+    const bull = new Array(dates.length).fill(null);
+    const bear = new Array(dates.length).fill(null);
+    const ratio = new Array(dates.length).fill(null);
+    row.points.forEach((point) => {
+      const index = position.get(point.date);
+      if (index === undefined) return;
+      bull[index] = point.bull;
+      bear[index] = point.bear;
+      ratio[index] = point.ratio;
+    });
+    const partsByDate = new Map(row.points.map((point) => [point.date, point.parts || {}]));
+    const pad = gridPad(document.getElementById('rot-trend').clientWidth);
+    document.getElementById('rot-trend-title').textContent = `${row.name} · 多空趋势`;
+    document.getElementById('rot-trend-meta').textContent = row.parent
+      ? `${row.parent} · ${dates.length} 个交易日` : `${dates.length} 个交易日`;
+    rotTrendChart.setOption({
+      animation: false,
+      tooltip: {
+        trigger: 'axis', backgroundColor: '#0b131c', borderColor: '#22303f', borderWidth: 1,
+        textStyle: { color: '#dfe8f2', fontSize: 11 },
+        axisPointer: { type: 'line', lineStyle: { color: '#3a4a5c' } },
+        formatter: (params) => {
+          if (!params.length) return '';
+          const index = params[0].dataIndex;
+          const day = dates[index];
+          return rotTipBox(`${day} · ${row.name}`, [
+            ['多头', `${bull[index] ?? 0} 只`],
+            ['空头', `${bear[index] ?? 0} 只`],
+            ['净强度', ratio[index] === null ? '—' : `${ratio[index] > 0 ? '+' : ''}${ratio[index]}%`],
+            ...Object.entries(partsByDate.get(day) || {}).map(([key, value]) => [key, `${value} 只`])
+          ]);
+        }
+      },
+      grid: { left: pad.left, right: pad.right, top: 8, bottom: 20 },
+      xAxis: {
+        type: 'category', data: dates, boundaryGap: true,
+        axisLine: { lineStyle: { color: '#1b262f' } }, axisTick: { show: false },
+        axisLabel: { color: '#6f8095', fontSize: 9, hideOverlap: true, formatter: (value) => value.slice(5) }
+      },
+      yAxis: [
+        { type: 'value', axisLabel: { color: '#6f8095', fontSize: 9 },
+          splitLine: { lineStyle: { color: '#131e29' } } },
+        { type: 'value', position: 'right', axisLabel: { color: '#6f8095', fontSize: 9, formatter: '{value}%' },
+          splitLine: { show: false } }
+      ],
+      series: [
+        { name: '多头', type: 'bar', data: bull, barMaxWidth: 7, itemStyle: { color: COLORS.bull }, animation: false },
+        { name: '空头', type: 'bar', data: bear, barMaxWidth: 7, itemStyle: { color: COLORS.bear }, animation: false },
+        { name: '净强度', type: 'line', yAxisIndex: 1, data: ratio, symbol: 'none', connectNulls: true,
+          lineStyle: { width: 1.2, color: '#c9d6e4' }, animation: false }
+      ]
+    }, { notMerge: true });
+  }
+
+  function renderRotation(payload) {
+    rotState.payload = payload;
+    const rows = payload.rows || [];
+    const dates = payload.dates || [];
+    const last = dates[dates.length - 1] || payload.end;
+    document.getElementById('rot-meta').textContent =
+      `${payload.start} ~ ${last} · ${dates.length} 个交易日 · ${rows.length} 个${payload.label}`;
+    document.getElementById('meta').textContent =
+      `板块轮动 · 个股开盘/收盘相对昨收 · 数据截至 ${last}`;
+    document.getElementById('rot-heat-title').textContent = `${payload.label} · 多空净强度热力`;
+    if (!rows.length) {
+      rotHeatChart.clear();
+      rotTrendChart.clear();
+      document.getElementById('rot-heat-meta').textContent = '暂无数据';
+      return;
+    }
+    const lookup = new Map();
+    rows.forEach((row) => row.points.forEach((point) => lookup.set(`${rotKey(row)}|${point.date}`, point)));
+    rotState.lookup = lookup;
+    const position = new Map(dates.map((day, index) => [day, index]));
+    const cells = [];
+    let peak = 10;
+    rows.forEach((row, y) => row.points.forEach((point) => {
+      const x = position.get(point.date);
+      if (x === undefined) return;
+      cells.push([x, y, point.ratio]);
+      peak = Math.max(peak, Math.abs(point.ratio));
+    }));
+    const selected = rows.find((row) => rotKey(row) === rotState.selected) || rows[0];
+    rotState.selected = rotKey(selected);
+
+    const longest = Math.max(...rows.map((row) => `${row.name}`.length));
+    const labelWidth = Math.min(170, Math.max(66, longest * 11 + 14));
+    const host = document.getElementById('rot-heat');
+    const available = host.parentElement ? host.parentElement.clientHeight : 0;
+    host.style.height = `${Math.max(available, rows.length * 16 + 50, 200)}px`;
+    rotHeatChart.resize();
+    rotHeatChart.setOption({
+      animation: false,
+      tooltip: {
+        backgroundColor: '#0b131c', borderColor: '#22303f', borderWidth: 1,
+        textStyle: { color: '#dfe8f2', fontSize: 11 },
+        formatter: (params) => {
+          const [x, y] = params.value;
+          const row = rows[y];
+          const point = lookup.get(`${rotKey(row)}|${dates[x]}`);
+          if (!point) return '';
+          return rotTipBox(`${dates[x]} · ${row.name}`, [
+            ['多头', `${point.bull} 只`], ['空头', `${point.bear} 只`],
+            ['净强度', `${point.ratio > 0 ? '+' : ''}${point.ratio}%`], ['样本', `${point.total} 只`],
+            ...Object.entries(point.parts || {}).map(([key, value]) => [key, `${value} 只`])
+          ]);
+        }
+      },
+      grid: { left: labelWidth, right: 58, top: 24, bottom: 22 },
+      xAxis: {
+        type: 'category', data: dates, boundaryGap: true,
+        axisLine: { lineStyle: { color: '#1b262f' } }, axisTick: { show: false },
+        axisLabel: { color: '#6f8095', fontSize: 9, hideOverlap: true, formatter: (value) => value.slice(5) }
+      },
+      yAxis: {
+        type: 'category', data: rows.map((row) => row.name), inverse: true, triggerEvent: true,
+        axisLine: { show: false }, axisTick: { show: false },
+        axisLabel: { color: '#9fb0c2', fontSize: 10, width: labelWidth - 10, overflow: 'truncate' }
+      },
+      visualMap: {
+        min: -peak, max: peak, orient: 'vertical', right: 6, top: 34,
+        itemWidth: 8, itemHeight: 90, text: ['多', '空'],
+        textStyle: { color: '#6f8095', fontSize: 9 },
+        inRange: { color: ['#2f7a5f', '#14202b', '#a83f4b'] }
+      },
+      series: [{
+        type: 'heatmap', data: cells, animation: false,
+        itemStyle: { borderColor: '#0a0f16', borderWidth: 1 },
+        emphasis: { itemStyle: { borderColor: '#dfe8f2', borderWidth: 1 } }
+      }]
+    }, { notMerge: true });
+    rotHeatChart.off('click');
+    rotHeatChart.on('click', (params) => {
+      let row = null;
+      if (params.componentType === 'yAxis') row = rows.find((item) => item.name === params.value);
+      else if (Array.isArray(params.value)) row = rows[params.value[1]];
+      if (!row) return;
+      rotState.selected = rotKey(row);
+      renderRotationTrend(payload, row);
+    });
+    document.getElementById('rot-heat-meta').textContent =
+      '点击任意行切换下方趋势 · 数值=净强度(多头-空头)/样本';
+    renderRotationTrend(payload, selected);
+  }
+
+  async function loadRotation() {
+    if (!IS_LOCAL) {
+      document.getElementById('rot-meta').textContent = '板块轮动数据由本机服务计算，请在 http://127.0.0.1:8765/ 使用';
+      return;
+    }
+    if (rotState.busy) return;
+    rotState.busy = true;
+    document.getElementById('rot-meta').textContent = '统计中…';
+    try {
+      const response = await fetch(`/api/v1/rotation?level=${rotState.level}&days=${rotState.days}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      renderRotation(await response.json());
+    } catch (error) {
+      document.getElementById('rot-meta').textContent = `读取失败：${error.message}`;
+    } finally {
+      rotState.busy = false;
+    }
+  }
+
   function switchModule(key) {
     state.module = key;
     document.querySelectorAll('.nav-item').forEach((button) => {
       button.classList.toggle('active', button.dataset.module === key);
     });
-    document.querySelectorAll('.subtab').forEach((button) => {
+    document.querySelectorAll('#subtabs .subtab').forEach((button) => {
       button.classList.toggle('active', button.dataset.sub === 'all');
     });
     const info = MODULES[key] || { group: '', name: key };
     document.getElementById('crumb-module').textContent = info.group;
     document.getElementById('crumb-page').textContent = info.name;
     const battle = key === 'battle';
+    const rotation = key === 'rotation';
     document.getElementById('view-battle').hidden = !battle;
-    document.getElementById('view-empty').hidden = battle;
+    document.getElementById('view-rotation').hidden = !rotation;
+    document.getElementById('view-empty').hidden = battle || rotation;
+    document.getElementById('subbar').style.display = rotation ? 'none' : 'flex';
     document.getElementById('empty-title').textContent = `${info.name} · 建设中`;
     if (battle) {
       setTimeout(resizeAll, 0);
       if (!state.intraday.length) refresh();
+    }
+    if (rotation) {
+      setTimeout(() => { rotHeatChart.resize(); rotTrendChart.resize(); }, 0);
+      if (!rotState.payload) loadRotation();
     }
   }
 
   document.querySelectorAll('.nav-item').forEach((button) => {
     button.addEventListener('click', () => switchModule(button.dataset.module));
   });
-  document.querySelectorAll('.subtab').forEach((button) => {
+  document.querySelectorAll('#subtabs .subtab').forEach((button) => {
     button.addEventListener('click', () => {
-      document.querySelectorAll('.subtab').forEach((item) => item.classList.toggle('active', item === button));
+      document.querySelectorAll('#subtabs .subtab').forEach((item) => item.classList.toggle('active', item === button));
+      if (button.dataset.sub === 'sector') {
+        switchModule('rotation');
+        return;
+      }
       if (button.dataset.sub === 'all') {
         document.getElementById('view-battle').hidden = false;
+        document.getElementById('view-rotation').hidden = true;
         document.getElementById('view-empty').hidden = true;
         setTimeout(resizeAll, 0);
         return;
       }
       document.getElementById('view-battle').hidden = true;
+      document.getElementById('view-rotation').hidden = true;
       document.getElementById('view-empty').hidden = false;
       document.getElementById('empty-title').textContent = `${button.textContent.trim()} · 建设中`;
     });
@@ -563,10 +811,40 @@
   document.querySelectorAll('#period-chips button').forEach((button) => {
     button.addEventListener('click', () => selectPeriod(button.dataset.period));
   });
+  document.querySelectorAll('#rot-levels button').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (rotState.level === button.dataset.level) return;
+      rotState.level = button.dataset.level;
+      rotState.selected = null;
+      document.querySelectorAll('#rot-levels button').forEach((item) => {
+        item.classList.toggle('active', item === button);
+      });
+      loadRotation();
+    });
+  });
+  document.querySelectorAll('#rot-days button').forEach((button) => {
+    button.addEventListener('click', () => {
+      rotState.days = Number(button.dataset.days);
+      document.querySelectorAll('#rot-days button').forEach((item) => {
+        item.classList.toggle('selected', item === button);
+      });
+      loadRotation();
+    });
+  });
 
   window.addEventListener('resize', resizeAll);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
   window.setInterval(refresh, IS_LOCAL ? 60000 : 300000);
+  const params = new URLSearchParams(location.search);
+  const initialLevel = params.get('level');
+  if (initialLevel && ['theme', 'segment', 'subseg'].includes(initialLevel)) {
+    rotState.level = initialLevel;
+    document.querySelectorAll('#rot-levels button').forEach((button) => {
+      button.classList.toggle('active', button.dataset.level === initialLevel);
+    });
+  }
+  const initial = params.get('module');
+  if (initial && MODULES[initial] && initial !== 'battle') switchModule(initial);
   refresh();
   }
 </script>
