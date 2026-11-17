@@ -12,13 +12,13 @@
     .head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
     .head h1 { margin: 0; font-size: 15px; }
     .meta { color: #7d8fa4; font-size: 11px; }
-    #chart { width: 100%; height: 62vh; min-height: 320px; }
+    #chart { width: 100%; height: 62vh; min-height: 360px; }
     .legend { display: flex; gap: 14px; font-size: 11px; color: #8b9caf; margin: 4px 0 8px; }
     .legend i { display: inline-block; width: 12px; height: 2px; margin-right: 5px; vertical-align: middle; }
     .foot { color: #5b6c80; font-size: 10px; margin-top: 6px; }
     body.embed .head, body.embed .foot { display: none; }
     body.embed .wrap { padding: 6px 8px 0; }
-    body.embed #chart { height: calc(100vh - 44px); min-height: 240px; }
+    body.embed #chart { height: calc(100vh - 36px); min-height: 260px; }
   </style>
 </head>
 <body>
@@ -46,7 +46,7 @@
       backgroundColor: 'transparent',
       animation: false,
       tooltip: { trigger: 'axis', confine: true },
-      grid: [{ left: 46, right: 52, top: 24, height: '58%' }, { left: 46, right: 52, top: '76%', height: '12%' }],
+      grid: [{ left: 46, right: 52, top: 24, bottom: 140 }, { left: 46, right: 52, height: 80, bottom: 24 }],
       xAxis: [
         { type: 'category', data: points.map((p) => p.time.slice(11)), boundaryGap: false, axisLabel: { color: '#6f8095', fontSize: 10 } },
         { type: 'category', gridIndex: 1, data: points.map((p) => p.time.slice(11)), boundaryGap: false, axisLabel: { show: false } }
