@@ -3,70 +3,171 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>多空博弈</title>
+  <title>A股投资情报站 · 全市场多空博弈</title>
   <style>
-    :root { color-scheme: dark; --bull:#ef6b78; --bear:#3fc39b; --index:#8d99a8; --resistance:#e3a25c; --support:#6ba6f2; }
+    :root { color-scheme: dark; --bull:#ef6b78; --bear:#3fc39b; --index:#8d99a8; --resistance:#e3a25c; --support:#6ba6f2; --line:#16202c; }
     * { box-sizing: border-box; }
     html, body { height: 100%; }
-    body { margin: 0; background: #0a0f16; color: #dfe8f2; font: 13px/1.5 "PingFang SC", "Microsoft YaHei", sans-serif; display: flex; flex-direction: column; overflow: hidden; }
-    .wrap { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 8px 10px 4px; }
-    .head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
-    .head h1 { margin: 0; font-size: 15px; }
-    .meta { color: #7d8fa4; font-size: 11px; }
-    .toolbar { display: none; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
-    body.local .toolbar { display: flex; }
-    .toolbar button, .toolbar input { background: #111b26; color: #b9c8d8; border: 1px solid #22303f; border-radius: 6px; padding: 3px 9px; font-size: 11px; font-family: inherit; }
-    .toolbar button { cursor: pointer; }
-    .toolbar button.selected { background: #1d3a31; border-color: #3f6b58; color: #d6efe2; }
-    .toolbar input { padding: 2px 6px; }
-    .sep { width: 1px; height: 16px; background: #22303f; }
-    .block { flex: 0 0 auto; display: flex; flex-direction: column; min-height: 0; }
-    .block-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 2px 2px 0; }
-    .block-title { color: #9db3c8; font-size: 11px; letter-spacing: .3px; }
-    .block-meta { color: #5b6c80; font-size: 10px; }
-    .recent-wrap { flex: 0 0 30%; min-height: 100px; display: flex; flex-direction: column; padding-bottom: 2px; border-bottom: 1px solid #17212d; margin-bottom: 2px; }
-    #recent-chart { flex: 1 1 auto; min-height: 0; }
-    #chart { flex: 1 1 auto; min-height: 0; }
-    .legend { display: flex; gap: 12px; font-size: 11px; color: #8b9caf; margin: 4px 0 2px; }
-    .legend i { display: inline-block; width: 12px; height: 2px; margin-right: 5px; vertical-align: middle; }
-    .foot { color: #5b6c80; font-size: 10px; margin: 2px 0 0; }
-    .tip { min-width: 128px; }
-    .tip-title { color: #9fb4c9; font-size: 11px; margin-bottom: 3px; }
+    body { margin: 0; background: #0a0f16; color: #dfe8f2; font: 13px/1.5 "PingFang SC", "Microsoft YaHei", sans-serif; overflow: hidden; }
+    .app { display: flex; height: 100%; min-height: 0; }
+    .side { flex: 0 0 178px; display: flex; flex-direction: column; min-height: 0; padding: 10px 8px 8px; background: #0b1119; border-right: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 8px; padding: 0 6px 10px; }
+    .logo { flex: 0 0 auto; width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #cfe9dc; background: linear-gradient(135deg, #2f5d4c, #1d3a31); }
+    .brand b { display: block; font-size: 13px; letter-spacing: .4px; }
+    .brand small { display: block; color: #4f6075; font-size: 10px; letter-spacing: 1.5px; }
+    .nav { flex: 1 1 auto; min-height: 0; overflow: auto; }
+    .nav-group { padding: 10px 8px 4px; color: #4f6075; font-size: 10px; letter-spacing: 1.5px; }
+    .nav-item { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; padding: 6px 8px; border: 0; border-radius: 6px; background: none; color: #9fb0c2; font: 12px/1.4 inherit; text-align: left; cursor: pointer; }
+    .nav-item:hover { background: #121c27; color: #c8d8e8; }
+    .nav-item.active { background: #16281f; color: #d9efe4; box-shadow: inset 2px 0 0 #3f6b58; }
+    .nav-item[data-status]::after { content: attr(data-status); flex: 0 0 auto; padding: 0 5px; border: 1px solid #22303f; border-radius: 8px; color: #5e7186; font-size: 9px; }
+    .side-foot { padding: 6px 8px 2px; border-top: 1px solid var(--line); color: #42536a; font-size: 10px; }
+    .main { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 8px 12px 6px; }
+    .topbar { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+    .crumb { color: #5b6c80; font-size: 11px; }
+    .crumb b { color: #c8d8e8; font-weight: 500; }
+    .meta { margin-left: auto; color: #5b6c80; font-size: 10px; }
+    .subbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+    .subtabs { display: flex; gap: 2px; padding: 2px; border: 1px solid #1b262f; border-radius: 7px; background: #0d151e; }
+    .subtab { display: flex; align-items: center; gap: 4px; padding: 3px 9px; border: 0; border-radius: 5px; background: none; color: #8b9caf; font: 11px/1.4 inherit; cursor: pointer; }
+    .subtab.active { background: #17242f; color: #d3e4f2; }
+    .subtab[data-status]::after { content: attr(data-status); color: #54677c; font-size: 9px; }
+    .chips { display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto; }
+    .chips button { padding: 3px 8px; border: 1px solid #22303f; border-radius: 6px; background: #111b26; color: #9fb0c2; font: 11px/1.4 inherit; cursor: pointer; }
+    .chips button:hover { border-color: #31465b; color: #d3e4f2; }
+    .chips button.selected { border-color: #3f6b58; background: #1d3a31; color: #d6efe2; }
+    .module-view { flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; min-height: 0; }
+    .module-view[hidden] { display: none; }
+    .pane { display: flex; flex-direction: column; min-height: 0; }
+    .pane.daily { flex: 0 0 24%; }
+    .pane.main { flex: 1 1 auto; }
+    .pane.sub { flex: 0 0 20%; }
+    .pane-head { display: flex; align-items: center; gap: 10px; padding: 0 2px; }
+    .pane-title { color: #9db3c8; font-size: 11px; white-space: nowrap; }
+    .pane-meta { margin-left: auto; color: #5b6c80; font-size: 10px; white-space: nowrap; }
+    .pane-body { flex: 1 1 auto; min-height: 0; }
+    .legend { display: inline-flex; align-items: center; gap: 8px; color: #7f91a6; font-size: 10px; white-space: nowrap; }
+    .legend span { display: inline-flex; align-items: center; }
+    .legend i { display: inline-block; width: 10px; height: 2px; margin-right: 3px; }
+    .empty { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; min-height: 0; }
+    .empty-card { max-width: 420px; padding: 26px 28px; border: 1px dashed #22303f; border-radius: 12px; background: #0c141d; text-align: center; }
+    .empty-card b { font-size: 15px; }
+    .empty-card p { margin: 8px 0 10px; color: #7f91a6; font-size: 12px; }
+    .empty-card span { color: #4f6075; font-size: 11px; }
+    .tip { min-width: 132px; }
+    .tip-title { margin-bottom: 3px; color: #9fb4c9; font-size: 11px; }
     .tip-row { display: flex; justify-content: space-between; gap: 18px; font-size: 11px; line-height: 1.55; }
     .tip-row span { color: #8b9caf; }
     .tip-row b { color: #dfe8f2; font-weight: 500; }
-    body.embed .head, body.embed .foot, body.embed .toolbar { display: none; }
-    body.embed .wrap { padding: 4px 6px 2px; }
+    body.embed .side, body.embed .topbar, body.embed .subtabs { display: none; }
+    body.embed .main { padding: 4px 6px 2px; }
+    body.embed .subbar { justify-content: flex-end; margin-bottom: 2px; }
+    @media (max-width: 780px) {
+      html, body { height: auto; min-height: 100%; }
+      body { overflow: auto; }
+      .app { flex-direction: column; height: auto; min-height: 100%; }
+      .side { flex: 0 0 auto; width: 100%; min-width: 0; flex-direction: row; align-items: center; gap: 6px; overflow: hidden; padding: 6px 8px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .brand { flex: 0 0 auto; padding: 0 6px 0 0; }
+      .brand small { display: none; }
+      .nav { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 4px; overflow-x: auto; }
+      .nav-group, .side-foot { display: none; }
+      .nav-item { width: auto; padding: 5px 8px; white-space: nowrap; }
+      .nav-item[data-status]::after { display: none; }
+      .main { min-height: calc(100vh - 48px); padding: 6px 8px 8px; }
+      .pane.daily { flex: 0 0 150px; }
+      .pane.main { flex: 0 0 300px; }
+      .pane.sub { flex: 0 0 120px; }
+      .chips { width: 100%; margin-left: 0; }
+      .pane-head .legend { display: none; }
+    }
   </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="head"><h1>全市场多空博弈</h1><span class="meta" id="meta">加载中…</span></div>
-  <div class="toolbar" id="toolbar">
-    <span id="period-group">
-      <button type="button" data-period="5m">5m</button>
-      <button type="button" data-period="30m">30m</button>
-      <button type="button" data-period="60m">60m</button>
-      <button type="button" data-period="1d" class="selected">日线</button>
-    </span>
-    <span class="sep"></span>
-    <span id="axis-group">
-      <button type="button" data-axis="log" class="selected">对数</button>
-      <button type="button" data-axis="linear">线性</button>
-    </span>
-    <span class="sep"></span>
-    <input type="date" id="start-date" value="2026-01-01" aria-label="开始日期">
-    <span style="color:#5b6c80">–</span>
-    <input type="date" id="end-date" aria-label="结束日期">
-  </div>
-  <div class="recent-wrap">
-    <div class="block-head"><span class="block-title">近 5 个交易日 · 60 分钟多空趋势</span><span class="block-meta" id="recent-meta">—</span></div>
-    <div id="recent-chart"></div>
-  </div>
-  <div class="block-head"><span class="block-title" id="main-title">今日 5 分钟 · 多空与阻力支撑</span><span class="block-meta" id="points-count">—</span></div>
-  <div class="legend"><span><i style="background:#ef6b78"></i>多头</span><span><i style="background:#3fc39b"></i>空头</span><span><i style="background:#8d99a8;height:1px"></i>指数</span><span><i style="background:#e3a25c"></i>阻力</span><span><i style="background:#6ba6f2"></i>支撑</span></div>
-  <div id="chart"></div>
-  <p class="foot">数据每 5 分钟更新；盘中为采集时点快照，仅供研究。</p>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <span class="logo">情报</span>
+      <div><b>A股投资情报站</b><small>RESEARCH DESK</small></div>
+    </div>
+    <nav class="nav" id="nav">
+      <div class="nav-group">市场</div>
+      <button type="button" class="nav-item active" data-module="battle">全市场多空博弈</button>
+      <button type="button" class="nav-item" data-module="sentiment" data-status="待建">指数与情绪</button>
+      <button type="button" class="nav-item" data-module="sector" data-status="待建">板块轮动</button>
+      <div class="nav-group">研究</div>
+      <button type="button" class="nav-item" data-module="stock" data-status="待建">个股诊断</button>
+      <button type="button" class="nav-item" data-module="review" data-status="待建">复盘日历</button>
+      <div class="nav-group">数据</div>
+      <button type="button" class="nav-item" data-module="ops" data-status="待建">采集状态</button>
+    </nav>
+    <div class="side-foot" id="side-state">数据每 5 分钟更新</div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div class="crumb"><span id="crumb-module">市场</span> / <b id="crumb-page">全市场多空博弈</b></div>
+      <div class="meta" id="meta">加载中…</div>
+    </div>
+    <div class="subbar">
+      <div class="subtabs" id="subtabs">
+        <button type="button" class="subtab active" data-sub="all">全市场</button>
+        <button type="button" class="subtab" data-sub="index" data-status="待建">指数对照</button>
+        <button type="button" class="subtab" data-sub="sector" data-status="待建">板块轮动</button>
+      </div>
+      <div class="chips" id="range-chips">
+        <button type="button" data-days="3">近3日</button>
+        <button type="button" data-days="5" class="selected">近5日</button>
+        <button type="button" data-days="10">近10日</button>
+        <button type="button" data-days="30">近30日</button>
+        <button type="button" data-days="60">近60日</button>
+        <button type="button" data-days="120">近120日</button>
+        <button type="button" data-days="250">近250日</button>
+      </div>
+    </div>
+    <section class="module-view" id="view-battle">
+      <div class="pane daily">
+        <div class="pane-head">
+          <span class="pane-title">日线 · 多空力量</span>
+          <span class="legend">
+            <span><i style="background:#ef6b78"></i>多头</span>
+            <span><i style="background:#3fc39b"></i>空头</span>
+            <span><i style="background:#8d99a8;height:1px"></i>指数</span>
+          </span>
+          <span class="pane-meta" id="daily-meta">—</span>
+        </div>
+        <div class="pane-body" id="daily-chart"></div>
+      </div>
+      <div class="pane main">
+        <div class="pane-head">
+          <span class="pane-title" id="main-title">多空博弈 · 指数对照</span>
+          <span class="legend">
+            <span><i style="background:#ef6b78"></i>多头</span>
+            <span><i style="background:#3fc39b"></i>空头</span>
+            <span><i style="background:#8d99a8;height:1px"></i>指数</span>
+          </span>
+          <span class="pane-meta" id="main-meta">—</span>
+        </div>
+        <div class="pane-body" id="main-chart"></div>
+      </div>
+      <div class="pane sub">
+        <div class="pane-head">
+          <span class="pane-title">阻力 / 支撑</span>
+          <span class="legend">
+            <span><i style="background:#e3a25c"></i>阻力</span>
+            <span><i style="background:#6ba6f2"></i>支撑</span>
+          </span>
+          <span class="pane-meta" id="sub-meta">—</span>
+        </div>
+        <div class="pane-body" id="sub-chart"></div>
+      </div>
+    </section>
+    <section class="module-view empty" id="view-empty" hidden>
+      <div class="empty-card">
+        <b id="empty-title">模块建设中</b>
+        <p>该功能模块正在规划，会随数据与策略逐步上线。</p>
+        <span>当前可用：市场 · 全市场多空博弈</span>
+      </div>
+    </section>
+  </main>
 </div>
 <script>
   (function boot() {
@@ -84,168 +185,347 @@
   const DATA_URL = 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/today.json';
   const IS_LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
   if (new URLSearchParams(location.search).get('embed') === '1') document.body.classList.add('embed');
-  if (IS_LOCAL) document.body.classList.add('local');
 
   const COLORS = { bull: '#ef6b78', bear: '#3fc39b', index: '#8d99a8', resistance: '#e3a25c', support: '#6ba6f2' };
+  const PERIOD_LABEL = { '5m': '5 分钟', '30m': '30 分钟', '60m': '60 分钟', '1d': '日线' };
+  const MODULES = {
+    battle: { group: '市场', name: '全市场多空博弈' },
+    sentiment: { group: '市场', name: '指数与情绪' },
+    sector: { group: '市场', name: '板块轮动' },
+    stock: { group: '研究', name: '个股诊断' },
+    review: { group: '研究', name: '复盘日历' },
+    ops: { group: '数据', name: '采集状态' }
+  };
   const fmt = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 2 });
   const compact = new Intl.NumberFormat('zh-CN', { notation: 'compact', maximumFractionDigits: 1 });
   const clock = new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit', hour12: false });
-  const chart = echarts.init(document.getElementById('chart'), null, { renderer: 'canvas' });
-  const recentChart = echarts.init(document.getElementById('recent-chart'), null, { renderer: 'canvas' });
-  const state = { period: '1d', axis: 'log', points: [], recent: [], range: { start: '2026-01-01', end: '' } };
 
-  const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? fmt.format(v) : '—');
-  const mainLabel = (time) => (time.length <= 10 ? time.slice(5) : time.slice(11));
+  const dailyChart = echarts.init(document.getElementById('daily-chart'), null, { renderer: 'canvas' });
+  const mainChart = echarts.init(document.getElementById('main-chart'), null, { renderer: 'canvas' });
+  const subChart = echarts.init(document.getElementById('sub-chart'), null, { renderer: 'canvas' });
+  [dailyChart, mainChart, subChart].forEach((chart) => { chart.group = 'battle'; });
+  echarts.connect('battle');
 
-  function tipHTML(time, point, rows) {
-    const body = rows.map(([name, key]) => `<div class="tip-row"><span>${name}</span><b>${num(point[key])}</b></div>`).join('');
-    return `<div class="tip"><div class="tip-title">${time}</div>${body}</div>`;
+  const state = { days: 5, period: '5m', intraday: [], daily: [], start: null, end: null, module: 'battle' };
+  let cloudPayload = null;
+  let busy = false;
+
+  const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
+  const num = (v) => (isNum(v) ? fmt.format(v) : '—');
+  const pct = (v) => (isNum(v) ? `${v > 0 ? '+' : ''}${v.toFixed(2)}%` : '—');
+  const shortTime = (value) => (typeof value === 'string' ? (value.length <= 10 ? value.slice(5) : value.slice(5, 16)) : '');
+  const periodLabel = (period) => PERIOD_LABEL[period] || period;
+
+  function tipHTML(title, rows) {
+    const body = rows.map(([name, value]) => `<div class="tip-row"><span>${name}</span><b>${value}</b></div>`).join('');
+    return `<div class="tip"><div class="tip-title">${title}</div>${body}</div>`;
+  }
+
+  function dailyOf(time) {
+    const day = String(time || '').slice(0, 10);
+    return state.daily.find((row) => row.time.slice(0, 10) === day) || null;
+  }
+
+  function tipStyle(formatter) {
+    return { trigger: 'axis', confine: true, backgroundColor: '#101a25f2', borderColor: '#2c3d50', padding: [8, 11], textStyle: { color: '#dfe8f2', fontSize: 11 }, formatter };
   }
 
   function mainTip(params) {
-    const list = Array.isArray(params) ? params : [params];
-    const point = state.points[list[0] && list[0].dataIndex];
+    const index = (Array.isArray(params) ? params[0] : params)?.dataIndex;
+    const point = state.intraday[index];
     if (!point) return '';
-    return tipHTML(point.time, point, [['多头', 'bull'], ['空头', 'bear'], ['指数', 'index'], ['涨跌', 'index_change'], ['阻力', 'resistance'], ['支撑', 'support'], ['追涨', 'chase'], ['抄底', 'bottom'], ['离场', 'exit'], ['恐慌', 'panic'], ['样本', 'total']]);
+    const day = dailyOf(point.time);
+    const rows = [['多头', num(point.bull)], ['空头', num(point.bear)], ['指数', num(point.index)], ['涨跌', pct(point.index_change)]];
+    if (day) rows.push(['当日多头', num(day.bull)], ['当日空头', num(day.bear)]);
+    rows.push(['样本', num(point.total)]);
+    return tipHTML(shortTime(point.time), rows);
   }
 
-  function recentTip(params) {
-    const list = Array.isArray(params) ? params : [params];
-    const point = state.recent[list[0] && list[0].dataIndex];
-    if (!point) return '';
-    return tipHTML(point.time, point, [['多头', 'bull'], ['空头', 'bear'], ['指数', 'index'], ['涨跌', 'index_change'], ['阻力', 'resistance'], ['支撑', 'support']]);
+  function dailyTip(params) {
+    const index = (Array.isArray(params) ? params[0] : params)?.dataIndex;
+    const point = state.intraday[index];
+    const day = point ? dailyOf(point.time) : null;
+    if (!day) return '';
+    return tipHTML(day.time.slice(5, 10), [['多头', num(day.bull)], ['空头', num(day.bear)], ['指数', num(day.index)], ['涨跌', pct(day.index_change)], ['阻力', num(day.resistance)], ['支撑', num(day.support)], ['样本', num(day.total)]]);
   }
 
-  function renderMain() {
-    const points = state.points;
-    const labels = points.map((p) => mainLabel(p.time));
-    const el = document.getElementById('chart');
-    const small = el.clientWidth < 480;
-    const log = state.axis === 'log';
-    const axis = {
-      type: 'category', data: labels, boundaryGap: false,
-      axisLine: { lineStyle: { color: '#26313f' } }, axisTick: { show: false },
-      axisPointer: { show: true, snap: true, lineStyle: { color: '#5f7d74', type: 'dashed' }, label: { backgroundColor: '#2b423a', color: '#dfe8f2', fontSize: 10 } }
+  function subTip(params) {
+    const index = (Array.isArray(params) ? params[0] : params)?.dataIndex;
+    const point = state.intraday[index];
+    if (!point) return '';
+    return tipHTML(shortTime(point.time), [['阻力', num(point.resistance)], ['支撑', num(point.support)], ['多头', num(point.bull)], ['空头', num(point.bear)]]);
+  }
+
+  function labelIndexes(points, isDaily) {
+    const starts = [];
+    let previous = '';
+    points.forEach((point, index) => {
+      const day = point.time.slice(0, 10);
+      if (day !== previous) { starts.push(index); previous = day; }
+    });
+    if (isDaily) {
+      const step = Math.max(1, Math.ceil(points.length / 7));
+      const shown = new Set();
+      points.forEach((_, index) => { if (index % step === 0) shown.add(index); });
+      return shown;
+    }
+    const step = starts.length > 24 ? 5 : starts.length > 12 ? 2 : 1;
+    return new Set(starts.filter((_, order) => order % step === 0));
+  }
+
+  function alignDaily(points, daily) {
+    const empty = { bull: [], bear: [], index: [], stepped: false };
+    if (!points.length) return empty;
+    const bull = new Array(points.length).fill(null);
+    const bear = new Array(points.length).fill(null);
+    const index = new Array(points.length).fill(null);
+    const byDay = new Map(daily.map((row) => [row.time.slice(0, 10), row]));
+    const fill = (position, row) => {
+      bull[position] = isNum(row.bull) ? row.bull : null;
+      bear[position] = isNum(row.bear) ? row.bear : null;
+      index[position] = isNum(row.index) ? row.index : null;
     };
-    chart.setOption({
-      backgroundColor: 'transparent', animation: false,
-      tooltip: { trigger: 'axis', confine: true, backgroundColor: '#101a25f2', borderColor: '#2c3d50', padding: [8, 11], textStyle: { color: '#dfe8f2', fontSize: 11 }, formatter: mainTip },
-      axisPointer: { link: [{ xAxisIndex: [0, 1] }], snap: true },
-      grid: [{ left: small ? 42 : 48, right: small ? 44 : 52, top: 16, bottom: 112 }, { left: small ? 42 : 48, right: small ? 44 : 52, height: 62, bottom: 34 }],
-      xAxis: [
-        { ...axis, gridIndex: 0, axisLabel: { color: '#6f8095', fontSize: 10, show: false } },
-        { ...axis, gridIndex: 1, axisLabel: { color: '#6f8095', fontSize: 9, hideOverlap: true, interval: Math.max(0, Math.ceil(labels.length / 6) - 1) } }
-      ],
-      yAxis: [
-        { type: log ? 'log' : 'value', logBase: 10, min: log ? 1 : null, splitNumber: 3, axisLabel: { color: '#6f8095', fontSize: 10, formatter: (v) => compact.format(v) }, splitLine: { lineStyle: { color: '#1c2632', type: 'dashed' } } },
-        { type: 'value', position: 'right', scale: true, splitNumber: 3, axisLabel: { color: '#6f8095', fontSize: 10, formatter: (v) => compact.format(v) }, splitLine: { show: false } },
-        { type: 'value', gridIndex: 1, min: 0, splitNumber: 2, axisLabel: { color: '#6f8095', fontSize: 9, formatter: (v) => compact.format(v) }, splitLine: { show: false } }
-      ],
-      dataZoom: [
-        { type: 'inside', xAxisIndex: [0, 1], filterMode: 'none', start: 0, end: 100 },
-        { type: 'slider', xAxisIndex: [0, 1], filterMode: 'none', bottom: 2, height: 12, left: small ? 42 : 48, right: small ? 44 : 52, borderColor: '#22303f', backgroundColor: '#0a121b', fillerColor: '#3b5a5033', handleStyle: { color: '#5b8a77' }, textStyle: { color: '#6f8095', fontSize: 9 }, showDetail: false, brushSelect: false }
-      ],
-      series: [
-        { name: '多头', type: 'line', data: points.map((p) => (log && !(p.bull > 0) ? null : p.bull)), showSymbol: false, connectNulls: false, lineStyle: { width: 1.6, color: COLORS.bull }, itemStyle: { color: COLORS.bull }, animation: false },
-        { name: '空头', type: 'line', data: points.map((p) => (log && !(p.bear > 0) ? null : p.bear)), showSymbol: false, connectNulls: false, lineStyle: { width: 1.6, color: COLORS.bear }, itemStyle: { color: COLORS.bear }, animation: false },
-        { name: '指数', type: 'line', yAxisIndex: 1, data: points.map((p) => p.index), showSymbol: false, connectNulls: false, lineStyle: { width: 0.9, color: COLORS.index }, itemStyle: { color: COLORS.index }, animation: false },
-        { name: '阻力', type: 'line', xAxisIndex: 1, yAxisIndex: 2, data: points.map((p) => (p.resistance > 0 ? p.resistance : null)), showSymbol: false, connectNulls: false, step: 'end', lineStyle: { width: 1.2, color: COLORS.resistance }, itemStyle: { color: COLORS.resistance }, animation: false },
-        { name: '支撑', type: 'line', xAxisIndex: 1, yAxisIndex: 2, data: points.map((p) => (p.support > 0 ? p.support : null)), showSymbol: false, connectNulls: false, step: 'end', lineStyle: { width: 1.2, color: COLORS.support }, itemStyle: { color: COLORS.support }, animation: false }
-      ]
-    }, { notMerge: true });
+    if (points[0].time.length <= 10) {
+      points.forEach((point, position) => {
+        const row = byDay.get(point.time.slice(0, 10));
+        if (row) fill(position, row);
+      });
+      return { bull, bear, index, stepped: false };
+    }
+    const first = {};
+    const last = {};
+    points.forEach((point, position) => {
+      const day = point.time.slice(0, 10);
+      if (first[day] === undefined) first[day] = position;
+      last[day] = position;
+    });
+    daily.forEach((row) => {
+      const day = row.time.slice(0, 10);
+      if (first[day] === undefined) return;
+      fill(first[day], row);
+      if (last[day] !== first[day]) fill(last[day], row);
+    });
+    return { bull, bear, index, stepped: true };
   }
 
-  function renderRecent() {
-    const labels = state.recent.map((p) => p.time.slice(5));
-    recentChart.setOption({
-      backgroundColor: 'transparent', animation: false,
-      tooltip: { trigger: 'axis', confine: true, backgroundColor: '#101a25f2', borderColor: '#2c3d50', padding: [8, 11], textStyle: { color: '#dfe8f2', fontSize: 11 }, formatter: recentTip },
-      grid: { left: 44, right: 48, top: 10, bottom: 18 },
-      xAxis: {
-        type: 'category', data: labels, boundaryGap: false,
-        axisLine: { lineStyle: { color: '#26313f' } }, axisTick: { show: false },
-        axisLabel: { color: '#6f8095', fontSize: 10, hideOverlap: true, formatter: (v, i) => (i % 4 === 0 ? v.slice(0, 5) : '') },
-        axisPointer: { show: true, snap: true, lineStyle: { color: '#5f7d74', type: 'dashed' }, label: { backgroundColor: '#2b423a', color: '#dfe8f2', fontSize: 10 } }
+  function gridPad(width) {
+    return width && width < 520 ? { left: 38, right: 42 } : { left: 50, right: 54 };
+  }
+
+  function paint() {
+    const points = state.intraday;
+    if (!points.length) {
+      [dailyChart, mainChart, subChart].forEach((chart) => chart.clear());
+      return;
+    }
+    const isDaily = state.period === '1d';
+    const shown = labelIndexes(points, isDaily);
+    const pad = gridPad(document.getElementById('main-chart').clientWidth);
+    const axis = {
+      type: 'category', data: points.map((point) => point.time), boundaryGap: false,
+      axisLine: { lineStyle: { color: '#26313f' } }, axisTick: { show: false },
+      axisLabel: {
+        color: '#6f8095', fontSize: 9, interval: 0, hideOverlap: true,
+        formatter: (value, index) => (shown.has(index) ? String(value).slice(5, 10) : '')
       },
-      yAxis: [
-        { type: 'log', logBase: 10, min: 1, splitNumber: 2, axisLabel: { color: '#6f8095', fontSize: 9, formatter: (v) => compact.format(v) }, splitLine: { lineStyle: { color: '#1c2632', type: 'dashed' } } },
-        { type: 'value', position: 'right', scale: true, splitNumber: 2, axisLabel: { color: '#6f8095', fontSize: 9, formatter: (v) => compact.format(v) }, splitLine: { show: false } }
-      ],
+      axisPointer: {
+        show: true, snap: true, lineStyle: { color: '#5f7d74', type: 'dashed' },
+        label: { backgroundColor: '#2b423a', color: '#dfe8f2', fontSize: 10, formatter: (params) => shortTime(params.value) }
+      }
+    };
+    const valueAxis = {
+      type: 'value', min: 0, splitNumber: 2,
+      axisLabel: { color: '#6f8095', fontSize: 9, formatter: (value) => compact.format(value) },
+      splitLine: { lineStyle: { color: '#1c2632', type: 'dashed' } }
+    };
+    const indexAxis = {
+      type: 'value', position: 'right', scale: true, splitNumber: 2,
+      axisLabel: { color: '#6f8095', fontSize: 9, formatter: (value) => compact.format(value) },
+      splitLine: { show: false }
+    };
+    const aligned = alignDaily(points, state.daily);
+    const dailyExtra = aligned.stepped ? { step: 'middle' } : {};
+    const dailyLine = (name, data, color, extra) => ({
+      name, type: 'line', data, showSymbol: true, symbolSize: 3, connectNulls: true,
+      lineStyle: { width: 1.5, color }, itemStyle: { color }, animation: false, ...dailyExtra, ...extra
+    });
+    const line = (name, data, color, extra) => ({
+      name, type: 'line', data, showSymbol: false, connectNulls: false,
+      lineStyle: { width: 1.5, color }, itemStyle: { color }, animation: false, ...extra
+    });
+
+    dailyChart.setOption({
+      animation: false, tooltip: tipStyle(dailyTip),
+      grid: { left: pad.left, right: pad.right, top: 8, bottom: 18 },
+      xAxis: axis,
+      yAxis: [valueAxis, indexAxis],
       series: [
-        { name: '多头', type: 'line', data: state.recent.map((p) => (p.bull > 0 ? p.bull : null)), showSymbol: false, connectNulls: false, lineStyle: { width: 1.5, color: COLORS.bull }, itemStyle: { color: COLORS.bull }, animation: false },
-        { name: '空头', type: 'line', data: state.recent.map((p) => (p.bear > 0 ? p.bear : null)), showSymbol: false, connectNulls: false, lineStyle: { width: 1.5, color: COLORS.bear }, itemStyle: { color: COLORS.bear }, animation: false },
-        { name: '指数', type: 'line', yAxisIndex: 1, data: state.recent.map((p) => p.index), showSymbol: false, connectNulls: false, lineStyle: { width: 0.9, color: COLORS.index }, itemStyle: { color: COLORS.index }, animation: false }
+        dailyLine('多头', aligned.bull, COLORS.bull),
+        dailyLine('空头', aligned.bear, COLORS.bear),
+        dailyLine('指数', aligned.index, COLORS.index, { yAxisIndex: 1, lineStyle: { width: 0.9, color: COLORS.index } })
+      ]
+    }, { notMerge: true });
+
+    mainChart.setOption({
+      animation: false, tooltip: tipStyle(mainTip),
+      grid: { left: pad.left, right: pad.right, top: 8, bottom: 20 },
+      xAxis: axis,
+      yAxis: [valueAxis, indexAxis],
+      series: [
+        line('多头', points.map((point) => (isNum(point.bull) ? point.bull : null)), COLORS.bull),
+        line('空头', points.map((point) => (isNum(point.bear) ? point.bear : null)), COLORS.bear),
+        { name: '指数', type: 'line', yAxisIndex: 1, data: points.map((point) => (isNum(point.index) ? point.index : null)), showSymbol: false, connectNulls: false, lineStyle: { width: 0.9, color: COLORS.index }, itemStyle: { color: COLORS.index }, animation: false }
+      ]
+    }, { notMerge: true });
+
+    subChart.setOption({
+      animation: false, tooltip: tipStyle(subTip),
+      grid: { left: pad.left, right: pad.right, top: 6, bottom: 18 },
+      xAxis: axis,
+      yAxis: [valueAxis],
+      series: [
+        line('阻力', points.map((point) => (point.resistance > 0 ? point.resistance : null)), COLORS.resistance, { step: 'end' }),
+        line('支撑', points.map((point) => (point.support > 0 ? point.support : null)), COLORS.support, { step: 'end' })
       ]
     }, { notMerge: true });
   }
 
-  function apply(payload) {
-    state.points = (Array.isArray(payload.points) ? payload.points : []).filter((p) => p && typeof p.time === 'string');
-    state.recent = (Array.isArray(payload.recent60) ? payload.recent60 : Array.isArray(payload.recent) ? payload.recent : []).filter((p) => p && typeof p.time === 'string');
-    const last = state.points[state.points.length - 1];
-    document.getElementById('meta').textContent = last ? `${last.time} · ${state.points.length} 点 · ${clock.format(new Date())} 更新` : '暂无数据，等待下一次推送';
-    document.getElementById('points-count').textContent = state.points.length ? `${state.points.length} 点` : '—';
-    document.getElementById('main-title').textContent = IS_LOCAL ? `${state.period} · ${state.range.start} — ${state.range.end}` : '今日 5 分钟 · 多空与阻力支撑';
-    const days = new Set(state.recent.map((p) => p.time.slice(0, 10))).size;
-    document.getElementById('recent-meta').textContent = state.recent.length ? `${days} 个交易日 · ${state.recent.length} 点` : '暂无数据';
-    if (state.points.length) renderMain();
-    if (state.recent.length) renderRecent();
+  function resizeAll() {
+    [dailyChart, mainChart, subChart].forEach((chart) => chart.resize());
   }
 
-  function today() {
-    const parts = Object.fromEntries(new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()).map((p) => [p.type, p.value]));
-    return `${parts.year}-${parts.month}-${parts.day}`;
+  function applyWindow(payload) {
+    const intraday = (payload.intraday || []).filter((point) => point && typeof point.time === 'string');
+    const daily = (payload.daily || []).filter((point) => point && typeof point.time === 'string');
+    state.intraday = intraday;
+    state.daily = daily;
+    state.period = payload.period || '1d';
+    const first = intraday[0];
+    const last = intraday[intraday.length - 1];
+    state.start = first ? first.time.slice(0, 10) : null;
+    state.end = last ? last.time.slice(0, 10) : null;
+    const days = new Set(intraday.map((point) => point.time.slice(0, 10))).size;
+    document.getElementById('daily-meta').textContent = daily.length ? `${daily.length} 个交易日` : '—';
+    document.getElementById('main-meta').textContent = intraday.length ? `${intraday.length} 点 · ${periodLabel(state.period)}` : '—';
+    document.getElementById('sub-meta').textContent = intraday.length ? `${days} 个交易日` : '—';
+    document.getElementById('main-title').textContent = `多空博弈 · 指数对照 · ${periodLabel(state.period)}`;
+    document.getElementById('meta').textContent = intraday.length
+      ? `${state.start} — ${state.end} · ${days} 个交易日 · ${clock.format(new Date())} 更新`
+      : '暂无数据，等待下一次推送';
+    paint();
+    setTimeout(resizeAll, 0);
   }
 
-  async function load() {
+  function sliceDays(points, days) {
+    const list = (points || []).filter((point) => point && typeof point.time === 'string');
+    const dates = [...new Set(list.map((point) => point.time.slice(0, 10)))];
+    const keep = new Set(dates.slice(-days));
+    return list.filter((point) => keep.has(point.time.slice(0, 10)));
+  }
+
+  async function loadLocal() {
+    document.getElementById('meta').textContent = '加载中…';
+    const response = await fetch(`/api/v1/window?days=${state.days}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    applyWindow(await response.json());
+  }
+
+  function renderCloud() {
+    if (!cloudPayload) return;
+    const ranges = cloudPayload.ranges || {};
+    const prefer = state.days <= 10 ? 'm5' : state.days <= 30 ? 'h60' : 'daily';
+    let pack = ranges[prefer] || ranges.daily || null;
+    let intraday;
+    let daily;
+    let period;
+    if (pack) {
+      intraday = sliceDays(pack.points, state.days);
+      daily = sliceDays((ranges.daily || pack).points, state.days);
+      period = pack.period || '1d';
+    } else {
+      intraday = sliceDays(cloudPayload.points, state.days);
+      daily = intraday;
+      period = '5m';
+    }
+    applyWindow({ intraday, daily, period });
+  }
+
+  async function loadCloud() {
+    const response = await fetch(`${DATA_URL}?t=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    cloudPayload = await response.json();
+    renderCloud();
+  }
+
+  async function refresh() {
+    if (busy) return;
+    busy = true;
     try {
-      if (IS_LOCAL) {
-        const start = document.getElementById('start-date').value || '2026-01-01';
-        const end = document.getElementById('end-date').value || today();
-        state.range = { start, end };
-        const query = new URLSearchParams({ period: state.period, start, end });
-        const [main, recent] = await Promise.all([
-          fetch(`/api/v1/battle?${query}`, { cache: 'no-store' }).then((r) => r.json()),
-          fetch('/api/v1/recent?days=5', { cache: 'no-store' }).then((r) => r.json()).catch(() => ({ points: [] }))
-        ]);
-        apply({ points: main.points, recent60: recent.points });
-        document.getElementById('meta').textContent += main.meta && main.meta.realtime ? ' · 实时' : '';
-      } else {
-        const response = await fetch(DATA_URL, { cache: 'no-store' });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const payload = await response.json();
-        payload.recent60 = payload.recent60 || [];
-        apply(payload);
-        document.getElementById('meta').textContent = `${payload.date || ''} · ${document.getElementById('meta').textContent}`;
-      }
+      if (IS_LOCAL) await loadLocal();
+      else await loadCloud();
     } catch (error) {
       document.getElementById('meta').textContent = `读取失败：${error.message}`;
+    } finally {
+      busy = false;
     }
   }
 
-  if (IS_LOCAL) {
-    const endInput = document.getElementById('end-date');
-    endInput.value = today();
-    endInput.max = today();
-    const pick = (group, key, value) => {
-      document.querySelectorAll(`#${group} button`).forEach((button) => {
-        const on = button.dataset[key] === value;
-        button.classList.toggle('selected', on);
-      });
-    };
-    document.querySelectorAll('#period-group button').forEach((button) => {
-      button.addEventListener('click', () => { state.period = button.dataset.period; pick('period-group', 'period', state.period); load(); });
+  function selectDays(days) {
+    state.days = days;
+    document.querySelectorAll('#range-chips button').forEach((button) => {
+      button.classList.toggle('selected', Number(button.dataset.days) === days);
     });
-    document.querySelectorAll('#axis-group button').forEach((button) => {
-      button.addEventListener('click', () => { state.axis = button.dataset.axis; pick('axis-group', 'axis', state.axis); if (state.points.length) renderMain(); });
-    });
-    document.querySelectorAll('#start-date, #end-date').forEach((input) => input.addEventListener('change', load));
+    if (state.module !== 'battle') return;
+    if (!IS_LOCAL && cloudPayload) renderCloud();
+    else refresh();
   }
 
-  window.addEventListener('resize', () => { chart.resize(); recentChart.resize(); });
-  window.setInterval(load, IS_LOCAL ? 60000 : 300000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
-  load();
+  function switchModule(key) {
+    state.module = key;
+    document.querySelectorAll('.nav-item').forEach((button) => {
+      button.classList.toggle('active', button.dataset.module === key);
+    });
+    document.querySelectorAll('.subtab').forEach((button) => {
+      button.classList.toggle('active', button.dataset.sub === 'all');
+    });
+    const info = MODULES[key] || { group: '', name: key };
+    document.getElementById('crumb-module').textContent = info.group;
+    document.getElementById('crumb-page').textContent = info.name;
+    const battle = key === 'battle';
+    document.getElementById('view-battle').hidden = !battle;
+    document.getElementById('view-empty').hidden = battle;
+    document.getElementById('empty-title').textContent = `${info.name} · 建设中`;
+    if (battle) {
+      setTimeout(resizeAll, 0);
+      if (!state.intraday.length) refresh();
+    }
+  }
+
+  document.querySelectorAll('.nav-item').forEach((button) => {
+    button.addEventListener('click', () => switchModule(button.dataset.module));
+  });
+  document.querySelectorAll('.subtab').forEach((button) => {
+    button.addEventListener('click', () => {
+      document.querySelectorAll('.subtab').forEach((item) => item.classList.toggle('active', item === button));
+      if (button.dataset.sub === 'all') {
+        document.getElementById('view-battle').hidden = false;
+        document.getElementById('view-empty').hidden = true;
+        setTimeout(resizeAll, 0);
+        return;
+      }
+      document.getElementById('view-battle').hidden = true;
+      document.getElementById('view-empty').hidden = false;
+      document.getElementById('empty-title').textContent = `${button.textContent.trim()} · 建设中`;
+    });
+  });
+  document.querySelectorAll('#range-chips button').forEach((button) => {
+    button.addEventListener('click', () => selectDays(Number(button.dataset.days)));
+  });
+
+  window.addEventListener('resize', resizeAll);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+  window.setInterval(refresh, IS_LOCAL ? 60000 : 300000);
+  refresh();
   }
 </script>
 </body>
