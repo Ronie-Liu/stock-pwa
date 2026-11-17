@@ -3,8 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>多空博弈 · 云端</title>
-  <script src="https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/echarts.min.js"></script>
+  <title>多空博弈</title>
   <style>
     :root { color-scheme: dark; --bull:#ef6b78; --bear:#3fc39b; --index:#8d99a8; --resistance:#e3a25c; --support:#6ba6f2; }
     * { box-sizing: border-box; }
@@ -14,13 +13,20 @@
     .head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
     .head h1 { margin: 0; font-size: 15px; }
     .meta { color: #7d8fa4; font-size: 11px; }
+    .toolbar { display: none; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+    body.local .toolbar { display: flex; }
+    .toolbar button, .toolbar input { background: #111b26; color: #b9c8d8; border: 1px solid #22303f; border-radius: 6px; padding: 3px 9px; font-size: 11px; font-family: inherit; }
+    .toolbar button { cursor: pointer; }
+    .toolbar button.selected { background: #1d3a31; border-color: #3f6b58; color: #d6efe2; }
+    .toolbar input { padding: 2px 6px; }
+    .sep { width: 1px; height: 16px; background: #22303f; }
     .block { flex: 0 0 auto; display: flex; flex-direction: column; min-height: 0; }
     .block-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 2px 2px 0; }
     .block-title { color: #9db3c8; font-size: 11px; letter-spacing: .3px; }
     .block-meta { color: #5b6c80; font-size: 10px; }
+    .recent-wrap { flex: 0 0 30%; min-height: 100px; display: flex; flex-direction: column; padding-bottom: 2px; border-bottom: 1px solid #17212d; margin-bottom: 2px; }
     #recent-chart { flex: 1 1 auto; min-height: 0; }
     #chart { flex: 1 1 auto; min-height: 0; }
-    .recent-wrap { flex: 0 0 30%; min-height: 100px; display: flex; flex-direction: column; padding-bottom: 2px; border-bottom: 1px solid #17212d; margin-bottom: 2px; }
     .legend { display: flex; gap: 12px; font-size: 11px; color: #8b9caf; margin: 4px 0 2px; }
     .legend i { display: inline-block; width: 12px; height: 2px; margin-right: 5px; vertical-align: middle; }
     .foot { color: #5b6c80; font-size: 10px; margin: 2px 0 0; }
@@ -29,64 +35,96 @@
     .tip-row { display: flex; justify-content: space-between; gap: 18px; font-size: 11px; line-height: 1.55; }
     .tip-row span { color: #8b9caf; }
     .tip-row b { color: #dfe8f2; font-weight: 500; }
-    body.embed .head, body.embed .foot { display: none; }
+    body.embed .head, body.embed .foot, body.embed .toolbar { display: none; }
     body.embed .wrap { padding: 4px 6px 2px; }
   </style>
 </head>
 <body>
 <div class="wrap">
   <div class="head"><h1>全市场多空博弈</h1><span class="meta" id="meta">加载中…</span></div>
+  <div class="toolbar" id="toolbar">
+    <span id="period-group">
+      <button type="button" data-period="5m">5m</button>
+      <button type="button" data-period="30m">30m</button>
+      <button type="button" data-period="60m">60m</button>
+      <button type="button" data-period="1d" class="selected">日线</button>
+    </span>
+    <span class="sep"></span>
+    <span id="axis-group">
+      <button type="button" data-axis="log" class="selected">对数</button>
+      <button type="button" data-axis="linear">线性</button>
+    </span>
+    <span class="sep"></span>
+    <input type="date" id="start-date" value="2026-01-01" aria-label="开始日期">
+    <span style="color:#5b6c80">–</span>
+    <input type="date" id="end-date" aria-label="结束日期">
+  </div>
   <div class="recent-wrap">
     <div class="block-head"><span class="block-title">近 5 个交易日 · 60 分钟多空趋势</span><span class="block-meta" id="recent-meta">—</span></div>
     <div id="recent-chart"></div>
   </div>
-  <div class="block-head"><span class="block-title">今日 5 分钟 · 多空与阻力支撑</span><span class="block-meta" id="points-count">—</span></div>
+  <div class="block-head"><span class="block-title" id="main-title">今日 5 分钟 · 多空与阻力支撑</span><span class="block-meta" id="points-count">—</span></div>
   <div class="legend"><span><i style="background:#ef6b78"></i>多头</span><span><i style="background:#3fc39b"></i>空头</span><span><i style="background:#8d99a8;height:1px"></i>指数</span><span><i style="background:#e3a25c"></i>阻力</span><span><i style="background:#6ba6f2"></i>支撑</span></div>
   <div id="chart"></div>
-  <p class="foot">数据每 5 分钟由本地情报站推送；盘中为采集时点快照，仅供研究。</p>
+  <p class="foot">数据每 5 分钟更新；盘中为采集时点快照，仅供研究。</p>
 </div>
 <script>
-  // 数据地址：阿里云 OSS 上的当日 5 分钟序列（含近 5 日 60 分钟数据）
+  (function boot() {
+    const local = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+    const script = document.createElement('script');
+    script.src = local ? '/echarts.min.js' : 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/echarts.min.js';
+    script.onload = () => main();
+    script.onerror = () => { document.getElementById('meta').textContent = '图表组件加载失败，请检查网络'; };
+    document.head.appendChild(script);
+  })();
+</script>
+<script>
+  function main() {
+  if (!window.echarts) { document.getElementById('meta').textContent = '图表组件不可用'; return; }
   const DATA_URL = 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/today.json';
+  const IS_LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
   if (new URLSearchParams(location.search).get('embed') === '1') document.body.classList.add('embed');
+  if (IS_LOCAL) document.body.classList.add('local');
 
   const COLORS = { bull: '#ef6b78', bear: '#3fc39b', index: '#8d99a8', resistance: '#e3a25c', support: '#6ba6f2' };
   const fmt = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 2 });
   const compact = new Intl.NumberFormat('zh-CN', { notation: 'compact', maximumFractionDigits: 1 });
+  const clock = new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit', hour12: false });
   const chart = echarts.init(document.getElementById('chart'), null, { renderer: 'canvas' });
   const recentChart = echarts.init(document.getElementById('recent-chart'), null, { renderer: 'canvas' });
-  let points = [];
-  let recent = [];
+  const state = { period: '1d', axis: 'log', points: [], recent: [], range: { start: '2026-01-01', end: '' } };
 
   const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? fmt.format(v) : '—');
+  const mainLabel = (time) => (time.length <= 10 ? time.slice(5) : time.slice(11));
 
-  function tipHTML(point, rows) {
+  function tipHTML(time, point, rows) {
     const body = rows.map(([name, key]) => `<div class="tip-row"><span>${name}</span><b>${num(point[key])}</b></div>`).join('');
-    return `<div class="tip"><div class="tip-title">${point.time}</div>${body}</div>`;
+    return `<div class="tip"><div class="tip-title">${time}</div>${body}</div>`;
   }
 
   function mainTip(params) {
     const list = Array.isArray(params) ? params : [params];
-    const point = points[list[0] && list[0].dataIndex];
+    const point = state.points[list[0] && list[0].dataIndex];
     if (!point) return '';
-    return tipHTML(point, [['多头', 'bull'], ['空头', 'bear'], ['指数', 'index'], ['涨跌', 'index_change'], ['阻力', 'resistance'], ['支撑', 'support'], ['追涨', 'chase'], ['抄底', 'bottom'], ['离场', 'exit'], ['恐慌', 'panic'], ['样本', 'total']]);
+    return tipHTML(point.time, point, [['多头', 'bull'], ['空头', 'bear'], ['指数', 'index'], ['涨跌', 'index_change'], ['阻力', 'resistance'], ['支撑', 'support'], ['追涨', 'chase'], ['抄底', 'bottom'], ['离场', 'exit'], ['恐慌', 'panic'], ['样本', 'total']]);
   }
 
   function recentTip(params) {
     const list = Array.isArray(params) ? params : [params];
-    const point = recent[list[0] && list[0].dataIndex];
+    const point = state.recent[list[0] && list[0].dataIndex];
     if (!point) return '';
-    return tipHTML(point, [['多头', 'bull'], ['空头', 'bear'], ['指数', 'index'], ['涨跌', 'index_change'], ['阻力', 'resistance'], ['支撑', 'support']]);
+    return tipHTML(point.time, point, [['多头', 'bull'], ['空头', 'bear'], ['指数', 'index'], ['涨跌', 'index_change'], ['阻力', 'resistance'], ['支撑', 'support']]);
   }
 
   function renderMain() {
-    const labels = points.map((p) => p.time.slice(11));
+    const points = state.points;
+    const labels = points.map((p) => mainLabel(p.time));
     const el = document.getElementById('chart');
     const small = el.clientWidth < 480;
+    const log = state.axis === 'log';
     const axis = {
       type: 'category', data: labels, boundaryGap: false,
       axisLine: { lineStyle: { color: '#26313f' } }, axisTick: { show: false },
-      axisLabel: { color: '#6f8095', fontSize: 10, hideOverlap: true },
       axisPointer: { show: true, snap: true, lineStyle: { color: '#5f7d74', type: 'dashed' }, label: { backgroundColor: '#2b423a', color: '#dfe8f2', fontSize: 10 } }
     };
     chart.setOption({
@@ -95,11 +133,11 @@
       axisPointer: { link: [{ xAxisIndex: [0, 1] }], snap: true },
       grid: [{ left: small ? 42 : 48, right: small ? 44 : 52, top: 16, bottom: 112 }, { left: small ? 42 : 48, right: small ? 44 : 52, height: 62, bottom: 34 }],
       xAxis: [
-        { ...axis, gridIndex: 0, axisLabel: { show: false } },
-        { ...axis, gridIndex: 1, axisLabel: { ...axis.axisLabel, fontSize: 9, interval: Math.max(0, Math.ceil(labels.length / 6) - 1) } }
+        { ...axis, gridIndex: 0, axisLabel: { color: '#6f8095', fontSize: 10, show: false } },
+        { ...axis, gridIndex: 1, axisLabel: { color: '#6f8095', fontSize: 9, hideOverlap: true, interval: Math.max(0, Math.ceil(labels.length / 6) - 1) } }
       ],
       yAxis: [
-        { type: 'log', logBase: 10, min: 1, splitNumber: 3, axisLabel: { color: '#6f8095', fontSize: 10, formatter: (v) => compact.format(v) }, splitLine: { lineStyle: { color: '#1c2632', type: 'dashed' } } },
+        { type: log ? 'log' : 'value', logBase: 10, min: log ? 1 : null, splitNumber: 3, axisLabel: { color: '#6f8095', fontSize: 10, formatter: (v) => compact.format(v) }, splitLine: { lineStyle: { color: '#1c2632', type: 'dashed' } } },
         { type: 'value', position: 'right', scale: true, splitNumber: 3, axisLabel: { color: '#6f8095', fontSize: 10, formatter: (v) => compact.format(v) }, splitLine: { show: false } },
         { type: 'value', gridIndex: 1, min: 0, splitNumber: 2, axisLabel: { color: '#6f8095', fontSize: 9, formatter: (v) => compact.format(v) }, splitLine: { show: false } }
       ],
@@ -108,8 +146,8 @@
         { type: 'slider', xAxisIndex: [0, 1], filterMode: 'none', bottom: 2, height: 12, left: small ? 42 : 48, right: small ? 44 : 52, borderColor: '#22303f', backgroundColor: '#0a121b', fillerColor: '#3b5a5033', handleStyle: { color: '#5b8a77' }, textStyle: { color: '#6f8095', fontSize: 9 }, showDetail: false, brushSelect: false }
       ],
       series: [
-        { name: '多头', type: 'line', data: points.map((p) => (p.bull > 0 ? p.bull : null)), showSymbol: false, connectNulls: false, lineStyle: { width: 1.6, color: COLORS.bull }, itemStyle: { color: COLORS.bull }, animation: false },
-        { name: '空头', type: 'line', data: points.map((p) => (p.bear > 0 ? p.bear : null)), showSymbol: false, connectNulls: false, lineStyle: { width: 1.6, color: COLORS.bear }, itemStyle: { color: COLORS.bear }, animation: false },
+        { name: '多头', type: 'line', data: points.map((p) => (log && !(p.bull > 0) ? null : p.bull)), showSymbol: false, connectNulls: false, lineStyle: { width: 1.6, color: COLORS.bull }, itemStyle: { color: COLORS.bull }, animation: false },
+        { name: '空头', type: 'line', data: points.map((p) => (log && !(p.bear > 0) ? null : p.bear)), showSymbol: false, connectNulls: false, lineStyle: { width: 1.6, color: COLORS.bear }, itemStyle: { color: COLORS.bear }, animation: false },
         { name: '指数', type: 'line', yAxisIndex: 1, data: points.map((p) => p.index), showSymbol: false, connectNulls: false, lineStyle: { width: 0.9, color: COLORS.index }, itemStyle: { color: COLORS.index }, animation: false },
         { name: '阻力', type: 'line', xAxisIndex: 1, yAxisIndex: 2, data: points.map((p) => (p.resistance > 0 ? p.resistance : null)), showSymbol: false, connectNulls: false, step: 'end', lineStyle: { width: 1.2, color: COLORS.resistance }, itemStyle: { color: COLORS.resistance }, animation: false },
         { name: '支撑', type: 'line', xAxisIndex: 1, yAxisIndex: 2, data: points.map((p) => (p.support > 0 ? p.support : null)), showSymbol: false, connectNulls: false, step: 'end', lineStyle: { width: 1.2, color: COLORS.support }, itemStyle: { color: COLORS.support }, animation: false }
@@ -118,7 +156,7 @@
   }
 
   function renderRecent() {
-    const labels = recent.map((p) => p.time.slice(5));
+    const labels = state.recent.map((p) => p.time.slice(5));
     recentChart.setOption({
       backgroundColor: 'transparent', animation: false,
       tooltip: { trigger: 'axis', confine: true, backgroundColor: '#101a25f2', borderColor: '#2c3d50', padding: [8, 11], textStyle: { color: '#dfe8f2', fontSize: 11 }, formatter: recentTip },
@@ -134,41 +172,81 @@
         { type: 'value', position: 'right', scale: true, splitNumber: 2, axisLabel: { color: '#6f8095', fontSize: 9, formatter: (v) => compact.format(v) }, splitLine: { show: false } }
       ],
       series: [
-        { name: '多头', type: 'line', data: recent.map((p) => (p.bull > 0 ? p.bull : null)), showSymbol: false, connectNulls: false, lineStyle: { width: 1.5, color: COLORS.bull }, itemStyle: { color: COLORS.bull }, animation: false },
-        { name: '空头', type: 'line', data: recent.map((p) => (p.bear > 0 ? p.bear : null)), showSymbol: false, connectNulls: false, lineStyle: { width: 1.5, color: COLORS.bear }, itemStyle: { color: COLORS.bear }, animation: false },
-        { name: '指数', type: 'line', yAxisIndex: 1, data: recent.map((p) => p.index), showSymbol: false, connectNulls: false, lineStyle: { width: 0.9, color: COLORS.index }, itemStyle: { color: COLORS.index }, animation: false }
+        { name: '多头', type: 'line', data: state.recent.map((p) => (p.bull > 0 ? p.bull : null)), showSymbol: false, connectNulls: false, lineStyle: { width: 1.5, color: COLORS.bull }, itemStyle: { color: COLORS.bull }, animation: false },
+        { name: '空头', type: 'line', data: state.recent.map((p) => (p.bear > 0 ? p.bear : null)), showSymbol: false, connectNulls: false, lineStyle: { width: 1.5, color: COLORS.bear }, itemStyle: { color: COLORS.bear }, animation: false },
+        { name: '指数', type: 'line', yAxisIndex: 1, data: state.recent.map((p) => p.index), showSymbol: false, connectNulls: false, lineStyle: { width: 0.9, color: COLORS.index }, itemStyle: { color: COLORS.index }, animation: false }
       ]
     }, { notMerge: true });
   }
 
-  function render(payload) {
-    points = Array.isArray(payload.points) ? payload.points : [];
-    recent = Array.isArray(payload.recent60) ? payload.recent60 : [];
-    const last = points[points.length - 1];
-    document.getElementById('meta').textContent = points.length
-      ? `${payload.date} · ${last.time.slice(11)} · ${points.length} 点`
-      : '暂无数据，等待下一次推送';
-    document.getElementById('points-count').textContent = points.length ? `${points.length} 点` : '—';
-    const days = new Set(recent.map((p) => p.time.slice(0, 10))).size;
-    document.getElementById('recent-meta').textContent = recent.length ? `${days} 个交易日 · ${recent.length} 点` : '暂无数据';
-    if (points.length) renderMain();
-    if (recent.length) renderRecent();
+  function apply(payload) {
+    state.points = (Array.isArray(payload.points) ? payload.points : []).filter((p) => p && typeof p.time === 'string');
+    state.recent = (Array.isArray(payload.recent60) ? payload.recent60 : Array.isArray(payload.recent) ? payload.recent : []).filter((p) => p && typeof p.time === 'string');
+    const last = state.points[state.points.length - 1];
+    document.getElementById('meta').textContent = last ? `${last.time} · ${state.points.length} 点 · ${clock.format(new Date())} 更新` : '暂无数据，等待下一次推送';
+    document.getElementById('points-count').textContent = state.points.length ? `${state.points.length} 点` : '—';
+    document.getElementById('main-title').textContent = IS_LOCAL ? `${state.period} · ${state.range.start} — ${state.range.end}` : '今日 5 分钟 · 多空与阻力支撑';
+    const days = new Set(state.recent.map((p) => p.time.slice(0, 10))).size;
+    document.getElementById('recent-meta').textContent = state.recent.length ? `${days} 个交易日 · ${state.recent.length} 点` : '暂无数据';
+    if (state.points.length) renderMain();
+    if (state.recent.length) renderRecent();
+  }
+
+  function today() {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()).map((p) => [p.type, p.value]));
+    return `${parts.year}-${parts.month}-${parts.day}`;
   }
 
   async function load() {
     try {
-      const response = await fetch(DATA_URL, { cache: 'no-store' });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      render(await response.json());
+      if (IS_LOCAL) {
+        const start = document.getElementById('start-date').value || '2026-01-01';
+        const end = document.getElementById('end-date').value || today();
+        state.range = { start, end };
+        const query = new URLSearchParams({ period: state.period, start, end });
+        const [main, recent] = await Promise.all([
+          fetch(`/api/v1/battle?${query}`, { cache: 'no-store' }).then((r) => r.json()),
+          fetch('/api/v1/recent?days=5', { cache: 'no-store' }).then((r) => r.json()).catch(() => ({ points: [] }))
+        ]);
+        apply({ points: main.points, recent60: recent.points });
+        document.getElementById('meta').textContent += main.meta && main.meta.realtime ? ' · 实时' : '';
+      } else {
+        const response = await fetch(DATA_URL, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        payload.recent60 = payload.recent60 || [];
+        apply(payload);
+        document.getElementById('meta').textContent = `${payload.date || ''} · ${document.getElementById('meta').textContent}`;
+      }
     } catch (error) {
       document.getElementById('meta').textContent = `读取失败：${error.message}`;
     }
   }
 
+  if (IS_LOCAL) {
+    const endInput = document.getElementById('end-date');
+    endInput.value = today();
+    endInput.max = today();
+    const pick = (group, key, value) => {
+      document.querySelectorAll(`#${group} button`).forEach((button) => {
+        const on = button.dataset[key] === value;
+        button.classList.toggle('selected', on);
+      });
+    };
+    document.querySelectorAll('#period-group button').forEach((button) => {
+      button.addEventListener('click', () => { state.period = button.dataset.period; pick('period-group', 'period', state.period); load(); });
+    });
+    document.querySelectorAll('#axis-group button').forEach((button) => {
+      button.addEventListener('click', () => { state.axis = button.dataset.axis; pick('axis-group', 'axis', state.axis); if (state.points.length) renderMain(); });
+    });
+    document.querySelectorAll('#start-date, #end-date').forEach((input) => input.addEventListener('change', load));
+  }
+
   window.addEventListener('resize', () => { chart.resize(); recentChart.resize(); });
-  setInterval(load, 300000);
+  window.setInterval(load, IS_LOCAL ? 60000 : 300000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
   load();
+  }
 </script>
 </body>
 </html>
