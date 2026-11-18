@@ -8,6 +8,7 @@
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    [hidden] { display: none !important; }
     html, body { margin: 0; background: #0a0f16; color: #dfe8f2; font: 12px/1.5 "PingFang SC", "Microsoft YaHei", sans-serif; }
     body { padding: 8px 8px calc(16px + env(safe-area-inset-bottom)); }
     body.embed { padding-top: 2px; }
@@ -19,7 +20,7 @@
     .title { font-size: 15px; font-weight: 600; }
     .title small { margin-left: 4px; color: #5b6c80; font-size: 10px; font-weight: 400; }
     .meta { margin-left: auto; color: #5b6c80; font-size: 10px; }
-    .bar { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+    .bar { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; margin-bottom: 6px; }
     .chips { display: flex; gap: 4px; }
     .chips button { padding: 3px 10px; border: 1px solid #22303f; border-radius: 6px; background: #111b26; color: #9fb0c2; font: 11px/1.4 inherit; }
     .chips button.selected { border-color: #3f6b58; background: #1d3a31; color: #d6efe2; }
@@ -57,18 +58,29 @@
   <div class="meta" id="meta">加载中…</div>
 </div>
 <div class="bar">
+  <div class="chips" id="modes">
+    <button type="button" data-mode="theme" class="selected">主题热力</button>
+    <button type="button" data-mode="rank">细分排名</button>
+  </div>
+  <button type="button" class="back" id="back">← 主题</button>
+  <span class="scope" id="scope"></span>
+</div>
+<div class="bar">
   <div class="chips" id="periods">
     <button type="button" data-size="5" class="selected">5分钟</button>
     <button type="button" data-size="30">30分钟</button>
     <button type="button" data-size="60">60分钟</button>
   </div>
-  <button type="button" class="back" id="back">← 主题</button>
-  <span class="scope" id="scope"></span>
+  <div class="chips" id="metrics" hidden>
+    <button type="button" data-metric="ratio" class="selected">净强度</button>
+    <button type="button" data-metric="index">指数涨幅</button>
+    <button type="button" data-metric="adr">涨跌比</button>
+  </div>
 </div>
 <div class="legend" id="legend"></div>
 <div class="heat-wrap" id="heat-wrap"><div id="heat"></div></div>
 <div class="hint" id="hint">09:30 为上一交易日收盘基线，开盘后按所选周期追加。</div>
-<div class="block-head"><span id="rank-title">最新净强度</span><span id="rank-meta">—</span></div>
+<div class="block-head" id="rank-block"><span id="rank-title">最新净强度</span><span id="rank-meta">—</span></div>
 <div class="rank" id="rank"></div>
 <p class="foot">净强度 =（多头 − 空头）/ 样本数；多头=追高+抄底，空头=离场+恐慌。点击主题可查看其细分。数据为采集时点快照，仅供研究。</p>
 <script>
@@ -92,6 +104,20 @@
       ['≤-10', '#155f42'], ['-10~-6', '#1f7a55'], ['-6~-3', '#2c9469'], ['-3~0', '#274a3f'],
       ['0', '#141d27'], ['0~3', '#4a2b33'], ['3~6', '#93404b'], ['6~10', '#c04a57'], ['≥10', '#f06372']
     ];
+    const RANK_LIMIT = 10;
+    const RANK_COLORS = ['#155f42', '#1f7a55', '#2c9469', '#274a3f', '#141d27',
+      '#4a2b33', '#93404b', '#c04a57', '#f06372'];
+    const RANK_METRICS = {
+      ratio: { label: '多空净强度', field: 1, unit: '%', bounds: [-10, -6, -3, 0, 0, 3, 6, 10],
+        legend: ['≤-10', '-10~-6', '-6~-3', '-3~0', '0', '0~3', '3~6', '6~10', '≥10'],
+        text: (value) => `${value > 0 ? '+' : ''}${Math.round(value)}` },
+      index: { label: '指数涨幅', field: 4, unit: '%', bounds: [-5, -3, -1, 0, 0, 1, 3, 5],
+        legend: ['≤-5%', '-5~-3', '-3~-1', '-1~0', '0', '0~1', '1~3', '3~5', '≥5%'],
+        text: (value) => `${value > 0 ? '+' : ''}${value.toFixed(1)}` },
+      adr: { label: '涨跌比', field: 5, unit: '', bounds: [0.33, 0.5, 0.8, 1, 1, 1.25, 2, 3],
+        legend: ['≤0.33', '0.33~0.5', '0.5~0.8', '0.8~1', '1', '1~1.25', '1.25~2', '2~3', '≥3'],
+        text: (value) => (value >= 10 ? value.toFixed(0) : value.toFixed(2)) }
+    };
     const local = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
     const num = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : null);
     function color(value) {
@@ -106,11 +132,27 @@
       if (value < 10) return '#c04a57';
       return '#f06372';
     }
-    document.getElementById('legend').innerHTML = SCALE
-      .map(([label, tint]) => `<span><i style="background:${tint}"></i>${label}</span>`).join('');
+    function rankColor(key, value) {
+      if (num(value) === null) return '#101822';
+      const bounds = RANK_METRICS[key].bounds;
+      for (let index = 0; index < bounds.length; index += 1) {
+        if (value < bounds[index]) return RANK_COLORS[index];
+        if (value === bounds[index]) return RANK_COLORS[index + 1];
+      }
+      return RANK_COLORS[RANK_COLORS.length - 1];
+    }
+    function paintLegend() {
+      const metric = state.mode === 'rank' ? RANK_METRICS[state.metric] : null;
+      const items = metric
+        ? metric.legend.map((label, index) => [label, RANK_COLORS[index]])
+        : SCALE;
+      document.getElementById('legend').innerHTML = items
+        .map(([label, tint]) => `<span><i style="background:${tint}"></i>${label}</span>`).join('');
+    }
 
     const chart = echarts.init(document.getElementById('heat'), null, { renderer: 'canvas' });
-    const state = { size: 5, theme: null, themes: null, segments: null, loading: false };
+    const state = { size: 5, mode: 'theme', metric: 'ratio', theme: null,
+                    themes: null, segments: null, loading: false };
     const CELL = { 5: 28, 30: 26, 60: 40 };
 
     function minutesOf(time) {
@@ -147,7 +189,7 @@
         keys.forEach((key, slot) => {
           const hit = map.get(key);
           if (!hit) return;
-          points.push([slot, hit.point[1], hit.point[2], hit.point[3], hit.point[4]]);
+          points.push([slot].concat(hit.point.slice(1)));
         });
         return { name: row.name, parent: row.parent, p: points };
       });
@@ -163,6 +205,7 @@
     }
 
     function render() {
+      if (state.mode === 'rank') { renderRankHeat(); return; }
       const view = scoped();
       if (!view || !view.rows.length || !view.times.length) return;
       const wrap = document.getElementById('heat-wrap');
@@ -273,11 +316,123 @@
       }
     }
 
+    function rankRows() {
+      if (!state.segments) return null;
+      const data = aggregate(state.segments, state.size);
+      const metric = RANK_METRICS[state.metric];
+      const rows = data.rows
+        .map((row) => ({ name: row.name, row, point: row.p.length ? row.p[row.p.length - 1] : null }))
+        .filter((item) => item.point && num(item.point[metric.field]) !== null);
+      rows.sort((a, b) => b.point[metric.field] - a.point[metric.field]);
+      const top = rows.slice(0, RANK_LIMIT);
+      const bottom = rows.length > RANK_LIMIT * 2 ? rows.slice(-RANK_LIMIT) : [];
+      const display = bottom.length
+        ? top.concat([{ sep: true, name: '', row: null, point: null }], bottom)
+        : top;
+      return { times: data.times, rows, display, top: top.length, bottom: bottom.length };
+    }
+
+    function renderRankHeat() {
+      const wrap = document.getElementById('heat-wrap');
+      const host = document.getElementById('heat');
+      const view = rankRows();
+      chart.off('click');
+      if (!view || !view.display.length || !view.times.length) {
+        chart.clear();
+        if (!state.segments) document.getElementById('meta').textContent = '加载中…';
+        return;
+      }
+      const metric = RANK_METRICS[state.metric];
+      const left = 96;
+      const cell = Math.max(20, CELL[state.size] - 6);
+      const avail = wrap.clientWidth - left - 12;
+      const step = Math.max(cell, avail / view.times.length);
+      const width = left + view.times.length * step + 12;
+      const atRight = wrap.scrollLeft + wrap.clientWidth >= wrap.scrollWidth - 90;
+      host.style.width = `${width}px`;
+      host.style.height = `${Math.max(200, view.display.length * 23 + 34)}px`;
+      chart.resize();
+      document.getElementById('meta').textContent =
+        `${state.segments.date} · ${state.segments.generated_at.slice(11, 16)}`;
+      document.getElementById('scope').textContent = `${view.rows.length} 个细分`;
+      document.getElementById('hint').textContent =
+        `09:30 为上一交易日收盘基线；按最新${metric.label}排序，展示前10与后10。`;
+      const cells = [];
+      view.display.forEach((item, y) => {
+        if (item.sep) return;
+        item.row.p.forEach((point) => {
+          const value = point[metric.field];
+          if (num(value) === null) return;
+          const strong = state.metric === 'ratio' ? Math.abs(value) >= 10
+            : state.metric === 'index' ? Math.abs(value) >= 5
+              : value >= 3 || value <= 0.33;
+          cells.push({ value: [point[0], y, value],
+            itemStyle: { color: rankColor(state.metric, value),
+              borderColor: strong ? '#e8f0f8' : '#0a0f16', borderWidth: strong ? 1.2 : 1 } });
+        });
+      });
+      chart.setOption({
+        animation: false,
+        grid: { left, right: 12, top: 8, bottom: 20 },
+        tooltip: {
+          backgroundColor: '#0b131c', borderColor: '#22303f', borderWidth: 1,
+          textStyle: { color: '#dfe8f2', fontSize: 11 },
+          formatter: (params) => {
+            const [slot, y] = params.value;
+            const item = view.display[y];
+            if (!item || item.sep) return '';
+            const point = item.row.p.find((cellPoint) => cellPoint[0] === slot);
+            if (!point) return '';
+            return `<b>${item.name}</b><br>${view.times[slot]}`
+              + `<br>${metric.label} ${metric.text(point[metric.field])}${metric.unit}`
+              + `<br>净强度 ${point[1] > 0 ? '+' : ''}${point[1]}%`
+              + `<br>多头 ${point[2]} · 空头 ${point[3]}`
+              + (num(point[4]) === null ? '' : `<br>等权指数 ${point[4] > 0 ? '+' : ''}${point[4]}%`)
+              + (num(point[5]) === null ? ''
+                : `<br>涨跌比 ${point[5]} : 1（${point[6]}↑ / ${point[7]}↓）`);
+          }
+        },
+        xAxis: {
+          type: 'category', data: view.times, boundaryGap: true,
+          axisLine: { lineStyle: { color: '#1b262f' } }, axisTick: { show: false },
+          axisLabel: { color: '#6f8095', fontSize: 8, interval: 0, hideOverlap: false,
+            formatter: (value, index) => (state.size === 5
+              ? (index === 0 || minutesOf(value) % 30 === 0 ? value : '')
+              : value) },
+          splitLine: { show: true,
+            interval: (index) => state.size === 5 && index > 0 && minutesOf(view.times[index]) % 30 === 0,
+            lineStyle: { color: '#1c2a38' } }
+        },
+        yAxis: {
+          type: 'category', data: view.display.map((item) => item.name), inverse: true,
+          axisLine: { show: false }, axisTick: { show: false },
+          axisLabel: { color: '#9fb0c2', fontSize: 9, width: left - 10, overflow: 'truncate',
+            formatter: (value, index) => (value ? `${index <= RANK_LIMIT ? index + 1 : index}. ${value}` : '') }
+        },
+        series: [{ type: 'heatmap', data: cells, animation: false,
+          label: { show: step >= 22, fontSize: 8, color: '#e9f1f9',
+            formatter: (params) => metric.text(params.value[2]) },
+          itemStyle: { borderColor: '#0a0f16', borderWidth: 1 },
+          emphasis: { itemStyle: { borderColor: '#dfe8f2', borderWidth: 1.4 } } }]
+      }, { notMerge: true });
+      if (atRight) requestAnimationFrame(() => { wrap.scrollLeft = wrap.scrollWidth; });
+    }
+
     function setScope() {
       const title = document.getElementById('title');
       const back = document.getElementById('back');
       const scope = document.getElementById('scope');
-      if (state.theme) {
+      const rankMode = state.mode === 'rank';
+      document.getElementById('metrics').hidden = !rankMode;
+      document.getElementById('rank-block').hidden = rankMode;
+      document.getElementById('rank').hidden = rankMode;
+      paintLegend();
+      if (rankMode) {
+        title.innerHTML = '细分排名<small>前10 / 后10</small>';
+        back.classList.remove('show');
+        document.getElementById('hint').textContent =
+          `09:30 为上一交易日收盘基线；按最新${RANK_METRICS[state.metric].label}排序，展示前10与后10。`;
+      } else if (state.theme) {
         title.innerHTML = `细分多空热力<small>${state.theme}</small>`;
         back.classList.add('show');
         scope.textContent = '';
@@ -322,7 +477,8 @@
         rows: rows.map((item) => ({
           name: item.row.name, parent: item.row.parent,
           p: item.points.map((point) => [position.get(point.time), point.point.ratio,
-            point.point.bull, point.point.bear, point.point.index])
+            point.point.bull, point.point.bear, point.point.index,
+            num(point.point.adr), num(point.point.up), num(point.point.down)])
         }))
       };
     }
@@ -353,9 +509,13 @@
 
     async function loadSegments() {
       try {
-        state.segments = await fetchJson(SEG_URL, '/api/v1/rotation/live?level=segment&bucket=5m');
+        const payload = await fetchJson(SEG_URL, '/api/v1/rotation/live?level=segment&bucket=5m');
+        if (!payload || !payload.rows || !payload.rows.length) return false;
+        state.segments = payload;
+        return true;
       } catch (error) {
-        document.getElementById('rank-meta').textContent = '细分数据读取失败';
+        document.getElementById('meta').textContent = '细分数据读取失败';
+        return false;
       }
     }
 
@@ -363,11 +523,13 @@
       if (state.loading) return;
       state.loading = true;
       try {
-        await loadThemes();
-        if (state.theme) {
+        if (state.mode === 'rank') {
           await loadSegments();
-          render();
+        } else {
+          await loadThemes();
+          if (state.theme) await loadSegments();
         }
+        render();
       } catch (error) {
         document.getElementById('meta').textContent = `读取失败：${error.message}`;
       } finally {
@@ -375,6 +537,29 @@
       }
     }
 
+    document.getElementById('modes').addEventListener('click', async (event) => {
+      const button = event.target.closest('button');
+      if (!button || button.dataset.mode === state.mode) return;
+      state.mode = button.dataset.mode;
+      document.querySelectorAll('#modes button').forEach((node) => {
+        node.classList.toggle('selected', node === button);
+      });
+      setScope();
+      if (state.mode === 'rank' && !state.segments) await loadSegments();
+      render();
+      const wrap = document.getElementById('heat-wrap');
+      requestAnimationFrame(() => { wrap.scrollLeft = wrap.scrollWidth; });
+    });
+    document.getElementById('metrics').addEventListener('click', (event) => {
+      const button = event.target.closest('button');
+      if (!button || button.dataset.metric === state.metric) return;
+      state.metric = button.dataset.metric;
+      document.querySelectorAll('#metrics button').forEach((node) => {
+        node.classList.toggle('selected', node === button);
+      });
+      setScope();
+      render();
+    });
     document.getElementById('periods').addEventListener('click', (event) => {
       const button = event.target.closest('button');
       if (!button) return;
@@ -391,7 +576,7 @@
     setScope();
     refresh();
     setInterval(refresh, 60000);
-    window.addEventListener('resize', () => { if (state.themes) render(); });
+    window.addEventListener('resize', () => { if (state.themes || state.segments) render(); });
   }
 </script>
 </body>
