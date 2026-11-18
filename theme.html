@@ -87,16 +87,6 @@
   if (new URLSearchParams(location.search).get('embed') === '1') document.body.classList.add('embed');
 </script>
 <script>
-  (function boot() {
-    const local = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
-    const script = document.createElement('script');
-    script.src = local ? '/echarts.min.js' : 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/echarts.min.js';
-    script.onload = () => main();
-    script.onerror = () => { document.getElementById('meta').textContent = '图表组件加载失败'; };
-    document.head.appendChild(script);
-  })();
-</script>
-<script>
   function main() {
     const THEME_URL = 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/theme5m.json';
     const SEG_URL = 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/seg5m.json';
@@ -578,6 +568,15 @@
     setInterval(refresh, 60000);
     window.addEventListener('resize', () => { if (state.themes || state.segments) render(); });
   }
+
+  (function boot() {
+    const local = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+    const script = document.createElement('script');
+    script.src = local ? '/echarts.min.js' : 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/echarts.min.js';
+    script.onload = () => main();
+    script.onerror = () => { document.getElementById('meta').textContent = '图表组件加载失败'; };
+    document.head.appendChild(script);
+  })();
 </script>
 </body>
 </html>
