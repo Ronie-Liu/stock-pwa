@@ -19,6 +19,13 @@
     .title { font-size: 15px; font-weight: 600; }
     .title small { margin-left: 4px; color: #5b6c80; font-size: 10px; font-weight: 400; }
     .meta { margin-left: auto; color: #5b6c80; font-size: 10px; }
+    .bar { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+    .chips { display: flex; gap: 4px; }
+    .chips button { padding: 3px 10px; border: 1px solid #22303f; border-radius: 6px; background: #111b26; color: #9fb0c2; font: 11px/1.4 inherit; }
+    .chips button.selected { border-color: #3f6b58; background: #1d3a31; color: #d6efe2; }
+    .back { display: none; padding: 3px 9px; border: 1px solid #2b4055; border-radius: 6px; background: #14212e; color: #cfe0ef; font: 11px/1.4 inherit; }
+    .back.show { display: inline-block; }
+    .scope { margin-left: auto; color: #8ba0b5; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .legend { display: flex; flex-wrap: wrap; gap: 6px 8px; margin-bottom: 6px; }
     .legend span { display: inline-flex; align-items: center; gap: 3px; color: #6f8095; font-size: 9px; }
     .legend i { width: 12px; height: 9px; border-radius: 2px; }
@@ -29,10 +36,13 @@
     .block-head span:last-child { color: #55677c; font-size: 10px; }
     .rank { display: flex; flex-direction: column; gap: 4px; }
     .row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid #16202c; border-radius: 6px; background: #0b131c; }
+    .row.tap { cursor: pointer; }
+    .row.tap:active { background: #12202c; }
     .row .name { flex: 1 1 auto; min-width: 0; color: #cfdcea; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .row .arrow { flex: 0 0 auto; color: #4f6075; font-size: 11px; }
     .row .bar { flex: 0 0 46px; height: 6px; border-radius: 3px; background: #17222e; overflow: hidden; position: relative; }
     .row .bar i { position: absolute; top: 0; bottom: 0; }
-    .row .val { flex: 0 0 58px; text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; }
+    .row .val { flex: 0 0 52px; text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; }
     .row .sub { flex: 0 0 74px; text-align: right; color: #6f8095; font-size: 10px; font-variant-numeric: tabular-nums; }
     .foot { margin: 12px 2px 0; color: #42536a; font-size: 10px; line-height: 1.6; }
   </style>
@@ -43,15 +53,24 @@
   <a href="./theme.html" class="active">主题热力</a>
 </div>
 <div class="head">
-  <div class="title">主题多空热力<small>5 分钟 · 当日</small></div>
+  <div class="title" id="title">主题多空热力<small>当日</small></div>
   <div class="meta" id="meta">加载中…</div>
+</div>
+<div class="bar">
+  <div class="chips" id="periods">
+    <button type="button" data-size="5" class="selected">5分钟</button>
+    <button type="button" data-size="30">30分钟</button>
+    <button type="button" data-size="60">60分钟</button>
+  </div>
+  <button type="button" class="back" id="back">← 主题</button>
+  <span class="scope" id="scope"></span>
 </div>
 <div class="legend" id="legend"></div>
 <div class="heat-wrap" id="heat-wrap"><div id="heat"></div></div>
-<div class="hint" id="hint">09:30 为上一交易日收盘基线，开盘后每 5 分钟追加。</div>
-<div class="block-head"><span>最新净强度</span><span id="rank-meta">—</span></div>
+<div class="hint" id="hint">09:30 为上一交易日收盘基线，开盘后按所选周期追加。</div>
+<div class="block-head"><span id="rank-title">最新净强度</span><span id="rank-meta">—</span></div>
 <div class="rank" id="rank"></div>
-<p class="foot">净强度 =（多头 − 空头）/ 样本数；多头=追高+抄底，空头=离场+恐慌。数据为采集时点快照，仅供研究。</p>
+<p class="foot">净强度 =（多头 − 空头）/ 样本数；多头=追高+抄底，空头=离场+恐慌。点击主题可查看其细分。数据为采集时点快照，仅供研究。</p>
 <script>
   if (new URLSearchParams(location.search).get('embed') === '1') document.body.classList.add('embed');
 </script>
@@ -67,11 +86,13 @@
 </script>
 <script>
   function main() {
-    const DATA_URL = 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/theme5m.json';
+    const THEME_URL = 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/theme5m.json';
+    const SEG_URL = 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/seg5m.json';
     const SCALE = [
       ['≤-10', '#155f42'], ['-10~-6', '#1f7a55'], ['-6~-3', '#2c9469'], ['-3~0', '#274a3f'],
       ['0', '#141d27'], ['0~3', '#4a2b33'], ['3~6', '#93404b'], ['6~10', '#c04a57'], ['≥10', '#f06372']
     ];
+    const local = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
     const num = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : null);
     function color(value) {
       if (num(value) === null) return '#101822';
@@ -89,143 +110,288 @@
       .map(([label, tint]) => `<span><i style="background:${tint}"></i>${label}</span>`).join('');
 
     const chart = echarts.init(document.getElementById('heat'), null, { renderer: 'canvas' });
-    let state = { payload: null, rendered: '' };
+    const state = { size: 5, theme: null, themes: null, segments: null, loading: false };
+    const CELL = { 5: 28, 30: 36, 60: 48 };
 
-    function render(payload) {
-      const times = payload.times || [];
-      const rows = payload.rows || [];
+    function minutesOf(time) {
+      const [hour, minute] = time.split(':').map(Number);
+      return hour * 60 + minute;
+    }
+
+    function bucketKey(minute, size) {
+      if (size === 5) return minute;
+      if (minute >= 570 && minute <= 690) return 570 + Math.ceil((minute - 570) / size) * size;
+      if (minute >= 780 && minute <= 900) return 780 + Math.ceil((minute - 780) / size) * size;
+      return null;
+    }
+
+    function aggregate(data, size) {
+      if (size === 5) return data;
+      const labels = new Map();
+      const buckets = data.rows.map((row) => {
+        const map = new Map();
+        row.p.forEach((point) => {
+          const time = data.times[point[0]];
+          const key = bucketKey(minutesOf(time), size);
+          if (key === null) return;
+          map.set(key, { time, point });
+          if (!labels.has(key) || time > labels.get(key)) labels.set(key, time);
+        });
+        return map;
+      });
+      const keys = [...labels.keys()].sort((a, b) => a - b);
+      const times = keys.map((key) => labels.get(key));
+      const rows = data.rows.map((row, index) => {
+        const map = buckets[index];
+        const points = [];
+        keys.forEach((key, slot) => {
+          const hit = map.get(key);
+          if (!hit) return;
+          points.push([slot, hit.point[1], hit.point[2], hit.point[3], hit.point[4]]);
+        });
+        return { name: row.name, parent: row.parent, p: points };
+      });
+      return { times, rows };
+    }
+
+    function scoped() {
+      const data = state.theme ? state.segments : state.themes;
+      if (!data) return null;
+      const view = aggregate(data, state.size);
+      if (!state.theme) return view;
+      return { times: view.times, rows: view.rows.filter((row) => row.parent === state.theme) };
+    }
+
+    function render() {
+      const view = scoped();
+      if (!view || !view.rows.length || !view.times.length) return;
       const wrap = document.getElementById('heat-wrap');
       const host = document.getElementById('heat');
-      const left = 88;
-      const cell = Math.max(14, Math.min(22, (window.innerWidth - left - 24) / Math.max(12, times.length)));
-      const width = left + times.length * cell + 14;
+      const left = state.theme ? 94 : 84;
+      const cell = CELL[state.size];
+      const avail = wrap.clientWidth - left - 12;
+      const step = view.times.length ? Math.max(cell, avail / view.times.length) : cell;
+      const width = left + view.times.length * step + 12;
+      const atRight = wrap.scrollLeft + wrap.clientWidth >= wrap.scrollWidth - 90;
       host.style.width = `${width}px`;
-      host.style.height = `${Math.max(220, rows.length * 24 + 40)}px`;
+      host.style.height = `${Math.max(200, view.rows.length * 24 + 34)}px`;
       chart.resize();
       const cells = [];
-      rows.forEach((row, y) => {
-        const map = new Map(row.points.map((point) => [point.time, point]));
-        times.forEach((time, x) => {
-          const point = map.get(time);
-          if (!point) return;
-          const strong = Math.abs(point.ratio) >= 10;
+      view.rows.forEach((row, y) => {
+        row.p.forEach((point) => {
+          const [slot, ratio] = point;
+          const strong = Math.abs(ratio) >= 10;
           cells.push({
-            value: [x, y, point.ratio, point],
+            value: [slot, y, ratio, point],
             itemStyle: {
-              color: color(point.ratio),
+              color: color(ratio),
               borderColor: strong ? '#e8f0f8' : '#0a0f16',
-              borderWidth: strong ? 1 : 1
+              borderWidth: 1
             }
           });
         });
       });
       chart.setOption({
         animation: false,
-        grid: { left, right: 14, top: 8, bottom: 20 },
+        grid: { left, right: 12, top: 8, bottom: 20 },
         tooltip: {
           backgroundColor: '#0b131c', borderColor: '#22303f', borderWidth: 1,
           textStyle: { color: '#dfe8f2', fontSize: 11 },
           formatter: (params) => {
             const point = params.value[3];
-            const row = rows[params.value[1]];
-            const ratio = point.ratio > 0 ? `+${point.ratio}%` : `${point.ratio}%`;
-            return `<b>${row.name}</b><br>${point.time}${point.seed ? '（昨收）' : ''}`
+            const row = view.rows[params.value[1]];
+            const ratio = point[1] > 0 ? `+${point[1]}%` : `${point[1]}%`;
+            return `<b>${row.name}</b><br>${view.times[point[0]]}`
               + `<br>净强度 ${ratio}`
-              + `<br>多头 ${point.bull} · 空头 ${point.bear} · 样本 ${point.total}`
-              + (num(point.index) === null ? '' : `<br>等权指数 ${point.index > 0 ? '+' : ''}${point.index}%`);
+              + `<br>多头 ${point[2]} · 空头 ${point[3]}`
+              + (num(point[4]) === null ? '' : `<br>等权指数 ${point[4] > 0 ? '+' : ''}${point[4]}%`);
           }
         },
         xAxis: {
-          type: 'category', data: times, boundaryGap: true,
+          type: 'category', data: view.times, boundaryGap: true,
           axisLine: { lineStyle: { color: '#1b262f' } }, axisTick: { show: false },
-          axisLabel: { color: '#6f8095', fontSize: 8, interval: (index) => index === 0 || index % 6 === 0 },
-          splitLine: { show: true, interval: (index) => index > 0 && index % 6 === 0, lineStyle: { color: '#1c2a38' } }
+          axisLabel: { color: '#6f8095', fontSize: 8, interval: 0, hideOverlap: false,
+            formatter: (value, index) => (state.size === 5
+              ? (index === 0 || minutesOf(value) % 30 === 0 ? value : '')
+              : value) },
+          splitLine: { show: true,
+            interval: (index) => state.size === 5 && index > 0 && minutesOf(view.times[index]) % 30 === 0,
+            lineStyle: { color: '#1c2a38' } }
         },
         yAxis: {
-          type: 'category', data: rows.map((row) => row.name), inverse: true,
+          type: 'category', data: view.rows.map((row) => row.name), inverse: true,
+          triggerEvent: true,
           axisLine: { show: false }, axisTick: { show: false },
           axisLabel: { color: '#9fb0c2', fontSize: 9, width: left - 10, overflow: 'truncate' }
         },
         series: [{ type: 'heatmap', data: cells, animation: false,
+          label: { show: true, fontSize: 10, color: '#eef5fb',
+            formatter: (params) => {
+              const value = Math.round(params.value[2]);
+              return value > 0 ? `+${value}` : `${value}`;
+            } },
           itemStyle: { borderColor: '#0a0f16', borderWidth: 1 },
-          emphasis: { itemStyle: { borderColor: '#dfe8f2', borderWidth: 1.4 } } }]
+          emphasis: { itemStyle: { borderColor: '#dfe8f2', borderWidth: 1.5 } } }]
+      }, { notMerge: true });
+      chart.off('click');
+      chart.on('click', (params) => {
+        let row = null;
+        if (params.componentType === 'yAxis') row = view.rows.find((item) => item.name === params.value);
+        else if (Array.isArray(params.value)) row = view.rows[params.value[1]];
+        if (row && !state.theme) open(row.name);
       });
-      requestAnimationFrame(() => { wrap.scrollLeft = wrap.scrollWidth; });
-      renderRank(payload);
+      if (atRight) requestAnimationFrame(() => { wrap.scrollLeft = wrap.scrollWidth; });
+      renderRank(view);
     }
 
-    function renderRank(payload) {
-      const rows = (payload.rows || []).slice().sort((a, b) => {
-        const av = a.latest ? a.latest.ratio : 0;
-        const bv = b.latest ? b.latest.ratio : 0;
-        return bv - av;
-      });
-      const peak = Math.max(10, ...rows.map((row) => (row.latest ? Math.abs(row.latest.ratio) : 0)));
-      document.getElementById('rank-meta').textContent = payload.times.length > 1
-        ? `${payload.times[payload.times.length - 1]} 更新` : '等待开盘后追加';
+    function renderRank(view) {
+      const rows = view.rows.map((row) => {
+        const point = row.p[row.p.length - 1];
+        return { name: row.name, ratio: point ? point[1] : 0, bull: point ? point[2] : 0,
+                 bear: point ? point[3] : 0, index: point ? point[4] : null };
+      }).sort((a, b) => b.ratio - a.ratio);
+      const peak = Math.max(10, ...rows.map((row) => Math.abs(row.ratio)));
+      document.getElementById('rank-title').textContent = state.theme ? `细分净强度 · ${state.theme}` : '最新净强度';
+      document.getElementById('rank-meta').textContent = view.times.length > 1
+        ? `${view.times[view.times.length - 1]} 更新` : '等待开盘后追加';
       document.getElementById('rank').innerHTML = rows.map((row) => {
-        const point = row.latest || {};
-        const ratio = num(point.ratio) === null ? 0 : point.ratio;
-        const width = Math.min(100, Math.abs(ratio) / peak * 100);
-        const sign = ratio >= 0 ? 1 : -1;
-        const bar = `<i style="width:${width}%;${sign > 0 ? `left:50%` : `right:50%`};background:${ratio >= 0 ? '#d8525f' : '#2f9c7a'}"></i>`;
-        return `<div class="row"><span class="name">${row.name}</span>`
+        const width = Math.min(100, Math.abs(row.ratio) / peak * 100);
+        const tint = row.ratio >= 0 ? '#d8525f' : '#2f9c7a';
+        const bar = `<i style="width:${width}%;${row.ratio >= 0 ? 'left:50%' : 'right:50%'};background:${tint}"></i>`;
+        const arrow = state.theme ? '' : '<span class="arrow">›</span>';
+        return `<div class="row${state.theme ? '' : ' tap'}" data-name="${row.name}">`
+          + `<span class="name">${row.name}</span>`
           + `<span class="bar"><i style="width:1px;left:50%;top:-2px;bottom:-2px;background:#2b3947"></i>${bar}</span>`
-          + `<span class="val" style="color:${ratio >= 0 ? '#ef8a94' : '#5fc6a4'}">${ratio > 0 ? '+' : ''}${ratio.toFixed(1)}%</span>`
-          + `<span class="sub">${point.bull || 0}/${point.bear || 0} · ${num(point.index) === null ? '—' : `${point.index > 0 ? '+' : ''}${point.index}%`}</span></div>`;
+          + `<span class="val" style="color:${row.ratio >= 0 ? '#ef8a94' : '#5fc6a4'}">${row.ratio > 0 ? '+' : ''}${row.ratio.toFixed(1)}%</span>`
+          + `<span class="sub">${row.bull}/${row.bear} · ${num(row.index) === null ? '—' : `${row.index > 0 ? '+' : ''}${row.index}%`}</span>`
+          + arrow + '</div>';
       }).join('');
+      if (!state.theme) {
+        document.querySelectorAll('#rank .row').forEach((node) => {
+          node.addEventListener('click', () => open(node.dataset.name));
+        });
+      }
     }
 
-    function normalize(board) {
+    function setScope() {
+      const title = document.getElementById('title');
+      const back = document.getElementById('back');
+      const scope = document.getElementById('scope');
+      if (state.theme) {
+        title.innerHTML = `细分多空热力<small>${state.theme}</small>`;
+        back.classList.add('show');
+        scope.textContent = '';
+      } else {
+        title.innerHTML = '主题多空热力<small>当日</small>';
+        back.classList.remove('show');
+        scope.textContent = '';
+      }
+    }
+
+    async function open(name) {
+      state.theme = name;
+      setScope();
+      render();
+      if (!state.segments) await loadSegments();
+      render();
+      document.getElementById('heat-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function close() {
+      state.theme = null;
+      setScope();
+      render();
+    }
+
+    function normalizeLegacy(board) {
       const rows = (board.rows || []).map((row) => {
         const points = (row.points || []).map((point) => {
           const time = point.time;
-          return Object.assign({}, point, { time: time.length > 10 ? time.slice(11, 16) : time });
+          return { time: time.length > 10 ? time.slice(11, 16) : time, point };
         });
-        return Object.assign({}, row, { points, latest: points[points.length - 1] || null });
+        return { row, points };
       });
       const times = [];
-      rows.forEach((row) => row.points.forEach((point) => {
+      rows.forEach((item) => item.points.forEach((point) => {
         if (times.indexOf(point.time) < 0) times.push(point.time);
       }));
-      return Object.assign({}, board, { rows, times: times.sort() });
+      times.sort();
+      const position = new Map(times.map((time, index) => [time, index]));
+      return {
+        date: board.date, generated_at: board.generated_at, times,
+        rows: rows.map((item) => ({
+          name: item.row.name, parent: item.row.parent,
+          p: item.points.map((point) => [position.get(point.time), point.point.ratio,
+            point.point.bull, point.point.bear, point.point.index])
+        }))
+      };
     }
 
-    async function fetchData() {
+    async function fetchJson(url, fallback) {
       try {
-        const response = await fetch(DATA_URL + '?t=' + Date.now(), { cache: 'no-store' });
+        const response = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return await response.json();
       } catch (error) {
-        const local = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
         if (!local) throw error;
-        const response = await fetch('/api/v1/rotation/live?level=theme&bucket=5m', { cache: 'no-store' });
+        const response = await fetch(fallback, { cache: 'no-store' });
         if (!response.ok) throw error;
-        return normalize(await response.json());
+        return normalizeLegacy(await response.json());
       }
     }
 
-    async function load() {
+    async function loadThemes() {
+      const payload = await fetchJson(THEME_URL, '/api/v1/rotation/live?level=theme&bucket=5m');
+      if (!payload || !payload.rows || !payload.rows.length) return;
+      state.themes = payload;
+      document.getElementById('meta').textContent = `${payload.date} · ${payload.generated_at.slice(11, 16)}`;
+      document.getElementById('hint').textContent = payload.times.length > 1
+        ? `已采集 ${payload.times.length} 个 5 分钟时点（09:30 为上一交易日收盘基线）`
+        : '09:30 为上一交易日收盘基线，开盘后自动追加。';
+      render();
+    }
+
+    async function loadSegments() {
       try {
-        const payload = await fetchData();
-        if (!payload || !payload.rows || !payload.rows.length) {
-          document.getElementById('meta').textContent = '暂无数据';
-          return;
+        state.segments = await fetchJson(SEG_URL, '/api/v1/rotation/live?level=segment&bucket=5m');
+      } catch (error) {
+        document.getElementById('rank-meta').textContent = '细分数据读取失败';
+      }
+    }
+
+    async function refresh() {
+      if (state.loading) return;
+      state.loading = true;
+      try {
+        await loadThemes();
+        if (state.theme) {
+          await loadSegments();
+          render();
         }
-        state.payload = payload;
-        document.getElementById('meta').textContent = `${payload.date} · ${payload.generated_at.slice(11, 16)}`;
-        document.getElementById('hint').textContent = payload.times.length > 1
-          ? `已采集 ${payload.times.length} 个时点（09:30 为上一交易日收盘基线）`
-          : '09:30 为上一交易日收盘基线，开盘后每 5 分钟追加。';
-        render(payload);
       } catch (error) {
         document.getElementById('meta').textContent = `读取失败：${error.message}`;
+      } finally {
+        state.loading = false;
       }
     }
 
-    load();
-    setInterval(load, 60000);
-    window.addEventListener('resize', () => { if (state.payload) render(state.payload); });
+    document.getElementById('periods').addEventListener('click', (event) => {
+      const button = event.target.closest('button');
+      if (!button) return;
+      state.size = Number(button.dataset.size);
+      document.querySelectorAll('#periods button').forEach((node) => {
+        node.classList.toggle('selected', node === button);
+      });
+      render();
+      const wrap = document.getElementById('heat-wrap');
+      requestAnimationFrame(() => { wrap.scrollLeft = wrap.scrollWidth; });
+    });
+    document.getElementById('back').addEventListener('click', close);
+
+    setScope();
+    refresh();
+    setInterval(refresh, 60000);
+    window.addEventListener('resize', () => { if (state.themes) render(); });
   }
 </script>
 </body>
