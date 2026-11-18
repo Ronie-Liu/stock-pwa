@@ -111,7 +111,7 @@
 
     const chart = echarts.init(document.getElementById('heat'), null, { renderer: 'canvas' });
     const state = { size: 5, theme: null, themes: null, segments: null, loading: false };
-    const CELL = { 5: 28, 30: 36, 60: 48 };
+    const CELL = { 5: 28, 30: 26, 60: 40 };
 
     function minutesOf(time) {
       const [hour, minute] = time.split(':').map(Number);
