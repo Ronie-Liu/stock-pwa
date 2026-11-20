@@ -82,6 +82,7 @@
       <span><i style="background:#ff922b"></i>强势延续</span>
       <span><i style="background:#ffd43b"></i>弱势修复</span>
       <span><i style="background:#b06aff"></i>两极分化</span>
+      <span><i style="background:#a9e34b"></i>强势抗跌</span>
       <span><i style="background:#8d99ae"></i>窄幅整理</span>
       <span><i style="background:#4dabf7"></i>高低切换</span>
       <span><i style="background:#69db7c"></i>温和退潮</span>
@@ -212,7 +213,7 @@
 
   /* 矩阵定性：先看两组是否全面同向，再看结构（强弱差），最后看整体基调。
      ① 两组同时 ≥+1% → 全面反弹；同时 ≤-1% → 全面走弱（弱势只是跌得更多，仍属全面走弱）；
-     ② 否则看强弱差 D=强-弱：D≥0.8 时弱势不跌→强势延续、弱势下跌→两极分化；
+     ② 否则看强弱差 D=强-弱：D≥0.8 时弱势不跌→强势延续、弱势下跌且强势真走强(≥+0.4%)→两极分化、强势仅在走平带内→强势抗跌；
         D≤-0.8 时强势不跌→弱势修复、强势下跌且弱势红盘→高低切换、双双下跌→强势补跌；
      ③ |D|<0.8 结构不明显，按整体基调 L=(强+弱)/2：≥0.4 全面反弹，±0.4 内窄幅整理，-1~-0.4 温和退潮，≤-1 全面走弱。 */
   const ND_FULL = 1;
@@ -224,6 +225,7 @@
     { name: '强势延续', color: '#ff922b' },
     { name: '弱势修复', color: '#ffd43b' },
     { name: '两极分化', color: '#b06aff' },
+    { name: '强势抗跌', color: '#a9e34b' },
     { name: '窄幅整理', color: '#8d99ae' },
     { name: '高低切换', color: '#4dabf7' },
     { name: '温和退潮', color: '#69db7c' },
@@ -238,7 +240,10 @@
     if (up <= -ND_FULL && down <= -ND_FULL) return ND_INDEX['全面走弱'];
     const diff = up - down;
     const base = (up + down) / 2;
-    if (diff >= ND_DIFF) return ND_INDEX[down >= 0 ? '强势延续' : '两极分化'];
+    if (diff >= ND_DIFF) {
+      if (down >= 0) return ND_INDEX['强势延续'];
+      return ND_INDEX[up >= ND_FLAT ? '两极分化' : '强势抗跌'];
+    }
     if (diff <= -ND_DIFF) {
       if (up >= 0) return ND_INDEX['弱势修复'];
       return ND_INDEX[down > 0 ? '高低切换' : '强势补跌'];
