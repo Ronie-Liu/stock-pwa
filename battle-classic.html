@@ -27,7 +27,7 @@
     .recent-wrap { flex: 0 0 26%; min-height: 96px; display: flex; flex-direction: column; padding-bottom: 2px; border-bottom: 1px solid #17212d; margin-bottom: 2px; }
     #recent-chart { flex: 1 1 auto; min-height: 0; }
     #chart { flex: 1 1 auto; min-height: 0; }
-    .nextday-wrap { flex: 0 0 24%; min-height: 100px; display: flex; flex-direction: column; border-top: 1px solid #17212d; margin-top: 2px; padding-top: 2px; }
+    .nextday-wrap { flex: 0 0 24%; min-height: 104px; display: flex; flex-direction: column; border-top: 1px solid #17212d; margin-top: 6px; padding-top: 3px; }
     #nextday-chart { flex: 1 1 auto; min-height: 0; }
     .legend { display: flex; gap: 12px; font-size: 11px; color: #8b9caf; margin: 4px 0 2px; }
     .legend i { display: inline-block; width: 12px; height: 2px; margin-right: 5px; vertical-align: middle; }
@@ -225,7 +225,7 @@
       },
       yAxis: {
         type: 'value', scale: true, splitNumber: 2,
-        axisLabel: { color: '#6f8095', fontSize: 9, formatter: (v) => `${v}%` },
+        axisLabel: { color: '#6f8095', fontSize: 9, formatter: (v) => `${v.toFixed(0)}%` },
         splitLine: { lineStyle: { color: '#1c2632', type: 'dashed' } }
       },
       series: [
@@ -243,7 +243,10 @@
       if (!response.ok) return;
       const payload = await response.json();
       state.nextday = (payload.rows || []).filter((row) => row && typeof row.date === 'string');
-      if (state.nextday.length) renderNextday();
+      if (state.nextday.length) {
+        renderNextday();
+        requestAnimationFrame(() => { chart.resize(); recentChart.resize(); nextdayChart.resize(); });
+      }
     } catch (error) {
       /* 取不到保留原图 */
     }
@@ -260,6 +263,7 @@
     document.getElementById('recent-meta').textContent = state.recent.length ? `${days} 个交易日 · ${state.recent.length} 点` : '暂无数据';
     if (state.points.length) renderMain();
     if (state.recent.length) renderRecent();
+    requestAnimationFrame(() => { chart.resize(); recentChart.resize(); });
   }
 
   function today() {
