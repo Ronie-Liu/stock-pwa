@@ -210,10 +210,12 @@
     }, { notMerge: true });
   }
 
-  /* 矩阵定性：先看强弱差 D=强-弱（决定结构），再看整体基调 L=(强+弱)/2（决定方向）。
-     D≥0.8 强势占优：弱势不跌→强势延续，弱势下跌→两极分化；
-     D≤-0.8 弱势占优：强势不跌→弱势修复，强势下跌且弱势红盘→高低切换，双双下跌→强势补跌；
-     |D|<0.8 结构不明显，按 L 分：≥0.4 全面反弹，±0.4 内窄幅整理，-1~-0.4 温和退潮，≤-1 全面走弱。 */
+  /* 矩阵定性：先看两组是否全面同向，再看结构（强弱差），最后看整体基调。
+     ① 两组同时 ≥+1% → 全面反弹；同时 ≤-1% → 全面走弱（弱势只是跌得更多，仍属全面走弱）；
+     ② 否则看强弱差 D=强-弱：D≥0.8 时弱势不跌→强势延续、弱势下跌→两极分化；
+        D≤-0.8 时强势不跌→弱势修复、强势下跌且弱势红盘→高低切换、双双下跌→强势补跌；
+     ③ |D|<0.8 结构不明显，按整体基调 L=(强+弱)/2：≥0.4 全面反弹，±0.4 内窄幅整理，-1~-0.4 温和退潮，≤-1 全面走弱。 */
+  const ND_FULL = 1;
   const ND_DIFF = 0.8;
   const ND_FLAT = 0.4;
   const ND_DEEP = -1;
@@ -232,6 +234,8 @@
 
   function ndClass(up, down) {
     if (!Number.isFinite(up) || !Number.isFinite(down)) return null;
+    if (up >= ND_FULL && down >= ND_FULL) return ND_INDEX['全面反弹'];
+    if (up <= -ND_FULL && down <= -ND_FULL) return ND_INDEX['全面走弱'];
     const diff = up - down;
     const base = (up + down) / 2;
     if (diff >= ND_DIFF) return ND_INDEX[down >= 0 ? '强势延续' : '两极分化'];
