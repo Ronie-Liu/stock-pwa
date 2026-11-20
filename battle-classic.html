@@ -24,9 +24,11 @@
     .block-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 2px 2px 0; }
     .block-title { color: #9db3c8; font-size: 11px; letter-spacing: .3px; }
     .block-meta { color: #5b6c80; font-size: 10px; }
-    .recent-wrap { flex: 0 0 30%; min-height: 100px; display: flex; flex-direction: column; padding-bottom: 2px; border-bottom: 1px solid #17212d; margin-bottom: 2px; }
+    .recent-wrap { flex: 0 0 26%; min-height: 96px; display: flex; flex-direction: column; padding-bottom: 2px; border-bottom: 1px solid #17212d; margin-bottom: 2px; }
     #recent-chart { flex: 1 1 auto; min-height: 0; }
     #chart { flex: 1 1 auto; min-height: 0; }
+    .nextday-wrap { flex: 0 0 24%; min-height: 100px; display: flex; flex-direction: column; border-top: 1px solid #17212d; margin-top: 2px; padding-top: 2px; }
+    #nextday-chart { flex: 1 1 auto; min-height: 0; }
     .legend { display: flex; gap: 12px; font-size: 11px; color: #8b9caf; margin: 4px 0 2px; }
     .legend i { display: inline-block; width: 12px; height: 2px; margin-right: 5px; vertical-align: middle; }
     .foot { color: #5b6c80; font-size: 10px; margin: 2px 0 0; }
@@ -66,6 +68,11 @@
   <div class="block-head"><span class="block-title" id="main-title">今日 5 分钟 · 多空与阻力支撑</span><span class="block-meta" id="points-count">—</span></div>
   <div class="legend"><span><i style="background:#ef6b78"></i>多头</span><span><i style="background:#3fc39b"></i>空头</span><span><i style="background:#8d99a8;height:1px"></i>指数</span><span><i style="background:#e3a25c"></i>阻力</span><span><i style="background:#6ba6f2"></i>支撑</span></div>
   <div id="chart"></div>
+  <div class="nextday-wrap">
+    <div class="block-head"><span class="block-title">昨日 - 今日表现 · 次日中位数</span><span class="block-meta" id="nextday-meta">—</span></div>
+    <div class="legend"><span><i style="background:#ef6b78"></i>昨日涨≥2% 今日</span><span><i style="background:#3fc39b"></i>昨日跌≤-2% 今日</span></div>
+    <div id="nextday-chart"></div>
+  </div>
   <p class="foot">数据每 5 分钟更新；盘中为采集时点快照，仅供研究。</p>
 </div>
 <script>
@@ -82,6 +89,7 @@
   function main() {
   if (!window.echarts) { document.getElementById('meta').textContent = '图表组件不可用'; return; }
   const DATA_URL = 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/today.json';
+  const NEXTDAY_URL = 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/nextday.json';
   const IS_LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
   if (new URLSearchParams(location.search).get('embed') === '1') document.body.classList.add('embed');
   if (IS_LOCAL) document.body.classList.add('local');
@@ -92,7 +100,8 @@
   const clock = new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit', hour12: false });
   const chart = echarts.init(document.getElementById('chart'), null, { renderer: 'canvas' });
   const recentChart = echarts.init(document.getElementById('recent-chart'), null, { renderer: 'canvas' });
-  const state = { period: '1d', axis: 'log', points: [], recent: [], range: { start: '2026-01-01', end: '' } };
+  const nextdayChart = echarts.init(document.getElementById('nextday-chart'), null, { renderer: 'canvas' });
+  const state = { period: '1d', axis: 'log', points: [], recent: [], nextday: [], range: { start: '2026-01-01', end: '' } };
 
   const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? fmt.format(v) : '—');
   const mainLabel = (time) => (time.length <= 10 ? time.slice(5) : time.slice(11));
@@ -179,6 +188,67 @@
     }, { notMerge: true });
   }
 
+  function verdict(row) {
+    const up = row.up_ret;
+    const down = row.dn_ret;
+    const strong = up > 0 ? '继续走强' : '补跌';
+    const weak = down > 0 ? '修复' : '继续走弱';
+    const tone = up > 0 && down > 0 ? '全面走强'
+      : up > 0 ? '两极分化'
+        : down > 0 ? '高低切换' : '全面走弱';
+    return `${strong} + ${weak} · ${tone}`;
+  }
+
+  function renderNextday() {
+    const rows = state.nextday;
+    if (!rows.length) return;
+    const last = rows[rows.length - 1];
+    document.getElementById('nextday-meta').textContent = `${last.date.slice(5)} ${verdict(last)}`;
+    nextdayChart.setOption({
+      backgroundColor: 'transparent', animation: false,
+      tooltip: {
+        trigger: 'axis', confine: true, backgroundColor: '#101a25f2', borderColor: '#2c3d50',
+        padding: [8, 11], textStyle: { color: '#dfe8f2', fontSize: 11 },
+        formatter: (params) => {
+          const list = Array.isArray(params) ? params : [params];
+          const row = rows[list[0] && list[0].dataIndex];
+          if (!row) return '';
+          const line = (name, value) => `<div class="tip-row"><span>${name}</span><b>${value}</b></div>`;
+          return `<div class="tip"><div class="tip-title">${row.date}</div>${line('昨日涨≥2%', `${num(row.up_ret)}%（${row.up_n} 只）`)}${line('昨日跌≤-2%', `${num(row.dn_ret)}%（${row.dn_n} 只）`)}${line('判定', verdict(row))}</div>`;
+        }
+      },
+      grid: { left: 40, right: 46, top: 8, bottom: 18 },
+      xAxis: {
+        type: 'category', data: rows.map((row) => row.date.slice(5)), boundaryGap: false,
+        axisLine: { lineStyle: { color: '#26313f' } }, axisTick: { show: false },
+        axisLabel: { color: '#6f8095', fontSize: 9, hideOverlap: true, formatter: (v, i) => (i % 10 === 0 ? v : '') }
+      },
+      yAxis: {
+        type: 'value', scale: true, splitNumber: 2,
+        axisLabel: { color: '#6f8095', fontSize: 9, formatter: (v) => `${v}%` },
+        splitLine: { lineStyle: { color: '#1c2632', type: 'dashed' } }
+      },
+      series: [
+        { name: '昨日涨≥2%', type: 'line', data: rows.map((row) => row.up_ret), showSymbol: false, connectNulls: true, lineStyle: { width: 1.4, color: COLORS.bull }, itemStyle: { color: COLORS.bull }, animation: false },
+        { name: '昨日跌≤-2%', type: 'line', data: rows.map((row) => row.dn_ret), showSymbol: false, connectNulls: true, lineStyle: { width: 1.4, color: COLORS.bear }, itemStyle: { color: COLORS.bear }, animation: false },
+        { type: 'line', data: [], animation: false, markLine: { silent: true, symbol: 'none', label: { show: false }, lineStyle: { color: '#3a4a5c', type: 'dashed' }, data: [{ yAxis: 0 }] } }
+      ]
+    }, { notMerge: true });
+  }
+
+  async function loadNextday() {
+    try {
+      const url = IS_LOCAL ? '/api/v1/nextday?days=60' : NEXTDAY_URL;
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) return;
+      const payload = await response.json();
+      state.nextday = (payload.rows || []).filter((row) => row && typeof row.date === 'string');
+      if (state.nextday.length) renderNextday();
+    } catch (error) {
+      /* 取不到保留原图 */
+    }
+  }
+
   function apply(payload) {
     state.points = (Array.isArray(payload.points) ? payload.points : []).filter((p) => p && typeof p.time === 'string');
     state.recent = (Array.isArray(payload.recent60) ? payload.recent60 : Array.isArray(payload.recent) ? payload.recent : []).filter((p) => p && typeof p.time === 'string');
@@ -252,10 +322,11 @@
     document.querySelectorAll('#start-date, #end-date').forEach((input) => input.addEventListener('change', load));
   }
 
-  window.addEventListener('resize', () => { chart.resize(); recentChart.resize(); });
+  window.addEventListener('resize', () => { chart.resize(); recentChart.resize(); nextdayChart.resize(); });
   window.setInterval(load, IS_LOCAL ? 60000 : 300000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
   load();
+  loadNextday();
   }
 </script>
 </body>
