@@ -76,6 +76,10 @@
     <button type="button" data-metric="index">指数涨幅</button>
     <button type="button" data-metric="adr">涨跌比</button>
   </div>
+  <div class="chips" id="pages" hidden>
+    <button type="button" data-page="top" class="selected">Top 20</button>
+    <button type="button" data-page="bottom">Bottom 20</button>
+  </div>
 </div>
 <div class="legend" id="legend"></div>
 <div class="heat-wrap" id="heat-wrap"><div id="heat"></div></div>
@@ -94,7 +98,7 @@
       ['≤-10', '#155f42'], ['-10~-6', '#1f7a55'], ['-6~-3', '#2c9469'], ['-3~0', '#274a3f'],
       ['0', '#141d27'], ['0~3', '#4a2b33'], ['3~6', '#93404b'], ['6~10', '#c04a57'], ['≥10', '#f06372']
     ];
-    const RANK_LIMIT = 10;
+    const RANK_LIMIT = 20;
     const RANK_COLORS = ['#155f42', '#1f7a55', '#2c9469', '#274a3f', '#141d27',
       '#4a2b33', '#93404b', '#c04a57', '#f06372'];
     const RANK_METRICS = {
@@ -141,7 +145,7 @@
     }
 
     const chart = echarts.init(document.getElementById('heat'), null, { renderer: 'canvas' });
-    const state = { size: 5, mode: 'theme', metric: 'ratio', theme: null,
+    const state = { size: 5, mode: 'theme', metric: 'ratio', page: 'top', theme: null,
                     themes: null, segments: null, loading: false };
     const CELL = { 5: 28, 30: 26, 60: 40 };
 
@@ -313,13 +317,11 @@
       const rows = data.rows
         .map((row) => ({ name: row.name, row, point: row.p.length ? row.p[row.p.length - 1] : null }))
         .filter((item) => item.point && num(item.point[metric.field]) !== null);
-      rows.sort((a, b) => b.point[metric.field] - a.point[metric.field]);
-      const top = rows.slice(0, RANK_LIMIT);
-      const bottom = rows.length > RANK_LIMIT * 2 ? rows.slice(-RANK_LIMIT) : [];
-      const display = bottom.length
-        ? top.concat([{ sep: true, name: '', row: null, point: null }], bottom)
-        : top;
-      return { times: data.times, rows, display, top: top.length, bottom: bottom.length };
+      rows.sort((a, b) => state.page === 'bottom'
+        ? a.point[metric.field] - b.point[metric.field]
+        : b.point[metric.field] - a.point[metric.field]);
+      const display = rows.slice(0, RANK_LIMIT);
+      return { times: data.times, rows, display, top: display.length, bottom: 0 };
     }
 
     function renderRankHeat() {
@@ -346,7 +348,7 @@
         `${state.segments.date} · ${state.segments.generated_at.slice(11, 16)}`;
       document.getElementById('scope').textContent = `${view.rows.length} 个细分`;
       document.getElementById('hint').textContent =
-        `09:30 为上一交易日收盘基线；按最新${metric.label}排序，展示前10与后10。`;
+        `09:30 为上一交易日收盘基线；按最新${metric.label}排序，展示${state.page === 'bottom' ? '最低' : '最高'} ${RANK_LIMIT} 名。`;
       const cells = [];
       view.display.forEach((item, y) => {
         if (item.sep) return;
@@ -397,7 +399,7 @@
           type: 'category', data: view.display.map((item) => item.name), inverse: true,
           axisLine: { show: false }, axisTick: { show: false },
           axisLabel: { color: '#9fb0c2', fontSize: 9, width: left - 10, overflow: 'truncate',
-            formatter: (value, index) => (value ? `${index <= RANK_LIMIT ? index + 1 : index}. ${value}` : '') }
+            formatter: (value, index) => (value ? `${index + 1}. ${value}` : '') }
         },
         series: [{ type: 'heatmap', data: cells, animation: false,
           label: { show: step >= 22, fontSize: 8, color: '#e9f1f9',
@@ -414,14 +416,18 @@
       const scope = document.getElementById('scope');
       const rankMode = state.mode === 'rank';
       document.getElementById('metrics').hidden = !rankMode;
+      document.getElementById('pages').hidden = !rankMode;
       document.getElementById('rank-block').hidden = rankMode;
       document.getElementById('rank').hidden = rankMode;
+      document.querySelectorAll('#pages button').forEach((node) => {
+        node.classList.toggle('selected', node.dataset.page === state.page);
+      });
       paintLegend();
       if (rankMode) {
-        title.innerHTML = '细分排名<small>前10 / 后10</small>';
+        title.innerHTML = '细分排名<small>Top 20 / Bottom 20</small>';
         back.classList.remove('show');
         document.getElementById('hint').textContent =
-          `09:30 为上一交易日收盘基线；按最新${RANK_METRICS[state.metric].label}排序，展示前10与后10。`;
+          `09:30 为上一交易日收盘基线；按最新${RANK_METRICS[state.metric].label}排序，展示${state.page === 'bottom' ? '最低' : '最高'} ${RANK_LIMIT} 名。`;
       } else if (state.theme) {
         title.innerHTML = `细分多空热力<small>${state.theme}</small>`;
         back.classList.add('show');
@@ -545,6 +551,16 @@
       if (!button || button.dataset.metric === state.metric) return;
       state.metric = button.dataset.metric;
       document.querySelectorAll('#metrics button').forEach((node) => {
+        node.classList.toggle('selected', node === button);
+      });
+      setScope();
+      render();
+    });
+    document.getElementById('pages').addEventListener('click', (event) => {
+      const button = event.target.closest('button');
+      if (!button || button.dataset.page === state.page) return;
+      state.page = button.dataset.page;
+      document.querySelectorAll('#pages button').forEach((node) => {
         node.classList.toggle('selected', node === button);
       });
       setScope();
