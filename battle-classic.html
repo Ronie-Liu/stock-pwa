@@ -80,7 +80,7 @@
       <span><i class="line" style="background:#3fc39b"></i>弱势组</span>
       <span><i style="background:#ff4d4f"></i>全面反弹</span>
       <span><i style="background:#ff922b"></i>强势延续</span>
-      <span><i style="background:#ffd43b"></i>低位修复</span>
+      <span><i style="background:#ffd43b"></i>弱势修复</span>
       <span><i style="background:#b06aff"></i>两极分化</span>
       <span><i style="background:#8d99ae"></i>窄幅整理</span>
       <span><i style="background:#4dabf7"></i>高低切换</span>
@@ -210,41 +210,39 @@
     }, { notMerge: true });
   }
 
-  /* 定性分档：±0.3% 走平带，±1% 明显档；两组各三档组合成九种状态。 */
-  const ND_BAND = 0.3;
-  const ND_STRONG = 1;
+  /* 矩阵定性：先看强弱差 D=强-弱（决定结构），再看整体基调 L=(强+弱)/2（决定方向）。
+     D≥0.8 强势占优：弱势不跌→强势延续，弱势下跌→两极分化；
+     D≤-0.8 弱势占优：强势不跌→弱势修复，强势下跌且弱势红盘→高低切换，双双下跌→强势补跌；
+     |D|<0.8 结构不明显，按 L 分：≥0.4 全面反弹，±0.4 内窄幅整理，-1~-0.4 温和退潮，≤-1 全面走弱。 */
+  const ND_DIFF = 0.8;
+  const ND_FLAT = 0.4;
+  const ND_DEEP = -1;
   const ND_CLASSES = [
-    { key: '1|1', name: '全面反弹', color: '#ff4d4f' },
-    { key: '1|0', name: '强势延续', color: '#ff922b' },
-    { key: '0|1', name: '低位修复', color: '#ffd43b' },
-    { key: '1|-1', name: '两极分化', color: '#b06aff' },
-    { key: '0|0', name: '窄幅整理', color: '#8d99ae' },
-    { key: '-1|1', name: '高低切换', color: '#4dabf7' },
-    { key: '0|-1', name: '温和退潮', color: '#69db7c' },
-    { key: '-1|0', name: '强势补跌', color: '#20c997' },
-    { key: '-1|-1', name: '全面走弱', color: '#087f5b' }
+    { name: '全面反弹', color: '#ff4d4f' },
+    { name: '强势延续', color: '#ff922b' },
+    { name: '弱势修复', color: '#ffd43b' },
+    { name: '两极分化', color: '#b06aff' },
+    { name: '窄幅整理', color: '#8d99ae' },
+    { name: '高低切换', color: '#4dabf7' },
+    { name: '温和退潮', color: '#69db7c' },
+    { name: '强势补跌', color: '#20c997' },
+    { name: '全面走弱', color: '#087f5b' }
   ];
-  const ND_INDEX = Object.fromEntries(ND_CLASSES.map((item) => [item.key, item]));
-
-  function ndLevel(v) {
-    if (typeof v !== 'number' || !Number.isFinite(v)) return null;
-    if (v >= ND_STRONG) return 2;
-    if (v >= ND_BAND) return 1;
-    if (v > -ND_BAND) return 0;
-    if (v > -ND_STRONG) return -1;
-    return -2;
-  }
-
-  function ndSign(v) {
-    const level = ndLevel(v);
-    return level === null ? null : level > 0 ? 1 : level < 0 ? -1 : 0;
-  }
+  const ND_INDEX = Object.fromEntries(ND_CLASSES.map((item) => [item.name, item]));
 
   function ndClass(up, down) {
-    const a = ndSign(up);
-    const b = ndSign(down);
-    if (a === null || b === null) return null;
-    return ND_INDEX[`${a}|${b}`] || null;
+    if (!Number.isFinite(up) || !Number.isFinite(down)) return null;
+    const diff = up - down;
+    const base = (up + down) / 2;
+    if (diff >= ND_DIFF) return ND_INDEX[down >= 0 ? '强势延续' : '两极分化'];
+    if (diff <= -ND_DIFF) {
+      if (up >= 0) return ND_INDEX['弱势修复'];
+      return ND_INDEX[down > 0 ? '高低切换' : '强势补跌'];
+    }
+    if (base >= ND_FLAT) return ND_INDEX['全面反弹'];
+    if (base > -ND_FLAT) return ND_INDEX['窄幅整理'];
+    if (base > ND_DEEP) return ND_INDEX['温和退潮'];
+    return ND_INDEX['全面走弱'];
   }
 
   function ndAlpha(hex, alpha) {
@@ -297,7 +295,8 @@
           return `<div class="tip"><div class="tip-title">${points[index].time.slice(5)}</div>`
             + line('强势组今日', `${pct(row.up_ret)}（${row.up_n} 只）`)
             + line('弱势组今日', `${pct(row.dn_ret)}（${row.dn_n} 只）`)
-            + line('分化度', pct(row.up_ret - row.dn_ret))
+            + line('强弱差', pct(row.up_ret - row.dn_ret))
+            + line('整体基调', pct((row.up_ret + row.dn_ret) / 2))
             + line('定性', cls ? cls.name : '—') + '</div>';
         }
       },
