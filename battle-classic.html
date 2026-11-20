@@ -224,8 +224,9 @@
         axisLabel: { color: '#6f8095', fontSize: 9, hideOverlap: true, formatter: (v, i) => (i % 10 === 0 ? v : '') }
       },
       yAxis: {
-        type: 'value', scale: true, splitNumber: 2,
-        axisLabel: { color: '#6f8095', fontSize: 9, formatter: (v) => `${v.toFixed(0)}%` },
+        type: 'value', min: (v) => Math.floor(v.min / 4) * 4,
+        max: (v) => Math.ceil(v.max / 4) * 4, interval: 4,
+        axisLabel: { color: '#6f8095', fontSize: 9, formatter: (v) => `${v}%` },
         splitLine: { lineStyle: { color: '#1c2632', type: 'dashed' } }
       },
       series: [
