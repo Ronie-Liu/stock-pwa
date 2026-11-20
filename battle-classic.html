@@ -78,15 +78,15 @@
     <div class="nd-legend" id="nd-legend">
       <span><i class="line" style="background:#ef6b78"></i>强势组</span>
       <span><i class="line" style="background:#3fc39b"></i>弱势组</span>
-      <span><i style="background:#f2545b"></i>全面反弹</span>
-      <span><i style="background:#ef8b93"></i>强势延续</span>
-      <span><i style="background:#f2b8b0"></i>低位修复</span>
-      <span><i style="background:#b07fd9"></i>两极分化</span>
-      <span><i style="background:#6f8095"></i>窄幅整理</span>
-      <span><i style="background:#7f9fd9"></i>高低切换</span>
-      <span><i style="background:#a6c9a0"></i>温和退潮</span>
-      <span><i style="background:#5fbf94"></i>强势补跌</span>
-      <span><i style="background:#2f9e78"></i>全面走弱</span>
+      <span><i style="background:#ff4d4f"></i>全面反弹</span>
+      <span><i style="background:#ff922b"></i>强势延续</span>
+      <span><i style="background:#ffd43b"></i>低位修复</span>
+      <span><i style="background:#b06aff"></i>两极分化</span>
+      <span><i style="background:#8d99ae"></i>窄幅整理</span>
+      <span><i style="background:#4dabf7"></i>高低切换</span>
+      <span><i style="background:#69db7c"></i>温和退潮</span>
+      <span><i style="background:#20c997"></i>强势补跌</span>
+      <span><i style="background:#087f5b"></i>全面走弱</span>
     </div>
     <div id="nextday-chart"></div>
   </div>
@@ -214,15 +214,15 @@
   const ND_BAND = 0.3;
   const ND_STRONG = 1;
   const ND_CLASSES = [
-    { key: '1|1', name: '全面反弹', color: '#f2545b' },
-    { key: '1|0', name: '强势延续', color: '#ef8b93' },
-    { key: '0|1', name: '低位修复', color: '#f2b8b0' },
-    { key: '1|-1', name: '两极分化', color: '#b07fd9' },
-    { key: '0|0', name: '窄幅整理', color: '#6f8095' },
-    { key: '-1|1', name: '高低切换', color: '#7f9fd9' },
-    { key: '0|-1', name: '温和退潮', color: '#a6c9a0' },
-    { key: '-1|0', name: '强势补跌', color: '#5fbf94' },
-    { key: '-1|-1', name: '全面走弱', color: '#2f9e78' }
+    { key: '1|1', name: '全面反弹', color: '#ff4d4f' },
+    { key: '1|0', name: '强势延续', color: '#ff922b' },
+    { key: '0|1', name: '低位修复', color: '#ffd43b' },
+    { key: '1|-1', name: '两极分化', color: '#b06aff' },
+    { key: '0|0', name: '窄幅整理', color: '#8d99ae' },
+    { key: '-1|1', name: '高低切换', color: '#4dabf7' },
+    { key: '0|-1', name: '温和退潮', color: '#69db7c' },
+    { key: '-1|0', name: '强势补跌', color: '#20c997' },
+    { key: '-1|-1', name: '全面走弱', color: '#087f5b' }
   ];
   const ND_INDEX = Object.fromEntries(ND_CLASSES.map((item) => [item.key, item]));
 
@@ -272,11 +272,11 @@
     const dnData = rows.map((row) => (row && Number.isFinite(row.dn_ret) ? row.dn_ret : null));
     const barData = rows.map((row) => {
       if (!row || !Number.isFinite(row.up_ret) || !Number.isFinite(row.dn_ret)) return null;
-      return 0.1 + 0.75 * Math.min(1, (Math.abs(row.up_ret) + Math.abs(row.dn_ret)) / 2 / 3);
+      return 0.12 + 0.8 * Math.min(1, (Math.abs(row.up_ret) + Math.abs(row.dn_ret)) / 2 / 2.5);
     });
     const barColor = rows.map((row) => {
       const cls = row ? ndClass(row.up_ret, row.dn_ret) : null;
-      return ndAlpha(cls ? cls.color : '#3a4a5c', 0.32);
+      return ndAlpha(cls ? cls.color : '#3a4a5c', 0.9);
     });
     let lastIndex = -1;
     rows.forEach((row, index) => { if (row) lastIndex = index; });
@@ -315,12 +315,12 @@
         { type: 'value', min: 0, max: 1, show: false }
       ],
       series: [
-        { name: '定性强度', type: 'bar', yAxisIndex: 1, data: barData, barWidth: '72%',
-          itemStyle: { color: (params) => barColor[params.dataIndex] }, animation: false, z: 0 },
-        { name: '昨日涨≥2%', type: 'line', data: upData, showSymbol: false, connectNulls: false, lineStyle: { width: 1.4, color: COLORS.bull }, itemStyle: { color: COLORS.bull }, animation: false, z: 3 },
-        { name: '昨日跌≤-2%', type: 'line', data: dnData, showSymbol: false, connectNulls: false, lineStyle: { width: 1.4, color: COLORS.bear }, itemStyle: { color: COLORS.bear }, animation: false, z: 3 },
-        { type: 'line', data: [], animation: false, z: 1,
-          markLine: { silent: true, symbol: 'none', label: { show: false }, lineStyle: { color: '#3a4a5c', type: 'dashed' }, data: [{ yAxis: 0 }] } }
+        { name: '定性强度', type: 'bar', yAxisIndex: 1, data: barData, barWidth: '88%',
+          itemStyle: { color: (params) => barColor[params.dataIndex] }, animation: false, z: 1 },
+        { name: '昨日涨≥2%', type: 'line', data: upData, showSymbol: false, connectNulls: false, lineStyle: { width: 1.1, color: COLORS.bull, opacity: 0.85 }, itemStyle: { color: COLORS.bull }, animation: false, z: 3 },
+        { name: '昨日跌≤-2%', type: 'line', data: dnData, showSymbol: false, connectNulls: false, lineStyle: { width: 1.1, color: COLORS.bear, opacity: 0.85 }, itemStyle: { color: COLORS.bear }, animation: false, z: 3 },
+        { type: 'line', data: [], animation: false, z: 2,
+          markLine: { silent: true, symbol: 'none', label: { show: false }, lineStyle: { color: '#e6edf5', opacity: 0.35, type: 'dashed' }, data: [{ yAxis: 0 }] } }
       ]
     }, { notMerge: true });
   }
