@@ -212,10 +212,12 @@
   }
 
   /* 矩阵定性：先看两组是否全面同向，再看结构（强弱差），最后看整体基调。
+     ⓪ 两组数量比 ≥5 倍时，忽略少数方，直接按多数方表现定性（强势主导涨→强势延续、跌→全面走弱；弱势主导涨→弱势修复、跌→全面走弱）；
      ① 两组同时 ≥+1% → 全面反弹；同时 ≤-1% → 全面走弱（弱势只是跌得更多，仍属全面走弱）；
      ② 否则看强弱差 D=强-弱：D≥0.8 时弱势不跌→强势延续、弱势下跌且强势真走强(≥+0.4%)→两极分化、强势仅在走平带内→强势抗跌；
         D≤-0.8 时强势不跌→弱势修复、强势下跌且弱势红盘→高低切换、双双下跌→强势补跌；
      ③ |D|<0.8 结构不明显，按整体基调 L=(强+弱)/2：≥0.4 全面反弹，±0.4 内窄幅整理，-1~-0.4 温和退潮，≤-1 全面走弱。 */
+  const ND_RATIO = 5;
   const ND_FULL = 1;
   const ND_DIFF = 0.8;
   const ND_FLAT = 0.4;
@@ -234,8 +236,20 @@
   ];
   const ND_INDEX = Object.fromEntries(ND_CLASSES.map((item) => [item.name, item]));
 
-  function ndClass(up, down) {
+  /* 单边定性：数量占绝对多数（≥5 倍）时忽略少数方，直接按多数方表现定性。 */
+  function ndSolo(value, strong) {
+    if (value >= ND_FLAT) return ND_INDEX[strong ? '强势延续' : '弱势修复'];
+    if (value > -ND_FLAT) return ND_INDEX['窄幅整理'];
+    if (value > ND_DEEP) return ND_INDEX['温和退潮'];
+    return ND_INDEX['全面走弱'];
+  }
+
+  function ndClass(up, down, upN, dnN) {
     if (!Number.isFinite(up) || !Number.isFinite(down)) return null;
+    if (Number.isFinite(upN) && Number.isFinite(dnN) && upN > 0 && dnN > 0) {
+      if (upN >= dnN * ND_RATIO) return ndSolo(up, true);
+      if (dnN >= upN * ND_RATIO) return ndSolo(down, false);
+    }
     if (up >= ND_FULL && down >= ND_FULL) return ND_INDEX['全面反弹'];
     if (up <= -ND_FULL && down <= -ND_FULL) return ND_INDEX['全面走弱'];
     const diff = up - down;
@@ -264,7 +278,7 @@
   }
 
   function verdict(row) {
-    const cls = ndClass(row.up_ret, row.dn_ret);
+    const cls = ndClass(row.up_ret, row.dn_ret, row.up_n, row.dn_n);
     return cls ? `${cls.name} · 强 ${pct(row.up_ret)} / 弱 ${pct(row.dn_ret)}` : '—';
   }
 
@@ -282,7 +296,7 @@
       return 0.12 + 0.8 * Math.min(1, (Math.abs(row.up_ret) + Math.abs(row.dn_ret)) / 2 / 2.5);
     });
     const barColor = rows.map((row) => {
-      const cls = row ? ndClass(row.up_ret, row.dn_ret) : null;
+      const cls = row ? ndClass(row.up_ret, row.dn_ret, row.up_n, row.dn_n) : null;
       return ndAlpha(cls ? cls.color : '#3a4a5c', 0.9);
     });
     let lastIndex = -1;
@@ -300,7 +314,7 @@
           const row = rows[index];
           if (!row) return '';
           const line = (name, value) => `<div class="tip-row"><span>${name}</span><b>${value}</b></div>`;
-          const cls = ndClass(row.up_ret, row.dn_ret);
+          const cls = ndClass(row.up_ret, row.dn_ret, row.up_n, row.dn_n);
           return `<div class="tip"><div class="tip-title">${points[index].time.slice(5)}</div>`
             + line('强势组今日', `${pct(row.up_ret)}（${row.up_n} 只）`)
             + line('弱势组今日', `${pct(row.dn_ret)}（${row.dn_n} 只）`)
