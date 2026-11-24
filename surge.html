@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>异动拉升</title>
+  <style>
+    :root { color-scheme: dark; --up:#ef6b78; --dn:#3fc39b; --bg:#0a0f16; --card:#111b26; --line:#1d2a38; --text:#dfe8f2; --mute:#7d8fa4; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.45 "PingFang SC", "Microsoft YaHei", sans-serif; display: flex; flex-direction: column; overflow: hidden; }
+    .wrap { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 8px 10px 0; }
+    .head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; }
+    .head h1 { margin: 0; font-size: 15px; letter-spacing: .5px; }
+    .meta { color: var(--mute); font-size: 11px; }
+    .cond { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-bottom: 6px; }
+    .cond span { background: #0f1a25; border: 1px solid var(--line); color: #9fb4c9; border-radius: 5px; padding: 2px 6px; font-size: 10px; white-space: nowrap; }
+    .cond span.off { color: #5b6c80; border-style: dashed; }
+    .bar { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+    .seg { display: flex; flex: 1 1 auto; min-width: 0; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+    .seg::-webkit-scrollbar { display: none; }
+    .seg button, .chip { background: #111b26; color: #93a6ba; border: 1px solid #22303f; border-radius: 6px; padding: 4px 9px; font: 11px/1.2 inherit; white-space: nowrap; }
+    .seg button.on { background: #1d3a31; border-color: #3f6b58; color: #d6efe2; }
+    .chip.on { background: #3a1d2b; border-color: #6b3f52; color: #f2d6e1; }
+    .stat { display: flex; gap: 10px; color: #5b6c80; font-size: 10px; margin-bottom: 5px; }
+    .list { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 10px; }
+    .item { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px 6px; margin-bottom: 6px; }
+    .r1 { display: flex; align-items: baseline; gap: 6px; }
+    .name { font-size: 14px; font-weight: 600; }
+    .code { color: var(--mute); font-size: 10px; }
+    .theme { color: #6f8aa5; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 auto; min-width: 0; }
+    .chg { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .up { color: var(--up); }
+    .dn { color: var(--dn); }
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px 4px; margin-top: 5px; }
+    .cell { background: #0d1721; border-radius: 5px; padding: 3px 5px; min-width: 0; }
+    .cell i { display: block; color: #64798f; font-size: 9px; font-style: normal; white-space: nowrap; }
+    .cell b { display: block; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cell b small { font-size: 9px; font-weight: 400; color: #6f8aa5; margin-left: 1px; }
+    .tag { display: inline-block; font-size: 9px; padding: 0 4px; border-radius: 3px; border: 1px solid #6b3f52; color: #f2a6be; margin-left: 4px; vertical-align: middle; }
+    .foot { flex: 0 0 auto; color: #4d5d6f; font-size: 10px; padding: 4px 0 6px; text-align: center; }
+    .empty { color: var(--mute); text-align: center; padding: 40px 0; font-size: 12px; }
+    body.embed .head, body.embed .foot { display: none; }
+    body.embed .wrap { padding: 6px 8px 0; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head"><h1>异动拉升</h1><span class="meta" id="meta">加载中…</span></div>
+  <div class="cond" id="cond"></div>
+  <div class="bar">
+    <div class="seg" id="sort">
+      <button type="button" data-k="main_gain" class="on">主段涨幅</button>
+      <button type="button" data-k="main_vol_share">量占比</button>
+      <button type="button" data-k="main_conc">集中度</button>
+      <button type="button" data-k="pct_chg">涨幅</button>
+      <button type="button" data-k="prev10">10日异</button>
+    </div>
+    <button type="button" class="chip" id="strat">A∧B∧E</button>
+  </div>
+  <div class="stat"><span id="stat"></span></div>
+  <div class="list" id="list"><div class="empty">加载中…</div></div>
+  <p class="foot">每 30 分钟一轮；14:00 前不含集中度/量比条件，14:00 后以当时累计成交量为基准</p>
+</div>
+<script>
+  (function () {
+    const IS_LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+    const OSS = 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/surge.json';
+    const SRC = IS_LOCAL ? 'http://127.0.0.1:8765/api/v1/surge' : OSS;
+    if (new URLSearchParams(location.search).get('embed') === '1') document.body.classList.add('embed');
+
+    const state = { payload: null, key: 'main_gain', strat: false };
+    const el = (id) => document.getElementById(id);
+    const fmt = (v, d) => (typeof v === 'number' && isFinite(v) ? v.toFixed(d === undefined ? 2 : d) : '—');
+    const sign = (v, d) => (typeof v === 'number' && isFinite(v) ? (v > 0 ? '+' : '') + v.toFixed(d === undefined ? 2 : d) : '—');
+    const cls = (v) => (typeof v === 'number' && v > 0 ? 'up' : typeof v === 'number' && v < 0 ? 'dn' : '');
+    const hm = (v) => (typeof v === 'number' ? String(Math.floor(v / 100)).padStart(2, '0') + ':' + String(v % 100).padStart(2, '0') : '—');
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    function conditions(cond, concApplied) {
+      if (!cond) return '';
+      const list = [
+        `主段涨幅 ≥ ${cond.main_gain}%`,
+        `主段量占比 ≥ ${cond.main_vol_share}%`,
+        `集中度 ≥ ${cond.main_conc}`,
+        `市值 ≤ ${cond.total_mv}亿`,
+        `前10日异 ≥ ${cond.prev10}`
+      ];
+      return list.map((t, i) => `<span class="${i === 2 && !concApplied ? 'off' : ''}">${esc(t)}${i === 2 && !concApplied ? '（14:00后）' : ''}</span>`).join('');
+    }
+
+    function rows() {
+      const all = (state.payload && state.payload.rows) || [];
+      const list = state.strat ? all.filter((r) => r.strategy && r.strategy.hit) : all.slice();
+      const key = state.key;
+      list.sort((a, b) => {
+        const x = a[key], y = b[key];
+        if (typeof x !== 'number') return 1;
+        if (typeof y !== 'number') return -1;
+        return y - x;
+      });
+      return list;
+    }
+
+    function render() {
+      const p = state.payload;
+      if (!p) return;
+      const list = rows();
+      el('meta').textContent = `${p.cycle || ''} · 更新 ${(p.asof || '').slice(11, 16)}`;
+      el('cond').innerHTML = conditions(p.conditions, p.conc_applied);
+      const bits = [`命中 ${list.length}${state.strat ? '/' + (p.rows || []).length : ''} 只`,
+        `候选 ${p.universe || 0}`, `取到 ${p.fetched || 0}`];
+      if (p.capped) bits.push('已截断');
+      if (p.degraded) bits.push('历史不足·未筛10日异');
+      if (p.elapsed) bits.push(`${p.elapsed}s`);
+      el('stat').textContent = bits.join(' · ');
+
+      if (!list.length) {
+        el('list').innerHTML = `<div class="empty">本轮无异动拉升个股</div>`;
+        return;
+      }
+      el('list').innerHTML = list.map((r) => {
+        const theme = [r.theme_seg || r.theme || '', r.detail || ''].filter(Boolean).join(' · ');
+        return `<div class="item">
+          <div class="r1">
+            <span class="name">${esc(r.name)}</span>
+            <span class="code">${esc(r.code)}</span>
+            ${r.strategy && r.strategy.hit ? '<span class="tag">策略</span>' : ''}
+            <span class="theme">${esc(theme)}</span>
+            <span class="chg ${cls(r.pct_chg)}">${sign(r.pct_chg)}%</span>
+          </div>
+          <div class="grid">
+            <div class="cell"><i>主段涨幅</i><b class="${cls(r.main_gain)}">${sign(r.main_gain)}%<small>${hm(r.main_start)}</small></b></div>
+            <div class="cell"><i>主段量占比</i><b>${fmt(r.main_vol_share, 1)}%</b></div>
+            <div class="cell"><i>集中度</i><b>${fmt(r.main_conc, 1)}</b></div>
+            <div class="cell"><i>10日异</i><b>${r.prev10 == null ? '—' : r.prev10}</b></div>
+            <div class="cell"><i>合计涨幅</i><b class="${cls(r.sum_gain)}">${sign(r.sum_gain)}%</b></div>
+            <div class="cell"><i>合计集中度</i><b>${fmt(r.sum_conc, 1)}</b></div>
+            <div class="cell"><i>收盘位</i><b>${fmt(r.close_pos, 0)}%</b></div>
+            <div class="cell"><i>市值</i><b>${fmt(r.total_mv, 0)}<small>亿</small></b></div>
+            <div class="cell"><i>10前涨</i><b class="${cls(r.r10)}">${sign(r.r10)}%</b></div>
+            <div class="cell"><i>10日回撤</i><b>${fmt(r.dd10, 1)}%</b></div>
+            <div class="cell"><i>现价比较</i><b class="${cls(r.nowcmp)}">${sign(r.nowcmp)}</b></div>
+            <div class="cell"><i>回撤深度</i><b class="${cls(r.dd_depth)}">${sign(r.dd_depth, 1)}</b></div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    async function load() {
+      try {
+        const response = await fetch(SRC + (SRC.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now(), { cache: 'no-store' });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        state.payload = await response.json();
+        render();
+      } catch (err) {
+        el('meta').textContent = '数据加载失败：' + err.message;
+        if (!state.payload) el('list').innerHTML = '<div class="empty">暂无数据，等待本轮生成</div>';
+      }
+    }
+
+    el('sort').addEventListener('click', (event) => {
+      const button = event.target.closest('button');
+      if (!button) return;
+      state.key = button.dataset.k;
+      el('sort').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === button));
+      render();
+    });
+    el('strat').addEventListener('click', () => {
+      state.strat = !state.strat;
+      el('strat').classList.toggle('on', state.strat);
+      render();
+    });
+
+    load();
+    setInterval(load, 60000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+  })();
+</script>
+</body>
+</html>
