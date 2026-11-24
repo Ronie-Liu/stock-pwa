@@ -108,7 +108,7 @@
       const list = rows();
       el('meta').textContent = `${p.cycle || ''} · 更新 ${(p.asof || '').slice(11, 16)}`;
       el('cond').innerHTML = conditions(p.conditions, p.conc_applied);
-      const bits = [`命中 ${list.length}${state.strat ? '/' + (p.rows || []).length : ''} 只`,
+      const bits = [`命中 ${list.length}${state.strat ? '/' + (p.total || (p.rows || []).length) : ''} 只${p.total > (p.rows || []).length ? '（共 ' + p.total + '）' : ''}`,
         `候选 ${p.universe || 0}`, `取到 ${p.fetched || 0}`];
       if (p.capped) bits.push('已截断');
       if (p.degraded) bits.push('历史不足·未筛10日异');
