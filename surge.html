@@ -21,9 +21,10 @@
     .seg::-webkit-scrollbar { display: none; }
     .seg button, .chip { background: #111b26; color: #93a6ba; border: 1px solid #22303f; border-radius: 6px; padding: 4px 9px; font: 11px/1.2 inherit; white-space: nowrap; }
     .seg button.on { background: #1d3a31; border-color: #3f6b58; color: #d6efe2; }
-    .chip.on { background: #3a1d2b; border-color: #6b3f52; color: #f2d6e1; }
+    .chip.on { background: #1d3350; border-color: #3f5f8b; color: #cfe2f8; }
+    .chip.act { background: #3a1d2b; border-color: #6b3f52; color: #f2d6e1; }
     .stat { display: flex; gap: 10px; color: #5b6c80; font-size: 10px; margin-bottom: 5px; }
-    .list { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 10px; }
+    .list { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 6px; }
     .item { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px 6px; margin-bottom: 6px; }
     .r1 { display: flex; align-items: baseline; gap: 6px; }
     .name { font-size: 14px; font-weight: 600; }
@@ -34,14 +35,27 @@
     .dn { color: var(--dn); }
     .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px 4px; margin-top: 5px; }
     .cell { background: #0d1721; border-radius: 5px; padding: 3px 5px; min-width: 0; }
-    .cell i { display: block; color: #64798f; font-size: 9px; font-style: normal; white-space: nowrap; }
+    .cell i { display: block; color: #64798f; font-size: 9px; font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .cell b { display: block; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .cell b small { font-size: 9px; font-weight: 400; color: #6f8aa5; margin-left: 1px; }
     .tag { display: inline-block; font-size: 9px; padding: 0 4px; border-radius: 3px; border: 1px solid #6b3f52; color: #f2a6be; margin-left: 4px; vertical-align: middle; }
+    .more { width: 100%; background: #111b26; color: #93a6ba; border: 1px solid #22303f; border-radius: 8px; padding: 9px; font: 12px inherit; margin: 2px 0 8px; }
     .foot { flex: 0 0 auto; color: #4d5d6f; font-size: 10px; padding: 4px 0 6px; text-align: center; }
     .empty { color: var(--mute); text-align: center; padding: 40px 0; font-size: 12px; }
     body.embed .head, body.embed .foot { display: none; }
     body.embed .wrap { padding: 6px 8px 0; }
+    .sheet { position: fixed; inset: 0; background: #0a0f16; display: none; flex-direction: column; z-index: 20; }
+    .sheet.open { display: flex; }
+    .sheet header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+    .sheet header b { font-size: 14px; flex: 1 1 auto; }
+    .sheet header button { background: #111b26; border: 1px solid #22303f; color: #9fb4c9; border-radius: 6px; padding: 5px 12px; font: 12px inherit; }
+    .sheet header button.ok { background: #1d3a31; border-color: #3f6b58; color: #d6efe2; }
+    .fields { flex: 1 1 auto; overflow-y: auto; padding: 8px 12px 20px; }
+    .field { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid #131f2a; }
+    .field span { flex: 0 0 92px; font-size: 12px; color: #9fb4c9; }
+    .field input { flex: 1 1 0; min-width: 0; background: #0d1721; border: 1px solid #22303f; color: var(--text); border-radius: 5px; padding: 6px 8px; font: 12px/1.2 inherit; }
+    .field input:focus { outline: 1px solid #3f6b58; }
+    .field em { color: #4d5d6f; font-style: normal; font-size: 10px; }
   </style>
 </head>
 <body>
@@ -57,11 +71,22 @@
       <button type="button" data-k="prev10">10日异</button>
     </div>
     <button type="button" class="chip" id="strat">A∧B∧E</button>
+    <button type="button" class="chip" id="filterBtn">筛选</button>
   </div>
   <div class="stat"><span id="stat"></span></div>
   <div class="list" id="list"><div class="empty">加载中…</div></div>
   <p class="foot">每 30 分钟一轮；14:00 前不含集中度/量比条件，14:00 后以当时累计成交量为基准</p>
 </div>
+
+<div class="sheet" id="sheet">
+  <header>
+    <b>筛选条件</b>
+    <button type="button" id="resetBtn">重置</button>
+    <button type="button" id="applyBtn" class="ok">完成</button>
+  </header>
+  <div class="fields" id="fields"></div>
+</div>
+
 <script>
   (function () {
     const IS_LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
@@ -69,13 +94,31 @@
     const SRC = IS_LOCAL ? 'http://127.0.0.1:8765/api/v1/surge' : OSS;
     if (new URLSearchParams(location.search).get('embed') === '1') document.body.classList.add('embed');
 
-    const state = { payload: null, key: 'main_gain', strat: false };
+    const FIELDS = [
+      ['main_gain', '主段涨幅%'], ['main_vol_share', '主段量占比%'], ['main_conc', '主段集中度'],
+      ['tv_share', '合计量占比%'], ['sum_gain', '合计涨幅%'], ['sum_conc', '合计集中度'],
+      ['main_minutes', '主段时长(分)'], ['sum_minutes', '合计时长(分)'], ['seg_cnt', '段数'],
+      ['main_decay', '拉后衰减'], ['pct_chg', '涨幅%'], ['gap_open', '开盘涨幅%'],
+      ['turnover', '换手%'], ['amplitude', '振幅%'], ['to5_mult', '换手倍数'],
+      ['close_pos', '收盘位%'], ['ma120', 'MA120'], ['total_mv', '市值(亿)'],
+      ['prev10', '10日异'], ['mc10', '10日段集'], ['r10', '10前涨%'], ['dd10', '10日回撤%'],
+      ['dd_depth', '回撤深度'], ['hp10', '距10高%'], ['nowcmp', '现价比较'], ['hpdays', '高距天'],
+      ['to10_ratio', '10换比'], ['d10max', '10大涨%'], ['amp10', '10日振%'], ['to10_sum', '10换和%'],
+      ['rng70', '70涨幅%'], ['lu70', '70涨停'], ['is_margin', '两融']
+    ];
+
+    const TEXTS = [['name', '名称包含'], ['theme_seg', '主题/行业包含']];
+
+    const state = { payload: null, key: 'main_gain', strat: false, filters: {}, show: 40 };
     const el = (id) => document.getElementById(id);
     const fmt = (v, d) => (typeof v === 'number' && isFinite(v) ? v.toFixed(d === undefined ? 2 : d) : '—');
     const sign = (v, d) => (typeof v === 'number' && isFinite(v) ? (v > 0 ? '+' : '') + v.toFixed(d === undefined ? 2 : d) : '—');
     const cls = (v) => (typeof v === 'number' && v > 0 ? 'up' : typeof v === 'number' && v < 0 ? 'dn' : '');
     const hm = (v) => (typeof v === 'number' ? String(Math.floor(v / 100)).padStart(2, '0') + ':' + String(v % 100).padStart(2, '0') : '—');
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    try { state.filters = JSON.parse(localStorage.getItem('surge_filters') || '{}') || {}; } catch (e) { state.filters = {}; }
+    try { state.key = localStorage.getItem('surge_sort') || 'main_gain'; } catch (e) {}
 
     function conditions(cond, concApplied) {
       if (!cond) return '';
@@ -89,11 +132,31 @@
       return list.map((t, i) => `<span class="${i === 2 && !concApplied ? 'off' : ''}">${esc(t)}${i === 2 && !concApplied ? '（14:00后）' : ''}</span>`).join('');
     }
 
+    function pass(row) {
+      for (const key of Object.keys(state.filters)) {
+        const rule = state.filters[key];
+        if (!rule) continue;
+        if (typeof rule === 'string') {
+          if (!String(row[key] == null ? '' : row[key]).toLowerCase().includes(rule.toLowerCase())) return false;
+          continue;
+        }
+        const value = row[key];
+        if (rule.min !== '' && rule.min != null) {
+          if (typeof value !== 'number' || value < Number(rule.min)) return false;
+        }
+        if (rule.max !== '' && rule.max != null) {
+          if (typeof value !== 'number' || value > Number(rule.max)) return false;
+        }
+      }
+      return true;
+    }
+
     function rows() {
       const all = (state.payload && state.payload.rows) || [];
-      const list = state.strat ? all.filter((r) => r.strategy && r.strategy.hit) : all.slice();
+      let list = all.filter(pass);
+      if (state.strat) list = list.filter((r) => r.strategy && r.strategy.hit);
       const key = state.key;
-      list.sort((a, b) => {
+      list = list.slice().sort((a, b) => {
         const x = a[key], y = b[key];
         if (typeof x !== 'number') return 1;
         if (typeof y !== 'number') return -1;
@@ -102,50 +165,138 @@
       return list;
     }
 
+    function cell(label, value, extra, d) {
+      return `<div class="cell"><i>${label}</i><b>${value}${extra ? `<small>${extra}</small>` : ''}</b></div>`;
+    }
+
     function render() {
       const p = state.payload;
       if (!p) return;
       const list = rows();
       el('meta').textContent = `${p.cycle || ''} · 更新 ${(p.asof || '').slice(11, 16)}`;
       el('cond').innerHTML = conditions(p.conditions, p.conc_applied);
-      const bits = [`命中 ${list.length}${state.strat ? '/' + (p.total || (p.rows || []).length) : ''} 只${p.total > (p.rows || []).length ? '（共 ' + p.total + '）' : ''}`,
+      const active = Object.values(state.filters).filter((r) => (typeof r === 'string' ? r !== '' : r && (r.min !== '' && r.min != null || r.max !== '' && r.max != null))).length;
+      const bits = [`命中 ${list.length}${p.total > (p.rows || []).length ? '（共 ' + p.total + '）' : ''} 只`,
         `候选 ${p.universe || 0}`, `取到 ${p.fetched || 0}`];
+      if (active) bits.push(`筛选 ${active} 项`);
       if (p.capped) bits.push('已截断');
       if (p.degraded) bits.push('历史不足·未筛10日异');
-      if (p.elapsed) bits.push(`${p.elapsed}s`);
       el('stat').textContent = bits.join(' · ');
+      el('filterBtn').classList.toggle('act', active > 0);
+      el('filterBtn').textContent = active ? `筛选 ${active}` : '筛选';
 
       if (!list.length) {
         el('list').innerHTML = `<div class="empty">本轮无异动拉升个股</div>`;
         return;
       }
-      el('list').innerHTML = list.map((r) => {
-        const theme = [r.theme_seg || r.theme || '', r.detail || ''].filter(Boolean).join(' · ');
-        return `<div class="item">
+      const shown = list.slice(0, state.show);
+      const html = shown.map((r) => `<div class="item">
           <div class="r1">
             <span class="name">${esc(r.name)}</span>
             <span class="code">${esc(r.code)}</span>
             ${r.strategy && r.strategy.hit ? '<span class="tag">策略</span>' : ''}
-            <span class="theme">${esc(theme)}</span>
+            <span class="theme">${esc(r.theme_seg)}</span>
             <span class="chg ${cls(r.pct_chg)}">${sign(r.pct_chg)}%</span>
           </div>
           <div class="grid">
-            <div class="cell"><i>主段涨幅</i><b class="${cls(r.main_gain)}">${sign(r.main_gain)}%<small>${hm(r.main_start)}</small></b></div>
-            <div class="cell"><i>主段量占比</i><b>${fmt(r.main_vol_share, 1)}%</b></div>
-            <div class="cell"><i>集中度</i><b>${fmt(r.main_conc, 1)}</b></div>
-            <div class="cell"><i>10日异</i><b>${r.prev10 == null ? '—' : r.prev10}</b></div>
-            <div class="cell"><i>合计涨幅</i><b class="${cls(r.sum_gain)}">${sign(r.sum_gain)}%</b></div>
-            <div class="cell"><i>合计集中度</i><b>${fmt(r.sum_conc, 1)}</b></div>
-            <div class="cell"><i>收盘位</i><b>${fmt(r.close_pos, 0)}%</b></div>
-            <div class="cell"><i>市值</i><b>${fmt(r.total_mv, 0)}<small>亿</small></b></div>
-            <div class="cell"><i>10前涨</i><b class="${cls(r.r10)}">${sign(r.r10)}%</b></div>
-            <div class="cell"><i>10日回撤</i><b>${fmt(r.dd10, 1)}%</b></div>
-            <div class="cell"><i>现价比较</i><b class="${cls(r.nowcmp)}">${sign(r.nowcmp)}</b></div>
-            <div class="cell"><i>回撤深度</i><b class="${cls(r.dd_depth)}">${sign(r.dd_depth, 1)}</b></div>
+            ${cell('主段涨幅', `${sign(r.main_gain)}%`, hm(r.main_start))}
+            ${cell('主段量占比', `${fmt(r.main_vol_share, 1)}%`)}
+            ${cell('集中度', fmt(r.main_conc, 1))}
+            ${cell('10日异', r.prev10 == null ? '—' : r.prev10)}
+            ${cell('合计涨幅', `${sign(r.sum_gain)}%`)}
+            ${cell('合计集中度', fmt(r.sum_conc, 1))}
+            ${cell('收盘位', `${fmt(r.close_pos, 0)}%`)}
+            ${cell('市值', fmt(r.total_mv, 0), '亿')}
+            ${cell('10前涨', `${sign(r.r10)}%`)}
+            ${cell('10日回撤', `${fmt(r.dd10, 1)}%`)}
+            ${cell('现价比较', sign(r.nowcmp))}
+            ${cell('回撤深度', sign(r.dd_depth, 1))}
+            ${cell('距10高', `${sign(r.hp10)}%`)}
+            ${cell('70涨幅', `${fmt(r.rng70, 1)}%`)}
+            ${cell('10日振', `${fmt(r.amp10, 1)}%`)}
+            ${cell('10大涨', `${fmt(r.d10max, 1)}%`)}
+            ${cell('10换比', fmt(r.to10_ratio, 2))}
+            ${cell('10换和', `${fmt(r.to10_sum, 1)}%`)}
+            ${cell('70涨停', r.lu70 == null ? '—' : r.lu70)}
+            ${cell('高距天', r.hpdays == null ? '—' : r.hpdays)}
+            ${cell('开盘涨幅', `${sign(r.gap_open)}%`)}
+            ${cell('换手', `${fmt(r.turnover, 1)}%`)}
+            ${cell('10日段集', fmt(r.mc10, 1))}
+            ${cell('换手倍', fmt(r.to5_mult, 2))}
+            ${cell('MA120', fmt(r.ma120, 2))}
+            ${cell('两融', r.is_margin ? '是' : '否')}
           </div>
+        </div>`).join('') + (list.length > shown.length
+          ? `<button type="button" class="more" id="moreBtn">加载更多（剩余 ${list.length - shown.length}）</button>`
+          : '');
+      el('list').innerHTML = html;
+      const more = el('moreBtn');
+      if (more) more.addEventListener('click', () => { state.show += 40; render(); });
+    }
+
+    function fieldsHtml() {
+      const head = TEXTS.map(([key, label]) => {
+        const value = typeof state.filters[key] === 'string' ? state.filters[key] : '';
+        return `<div class="field">
+          <span>${label}</span>
+          <input type="text" data-k="${key}" data-t="1" placeholder="关键字" value="${esc(value)}">
+        </div>`;
+      }).join('');
+      return head + FIELDS.map(([key, label]) => {
+        const rule = state.filters[key] || {};
+        return `<div class="field">
+          <span>${label}</span>
+          <input type="number" inputmode="decimal" data-k="${key}" data-b="min" placeholder="最小" value="${rule.min == null ? '' : esc(rule.min)}">
+          <em>~</em>
+          <input type="number" inputmode="decimal" data-k="${key}" data-b="max" placeholder="最大" value="${rule.max == null ? '' : esc(rule.max)}">
         </div>`;
       }).join('');
     }
+
+    el('sort').addEventListener('click', (event) => {
+      const button = event.target.closest('button');
+      if (!button) return;
+      state.key = button.dataset.k;
+      state.show = 40;
+      try { localStorage.setItem('surge_sort', state.key); } catch (e) {}
+      el('sort').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === button));
+      render();
+    });
+    el('strat').addEventListener('click', () => {
+      state.strat = !state.strat;
+      el('strat').classList.toggle('on', state.strat);
+      state.show = 40;
+      render();
+    });
+    el('filterBtn').addEventListener('click', () => {
+      el('fields').innerHTML = fieldsHtml();
+      el('sheet').classList.add('open');
+    });
+    el('applyBtn').addEventListener('click', () => {
+      const next = {};
+      el('fields').querySelectorAll('input').forEach((input) => {
+        const key = input.dataset.k;
+        const value = input.value.trim();
+        if (value === '') return;
+        if (input.dataset.t === '1') {
+          next[key] = value;
+          return;
+        }
+        next[key] = next[key] || { min: '', max: '' };
+        next[key][input.dataset.b] = value;
+      });
+      state.filters = next;
+      state.show = 40;
+      try { localStorage.setItem('surge_filters', JSON.stringify(next)); } catch (e) {}
+      el('sheet').classList.remove('open');
+      render();
+    });
+    el('resetBtn').addEventListener('click', () => {
+      state.filters = {};
+      try { localStorage.removeItem('surge_filters'); } catch (e) {}
+      el('fields').innerHTML = fieldsHtml();
+      render();
+    });
 
     async function load() {
       try {
@@ -159,19 +310,7 @@
       }
     }
 
-    el('sort').addEventListener('click', (event) => {
-      const button = event.target.closest('button');
-      if (!button) return;
-      state.key = button.dataset.k;
-      el('sort').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === button));
-      render();
-    });
-    el('strat').addEventListener('click', () => {
-      state.strat = !state.strat;
-      el('strat').classList.toggle('on', state.strat);
-      render();
-    });
-
+    el('sort').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.k === state.key));
     load();
     setInterval(load, 60000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
