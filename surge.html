@@ -77,7 +77,6 @@
   <div class="cond" id="cond"></div>
   <div class="bar">
     <div class="seg" id="sort">
-      <button type="button" data-k="main_gain" class="on">主段涨幅</button>
       <button type="button" data-k="main_vol_share">量占比</button>
       <button type="button" data-k="main_conc">集中度</button>
       <button type="button" data-k="pct_chg">涨幅</button>
@@ -117,21 +116,22 @@
     if (new URLSearchParams(location.search).get('embed') === '1') document.body.classList.add('embed');
 
     const FIELDS = [
-      ['main_gain', '主段涨幅%'], ['main_vol_share', '主段量占比%'], ['main_conc', '主段集中度'],
-      ['tv_share', '合计量占比%'], ['sum_gain', '合计涨幅%'], ['sum_conc', '合计集中度'],
+      ['main_vol_share', '主段量占比%'], ['main_conc', '主段集中度'],
+      ['tv_share', '合计量占比%'], ['sum_conc', '合计集中度'],
       ['main_minutes', '主段时长(分)'], ['sum_minutes', '合计时长(分)'], ['seg_cnt', '段数'],
       ['main_decay', '拉后衰减'], ['pct_chg', '涨幅%'], ['gap_open', '开盘涨幅%'],
       ['turnover', '换手%'], ['amplitude', '振幅%'], ['to5_mult', '换手倍数'],
-      ['close_pos', '收盘位%'], ['ma120', 'MA120'], ['total_mv', '市值(亿)'],
-      ['prev10', '10日异'], ['mc10', '10日段集'], ['r10', '10前涨%'], ['dd10', '10日回撤%'],
+      ['ma120', 'MA120'], ['total_mv', '市值(亿)'],
+      ['prev10', '10日异'], ['r10', '10前涨%'], ['dd10', '10日回撤%'],
       ['dd_depth', '回撤深度'], ['hp10', '距10高%'], ['nowcmp', '现价比较'], ['hpdays', '高距天'],
       ['to10_ratio', '10换比'], ['d10max', '10大涨%'], ['amp10', '10日振%'], ['to10_sum', '10换和%'],
-      ['rng70', '70涨幅%'], ['lu70', '70涨停'], ['is_margin', '两融']
+      ['rng70', '70涨幅%'], ['lu70', '70涨停'], ['is_margin', '两融'],
+      ['up11_high', '11日上高'], ['up11_oc', '11日上开收'], ['up11_ma5', '11日上MA5']
     ];
 
     const TEXTS = [['name', '名称包含'], ['theme_seg', '主题/行业包含']];
 
-    const state = { payload: null, key: 'main_gain', strat: false, filters: {}, show: 40 };
+    const state = { payload: null, key: 'pct_chg', strat: false, filters: {}, show: 40 };
     const el = (id) => document.getElementById(id);
     const fmt = (v, d) => (typeof v === 'number' && isFinite(v) ? v.toFixed(d === undefined ? 2 : d) : '—');
     const sign = (v, d) => (typeof v === 'number' && isFinite(v) ? (v > 0 ? '+' : '') + v.toFixed(d === undefined ? 2 : d) : '—');
@@ -140,7 +140,8 @@
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
     try { state.filters = JSON.parse(localStorage.getItem('surge_filters') || '{}') || {}; } catch (e) { state.filters = {}; }
-    try { state.key = localStorage.getItem('surge_sort') || 'main_gain'; } catch (e) {}
+    try { state.key = localStorage.getItem('surge_sort') || 'pct_chg'; } catch (e) {}
+    if (['main_gain', 'sum_gain', 'mc10', 'close_pos'].indexOf(state.key) >= 0) state.key = 'pct_chg';
 
     function conditions(cond, concApplied) {
       if (!cond) return '';
@@ -221,13 +222,13 @@
             <span class="chg ${cls(r.pct_chg)}">${sign(r.pct_chg)}%</span>
           </div>
           <div class="grid">
-            ${cell('主段涨幅', `${sign(r.main_gain)}%`, hm(r.main_start))}
+            ${cell('11日上高', r.up11_high == null ? '—' : r.up11_high)}
             ${cell('主段量占比', `${fmt(r.main_vol_share, 1)}%`)}
             ${cell('集中度', fmt(r.main_conc, 1))}
             ${cell('10日异', r.prev10 == null ? '—' : r.prev10)}
-            ${cell('合计涨幅', `${sign(r.sum_gain)}%`)}
+            ${cell('11日上开收', r.up11_oc == null ? '—' : r.up11_oc)}
             ${cell('合计集中度', fmt(r.sum_conc, 1))}
-            ${cell('收盘位', `${fmt(r.close_pos, 0)}%`)}
+            ${cell('11日上MA5', r.up11_ma5 == null ? '—' : r.up11_ma5)}
             ${cell('市值', fmt(r.total_mv, 0), '亿')}
             ${cell('10前涨', `${sign(r.r10)}%`)}
             ${cell('10日回撤', `${fmt(r.dd10, 1)}%`)}
@@ -243,7 +244,6 @@
             ${cell('高距天', r.hpdays == null ? '—' : r.hpdays)}
             ${cell('开盘涨幅', `${sign(r.gap_open)}%`)}
             ${cell('换手', `${fmt(r.turnover, 1)}%`)}
-            ${cell('10日段集', fmt(r.mc10, 1))}
             ${cell('换手倍', fmt(r.to5_mult, 2))}
             ${cell('MA120', fmt(r.ma120, 2))}
             ${cell('两融', r.is_margin ? '是' : '否')}
