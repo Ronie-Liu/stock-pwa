@@ -202,6 +202,13 @@ async function switchTab(tabId) {
     el.classList.toggle('active', el.id === 'page-' + tabId);
   });
 
+  // 异动页每轮数据都在变，切回来时强制重载 iframe，避免停在打开时的旧一轮
+  if (tabId === 'surge') {
+    const frame = document.querySelector('#page-surge iframe');
+    if (frame && frame.dataset.seen === '1') frame.src = frame.getAttribute('src');
+    if (frame) frame.dataset.seen = '1';
+  }
+
   // 渲染页面内容
   if (tabId === 'watchlist') {
     await renderWatchlistPage();
