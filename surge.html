@@ -56,6 +56,14 @@
     .field input { flex: 1 1 0; min-width: 0; background: #0d1721; border: 1px solid #22303f; color: var(--text); border-radius: 5px; padding: 6px 8px; font: 12px/1.2 inherit; }
     .field input:focus { outline: 1px solid #3f6b58; }
     .field em { color: #4d5d6f; font-style: normal; font-size: 10px; }
+    .name { cursor: pointer; color: #cfe2f8; }
+    .name:active { opacity: .6; }
+    .name i { font-style: normal; color: #4d5d6f; font-size: 11px; margin-left: 2px; }
+    .dbody { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; }
+    .dsec { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 9px 4px; margin-bottom: 10px; }
+    .dsec h2 { margin: 0 0 6px; font-size: 11px; font-weight: 600; color: #9fb4c9; display: flex; justify-content: space-between; align-items: baseline; }
+    .dsec h2 small { font-size: 10px; font-weight: 400; color: #64798f; }
+    .dsec canvas { display: block; width: 100%; }
   </style>
 </head>
 <body>
@@ -87,11 +95,20 @@
   <div class="fields" id="fields"></div>
 </div>
 
+<div class="sheet detail" id="detail">
+  <header>
+    <b id="dTitle">—</b>
+    <button type="button" id="dClose">关闭</button>
+  </header>
+  <div class="dbody" id="dBody"></div>
+</div>
+
 <script>
   (function () {
     const IS_LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
     const OSS = 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/surge.json';
     const SRC = IS_LOCAL ? 'http://127.0.0.1:8765/api/v1/surge' : OSS;
+    const DETAIL_BASE = 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/surge_detail/';
     if (new URLSearchParams(location.search).get('embed') === '1') document.body.classList.add('embed');
 
     const FIELDS = [
@@ -173,7 +190,7 @@
       const p = state.payload;
       if (!p) return;
       const list = rows();
-      el('meta').textContent = `${p.cycle || ''} · 更新 ${(p.asof || '').slice(11, 16)}`;
+      el('meta').textContent = `${p.cycle || ''} · 更新 ${(p.asof || '').slice(11, 19)}`;
       el('cond').innerHTML = conditions(p.conditions, p.conc_applied);
       const active = Object.values(state.filters).filter((r) => (typeof r === 'string' ? r !== '' : r && (r.min !== '' && r.min != null || r.max !== '' && r.max != null))).length;
       const bits = [`命中 ${list.length}${p.total > (p.rows || []).length ? '（共 ' + p.total + '）' : ''} 只`,
@@ -192,7 +209,7 @@
       const shown = list.slice(0, state.show);
       const html = shown.map((r) => `<div class="item">
           <div class="r1">
-            <span class="name">${esc(r.name)}</span>
+            <span class="name" data-code="${esc(r.code)}" data-name="${esc(r.name)}">${esc(r.name)}<i>›</i></span>
             <span class="code">${esc(r.code)}</span>
             ${r.strategy && r.strategy.hit ? '<span class="tag">策略</span>' : ''}
             <span class="theme">${esc(r.theme_seg)}</span>
@@ -252,6 +269,194 @@
         </div>`;
       }).join('');
     }
+
+    // ---------- 个股详情：当日分时 + 近 20 日 K 线 ----------
+
+    const UP = '#ef6b78', DN = '#3fc39b';
+
+    function canvasBox(canvas, height) {
+      const width = Math.max(220, canvas.clientWidth || 320);
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      canvas.style.height = height + 'px';
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+      return { ctx: ctx, w: width, h: height };
+    }
+
+    function clock(v) {
+      return String(v == null ? '' : v).padStart(4, '0').replace(/^(\d{2})(\d{2})$/, '$1:$2');
+    }
+
+    function drawIntraday(data) {
+      const canvas = el('cMin');
+      if (!canvas) return;
+      const box = canvasBox(canvas, 196);
+      const ctx = box.ctx, w = box.w, h = box.h;
+      const ps = (data.intraday && data.intraday.p) || [];
+      const vs = (data.intraday && data.intraday.v) || [];
+      const avg = (data.intraday && data.intraday.a) || [];
+      const times = (data.intraday && data.intraday.t) || [];
+      if (ps.length < 2) {
+        ctx.fillStyle = '#7d8fa4'; ctx.font = '11px sans-serif';
+        ctx.fillText('暂无分时数据', 8, 24);
+        return;
+      }
+      const base = data.prev_close || ps[0];
+      const padR = 42, top = 6, priceH = h * 0.66, volTop = priceH + 14, volH = h - volTop - 13;
+      const plotW = w - padR;
+      let lo = Math.min.apply(null, ps.concat(avg, [base]));
+      let hi = Math.max.apply(null, ps.concat(avg, [base]));
+      const pad = (hi - lo) * 0.06 || 0.01;
+      lo -= pad; hi += pad;
+      const X = (i) => (i / (ps.length - 1)) * plotW;
+      const Y = (v) => top + ((hi - v) / (hi - lo)) * (priceH - top);
+      ctx.font = '9px sans-serif'; ctx.lineWidth = 1;
+      for (let k = 0; k <= 4; k++) {
+        const value = hi - ((hi - lo) * k) / 4;
+        const y = Y(value);
+        ctx.strokeStyle = '#1d2a38';
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(plotW, y); ctx.stroke();
+        ctx.fillStyle = value >= base ? UP : DN;
+        ctx.textAlign = 'left';
+        ctx.fillText(value.toFixed(2), plotW + 4, y + 3);
+      }
+      ctx.strokeStyle = '#4d5d6f'; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(0, Y(base)); ctx.lineTo(plotW, Y(base)); ctx.stroke();
+      ctx.setLineDash([]);
+      const vmax = Math.max.apply(null, vs.concat([1]));
+      const bw = Math.max(1, (plotW / vs.length) * 0.7);
+      for (let i = 0; i < vs.length; i++) {
+        const vh = (vs[i] / vmax) * volH;
+        ctx.fillStyle = i && ps[i] < ps[i - 1] ? 'rgba(63,195,155,.5)' : 'rgba(239,107,120,.5)';
+        ctx.fillRect(X(i) - bw / 2, h - 13 - vh, bw, vh);
+      }
+      ctx.strokeStyle = '#cfe2f8'; ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ps.forEach((p, i) => (i ? ctx.lineTo(X(i), Y(p)) : ctx.moveTo(X(i), Y(p))));
+      ctx.stroke();
+      if (avg.length === ps.length) {
+        ctx.strokeStyle = '#f0b45a'; ctx.lineWidth = 1;
+        ctx.beginPath();
+        avg.forEach((p, i) => (i ? ctx.lineTo(X(i), Y(p)) : ctx.moveTo(X(i), Y(p))));
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#64798f'; ctx.font = '9px sans-serif';
+      [0, Math.floor((times.length - 1) / 2), times.length - 1].forEach((i, k) => {
+        if (i < 0 || !times[i]) return;
+        ctx.textAlign = k === 0 ? 'left' : k === 2 ? 'right' : 'center';
+        ctx.fillText(clock(times[i]), k === 0 ? 0 : k === 2 ? plotW : X(i), h - 2);
+      });
+      ctx.textAlign = 'left';
+    }
+
+    function drawDaily(data) {
+      const canvas = el('cDay');
+      if (!canvas) return;
+      const box = canvasBox(canvas, 214);
+      const ctx = box.ctx, w = box.w, h = box.h;
+      const d = data.daily || {};
+      const n = (d.c || []).length;
+      if (!n) {
+        ctx.fillStyle = '#7d8fa4'; ctx.font = '11px sans-serif';
+        ctx.fillText('暂无 K 线数据', 8, 24);
+        return;
+      }
+      const padR = 42, top = 6, priceH = h * 0.64, volTop = priceH + 16, volH = h - volTop - 13;
+      const plotW = w - padR;
+      let lo = Math.min.apply(null, d.l), hi = Math.max.apply(null, d.h);
+      const pad = (hi - lo) * 0.07 || 0.01;
+      lo -= pad; hi += pad;
+      const slot = plotW / n;
+      const Y = (v) => top + ((hi - v) / (hi - lo)) * (priceH - top);
+      ctx.font = '9px sans-serif'; ctx.lineWidth = 1;
+      for (let k = 0; k <= 3; k++) {
+        const value = hi - ((hi - lo) * k) / 3;
+        const y = Y(value);
+        ctx.strokeStyle = '#1d2a38';
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(plotW, y); ctx.stroke();
+        ctx.fillStyle = '#64798f';
+        ctx.fillText(value.toFixed(2), plotW + 4, y + 3);
+      }
+      const tos = d.to || [];
+      const valid = tos.filter((x) => typeof x === 'number' && isFinite(x));
+      const tmax = Math.max.apply(null, valid.concat([0.01]));
+      const bw = Math.max(1.4, Math.min(9, slot * 0.62));
+      for (let i = 0; i < n; i++) {
+        const o = d.o[i], c = d.c[i], hh = d.h[i], ll = d.l[i];
+        const color = c >= o ? UP : DN;
+        const cx = slot * (i + 0.5);
+        ctx.strokeStyle = color;
+        ctx.beginPath(); ctx.moveTo(cx, Y(hh)); ctx.lineTo(cx, Y(ll)); ctx.stroke();
+        const yO = Y(o), yC = Y(c);
+        ctx.fillStyle = color;
+        ctx.fillRect(cx - bw / 2, Math.min(yO, yC), bw, Math.max(1.2, Math.abs(yC - yO)));
+        if (typeof tos[i] === 'number') {
+          const th = (tos[i] / tmax) * volH;
+          ctx.globalAlpha = 0.55;
+          ctx.fillRect(cx - bw / 2, h - 13 - th, bw, th);
+          ctx.globalAlpha = 1;
+        }
+      }
+      ctx.fillStyle = '#64798f';
+      ctx.textAlign = 'left';
+      ctx.fillText('换手 ' + tmax.toFixed(1) + '%', plotW + 4, volTop + 8);
+      [0, Math.floor((n - 1) / 2), n - 1].forEach((i, k) => {
+        if (!d.d[i]) return;
+        ctx.textAlign = k === 0 ? 'left' : k === 2 ? 'right' : 'center';
+        ctx.fillText(String(d.d[i]).slice(5), k === 0 ? 0 : k === 2 ? plotW : slot * (i + 0.5), h - 2);
+      });
+      ctx.textAlign = 'left';
+    }
+
+    function paintDetail() {
+      const data = state.detail;
+      if (!data) return;
+      drawIntraday(data);
+      drawDaily(data);
+    }
+
+    async function openDetail(code, name) {
+      state.detail = null;
+      el('dTitle').textContent = `${name} ${code}`;
+      el('dBody').innerHTML = '<div class="empty">加载中…</div>';
+      el('detail').classList.add('open');
+      try {
+        const response = await fetch(DETAIL_BASE + code + '.json?t=' + Date.now(), { cache: 'no-store' });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        if (!el('detail').classList.contains('open')) return;
+        state.detail = data;
+        const ps = (data.intraday && data.intraday.p) || [];
+        const last = ps.length ? ps[ps.length - 1] : null;
+        const pct = last && data.prev_close ? (last / data.prev_close - 1) * 100 : null;
+        el('dTitle').textContent = `${data.name || name} ${code} · ${data.day} 更新 ${String(data.updated || '').slice(11, 19)}`;
+        el('dBody').innerHTML = `
+          <div class="dsec">
+            <h2>当日分时<small>现价 ${last == null ? '—' : last.toFixed(2)} · ${pct == null ? '—' : sign(pct) + '%'}</small></h2>
+            <canvas id="cMin"></canvas>
+          </div>
+          <div class="dsec">
+            <h2>近 20 日 K 线<small>副图：换手率</small></h2>
+            <canvas id="cDay"></canvas>
+          </div>`;
+        paintDetail();
+      } catch (err) {
+        el('dBody').innerHTML = `<div class="empty">加载失败：${esc(err.message)}</div>`;
+      }
+    }
+
+    el('list').addEventListener('click', (event) => {
+      const node = event.target.closest('.name[data-code]');
+      if (node) openDetail(node.dataset.code, node.dataset.name);
+    });
+    el('dClose').addEventListener('click', () => {
+      el('detail').classList.remove('open');
+      state.detail = null;
+    });
+    window.addEventListener('resize', () => { if (state.detail) paintDetail(); });
 
     el('sort').addEventListener('click', (event) => {
       const button = event.target.closest('button');
