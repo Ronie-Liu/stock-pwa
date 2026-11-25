@@ -42,7 +42,10 @@
     .more { width: 100%; background: #111b26; color: #93a6ba; border: 1px solid #22303f; border-radius: 8px; padding: 9px; font: 12px inherit; margin: 2px 0 8px; }
     .foot { flex: 0 0 auto; color: #4d5d6f; font-size: 10px; padding: 4px 0 6px; text-align: center; }
     .empty { color: var(--mute); text-align: center; padding: 40px 0; font-size: 12px; }
-    body.embed .head, body.embed .foot { display: none; }
+    body.embed .head { display: flex; margin-bottom: 4px; }
+    body.embed .head h1 { display: none; }
+    body.embed .meta { font-size: 10px; }
+    body.embed .foot { display: none; }
     body.embed .wrap { padding: 6px 8px 0; }
     .sheet { position: fixed; inset: 0; background: #0a0f16; display: none; flex-direction: column; z-index: 20; }
     .sheet.open { display: flex; }
@@ -63,7 +66,9 @@
     .dsec { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 9px 4px; margin-bottom: 10px; }
     .dsec h2 { margin: 0 0 6px; font-size: 11px; font-weight: 600; color: #9fb4c9; display: flex; justify-content: space-between; align-items: baseline; }
     .dsec h2 small { font-size: 10px; font-weight: 400; color: #64798f; }
-    .dsec canvas { display: block; width: 100%; }
+    .dsec canvas { display: block; width: 100%; touch-action: pan-y; }
+    .dchips { display: flex; flex-wrap: wrap; gap: 3px 10px; font-size: 10px; color: #7d8fa4; padding: 0 0 5px; }
+    .dchips b { font-weight: 600; font-variant-numeric: tabular-nums; }
   </style>
 </head>
 <body>
@@ -273,6 +278,7 @@
     // ---------- 个股详情：当日分时 + 近 20 日 K 线 ----------
 
     const UP = '#ef6b78', DN = '#3fc39b';
+    const charts = { min: null, day: null };
 
     function canvasBox(canvas, height) {
       const width = Math.max(220, canvas.clientWidth || 320);
@@ -290,7 +296,7 @@
       return String(v == null ? '' : v).padStart(4, '0').replace(/^(\d{2})(\d{2})$/, '$1:$2');
     }
 
-    function drawIntraday(data) {
+    function drawIntraday(data, index) {
       const canvas = el('cMin');
       if (!canvas) return;
       const box = canvasBox(canvas, 196);
@@ -350,9 +356,29 @@
         ctx.fillText(clock(times[i]), k === 0 ? 0 : k === 2 ? plotW : X(i), h - 2);
       });
       ctx.textAlign = 'left';
+      charts.min = {
+        index: index,
+        indexAt: (x) => Math.max(0, Math.min(ps.length - 1, Math.round((x / plotW) * (ps.length - 1))))
+      };
+      if (index == null || !times[index]) return;
+      const cx = X(index), py = Y(ps[index]);
+      ctx.strokeStyle = '#8fa8c0'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(cx, top); ctx.lineTo(cx, h - 12); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(plotW, py); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#22303f'; ctx.fillRect(plotW, py - 7, padR, 14);
+      ctx.fillStyle = '#dfe8f2'; ctx.font = '9px sans-serif';
+      ctx.fillText(ps[index].toFixed(2), plotW + 4, py + 3);
+      const pctv = base ? (ps[index] / base - 1) * 100 : 0;
+      const text = `${clock(times[index])} ${ps[index].toFixed(2)} ${sign(pctv)}% 均${(avg[index] || ps[index]).toFixed(2)}`;
+      ctx.font = '10px sans-serif';
+      const tw = ctx.measureText(text).width + 10;
+      const tx = Math.max(0, Math.min(cx + 8, plotW - tw));
+      ctx.fillStyle = 'rgba(10,15,22,.9)'; ctx.fillRect(tx, top + 1, tw, 16);
+      ctx.fillStyle = '#cfe2f8'; ctx.fillText(text, tx + 5, top + 12);
     }
 
-    function drawDaily(data) {
+    function drawDaily(data, index) {
       const canvas = el('cDay');
       if (!canvas) return;
       const box = canvasBox(canvas, 214);
@@ -409,17 +435,60 @@
         ctx.fillText(String(d.d[i]).slice(5), k === 0 ? 0 : k === 2 ? plotW : slot * (i + 0.5), h - 2);
       });
       ctx.textAlign = 'left';
+      charts.day = {
+        index: index,
+        indexAt: (x) => Math.max(0, Math.min(n - 1, Math.floor(x / slot)))
+      };
+      if (index == null || !d.d[index]) return;
+      const cx = slot * (index + 0.5), py = Y(d.c[index]);
+      ctx.strokeStyle = '#8fa8c0'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(cx, top); ctx.lineTo(cx, h - 12); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(plotW, py); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#22303f'; ctx.fillRect(plotW, py - 7, padR, 14);
+      ctx.fillStyle = '#dfe8f2'; ctx.font = '9px sans-serif';
+      ctx.fillText(d.c[index].toFixed(2), plotW + 4, py + 3);
+      const prevC = index ? d.c[index - 1] : d.c[index];
+      const pctv = prevC ? (d.c[index] / prevC - 1) * 100 : 0;
+      const to = typeof tos[index] === 'number' ? ' 换' + tos[index].toFixed(1) + '%' : '';
+      const text = `${String(d.d[index]).slice(5)} 开${d.o[index]} 高${d.h[index]} 低${d.l[index]} 收${d.c[index]} ${sign(pctv)}%${to}`;
+      ctx.font = '9px sans-serif';
+      const tw = ctx.measureText(text).width + 10;
+      const tx = Math.max(0, Math.min(cx + 8, plotW - tw));
+      ctx.fillStyle = 'rgba(10,15,22,.9)'; ctx.fillRect(tx, top + 1, tw, 15);
+      ctx.fillStyle = '#cfe2f8'; ctx.fillText(text, tx + 5, top + 11.5);
     }
 
     function paintDetail() {
       const data = state.detail;
       if (!data) return;
-      drawIntraday(data);
-      drawDaily(data);
+      drawIntraday(data, charts.min && charts.min.index);
+      drawDaily(data, charts.day && charts.day.index);
+    }
+
+    function bindCrosshair(id, kind) {
+      const canvas = el(id);
+      if (!canvas) return;
+      let active = false;
+      const apply = (event) => {
+        const chart = charts[kind];
+        if (!chart) return;
+        const rect = canvas.getBoundingClientRect();
+        chart.index = chart.indexAt(event.clientX - rect.left);
+        paintDetail();
+      };
+      canvas.addEventListener('pointerdown', (event) => { active = true; apply(event); });
+      canvas.addEventListener('pointermove', (event) => {
+        if (active || event.pointerType === 'mouse') apply(event);
+      });
+      canvas.addEventListener('pointerup', () => { active = false; });
+      canvas.addEventListener('pointercancel', () => { active = false; });
     }
 
     async function openDetail(code, name) {
       state.detail = null;
+      charts.min = null;
+      charts.day = null;
       el('dTitle').textContent = `${name} ${code}`;
       el('dBody').innerHTML = '<div class="empty">加载中…</div>';
       el('detail').classList.add('open');
@@ -433,9 +502,17 @@
         const last = ps.length ? ps[ps.length - 1] : null;
         const pct = last && data.prev_close ? (last / data.prev_close - 1) * 100 : null;
         el('dTitle').textContent = `${data.name || name} ${code} · ${data.day} 更新 ${String(data.updated || '').slice(11, 19)}`;
+        const snap = data.snap || {};
+        const rel = (v) => (typeof v === 'number' && data.prev_close ? (v / data.prev_close - 1) * 100 : null);
+        const pchip = (label, v) => {
+          const p = rel(v);
+          return `<span>${label} <b class="${cls(p)}">${p == null ? '—' : sign(p) + '%'}</b></span>`;
+        };
+        const vchip = (label, v) => `<span>${label} <b>${typeof v === 'number' ? v.toFixed(2) + '%' : '—'}</b></span>`;
         el('dBody').innerHTML = `
           <div class="dsec">
-            <h2>当日分时<small>现价 ${last == null ? '—' : last.toFixed(2)} · ${pct == null ? '—' : sign(pct) + '%'}</small></h2>
+            <h2>当日分时<small>${data.day} 更新 ${String(data.updated || '').slice(11, 19)}</small></h2>
+            <div class="dchips">${pchip('开', snap.open)}${pchip('低', snap.low)}${pchip('高', snap.high)}${pchip('现', last)}${vchip('换', snap.turnover)}${vchip('昨换', snap.prev_turnover)}</div>
             <canvas id="cMin"></canvas>
           </div>
           <div class="dsec">
@@ -443,6 +520,8 @@
             <canvas id="cDay"></canvas>
           </div>`;
         paintDetail();
+        bindCrosshair('cMin', 'min');
+        bindCrosshair('cDay', 'day');
       } catch (err) {
         el('dBody').innerHTML = `<div class="empty">加载失败：${esc(err.message)}</div>`;
       }
@@ -455,6 +534,8 @@
     el('dClose').addEventListener('click', () => {
       el('detail').classList.remove('open');
       state.detail = null;
+      charts.min = null;
+      charts.day = null;
     });
     window.addEventListener('resize', () => { if (state.detail) paintDetail(); });
 
