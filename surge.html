@@ -142,6 +142,8 @@
     try { state.filters = JSON.parse(localStorage.getItem('surge_filters') || '{}') || {}; } catch (e) { state.filters = {}; }
     try { state.key = localStorage.getItem('surge_sort') || 'pct_chg'; } catch (e) {}
     if (['main_gain', 'sum_gain', 'mc10', 'close_pos'].indexOf(state.key) >= 0) state.key = 'pct_chg';
+    const VALID = new Set(FIELDS.map((f) => f[0]).concat(TEXTS.map((t) => t[0])));
+    Object.keys(state.filters).forEach((k) => { if (!VALID.has(k)) delete state.filters[k]; });
 
     function conditions(cond, concApplied) {
       if (!cond) return '';
