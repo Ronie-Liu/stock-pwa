@@ -39,6 +39,11 @@
     .cell b { display: block; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .cell b small { font-size: 9px; font-weight: 400; color: #6f8aa5; margin-left: 1px; }
     .tag { display: inline-block; font-size: 9px; padding: 0 4px; border-radius: 3px; border: 1px solid #6b3f52; color: #f2a6be; margin-left: 4px; vertical-align: middle; }
+    .star { flex: 0 0 auto; background: #111b26; border: 1px solid #22303f; color: #93a6ba; border-radius: 6px; padding: 2px 7px; font: 10px/1.5 inherit; white-space: nowrap; }
+    .star:active { opacity: .6; }
+    .star.on { background: #1d3a31; border-color: #3f6b58; color: #d6efe2; }
+    .toast { position: fixed; left: 50%; bottom: 72px; transform: translateX(-50%); background: #16232f; border: 1px solid #2c3d50; color: #dfe8f2; border-radius: 8px; padding: 7px 14px; font-size: 12px; opacity: 0; transition: opacity .16s; pointer-events: none; z-index: 30; }
+    .toast.show { opacity: 1; }
     .more { width: 100%; background: #111b26; color: #93a6ba; border: 1px solid #22303f; border-radius: 8px; padding: 9px; font: 12px inherit; margin: 2px 0 8px; }
     .foot { flex: 0 0 auto; color: #4d5d6f; font-size: 10px; padding: 4px 0 6px; text-align: center; }
     .empty { color: var(--mute); text-align: center; padding: 40px 0; font-size: 12px; }
@@ -131,7 +136,7 @@
 
     const TEXTS = [['name', '名称包含'], ['theme_seg', '主题/行业包含']];
 
-    const state = { payload: null, key: 'pct_chg', strat: false, filters: {}, show: 40 };
+    const state = { payload: null, key: 'pct_chg', strat: false, filters: {}, show: 40, added: new Set() };
     const el = (id) => document.getElementById(id);
     const fmt = (v, d) => (typeof v === 'number' && isFinite(v) ? v.toFixed(d === undefined ? 2 : d) : '—');
     const sign = (v, d) => (typeof v === 'number' && isFinite(v) ? (v > 0 ? '+' : '') + v.toFixed(d === undefined ? 2 : d) : '—');
@@ -221,6 +226,7 @@
             <span class="code">${esc(r.code)}</span>
             ${r.strategy && r.strategy.hit ? '<span class="tag">策略</span>' : ''}
             <span class="theme">${esc(r.theme_seg)}</span>
+            <button type="button" class="star${state.added.has(r.code) ? ' on' : ''}" data-add="${esc(r.code)}" data-name="${esc(r.name)}">${state.added.has(r.code) ? '已自选' : '＋自选'}</button>
             <span class="chg ${cls(r.pct_chg)}">${sign(r.pct_chg)}%</span>
           </div>
           <div class="grid">
@@ -530,9 +536,76 @@
     }
 
     el('list').addEventListener('click', (event) => {
+      const star = event.target.closest('.star[data-add]');
+      if (star) {
+        addWatch(star.dataset.add, star.dataset.name, star);
+        return;
+      }
       const node = event.target.closest('.name[data-code]');
       if (node) openDetail(node.dataset.code, node.dataset.name);
     });
+
+    /* 自选股：优先复用外层应用的 IndexedDB 接口，独立打开页面时再按需加载 db.js */
+    function watchApi() {
+      return new Promise((resolve, reject) => {
+        if (window.parent && window.parent !== window && typeof window.parent.addStock === 'function') {
+          resolve(window.parent);
+          return;
+        }
+        if (typeof addStock === 'function' && typeof getAllStocks === 'function') {
+          resolve(window);
+          return;
+        }
+        const script = document.createElement('script');
+        script.src = '/js/db.js';
+        script.onload = () => (typeof addStock === 'function'
+          ? resolve(window) : reject(new Error('自选股接口不可用')));
+        script.onerror = () => reject(new Error('自选股接口加载失败'));
+        document.head.appendChild(script);
+      });
+    }
+
+    let toastTimer = null;
+    function toast(text) {
+      let node = el('toast');
+      if (!node) {
+        node = document.createElement('div');
+        node.id = 'toast';
+        node.className = 'toast';
+        document.body.appendChild(node);
+      }
+      node.textContent = text;
+      node.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => node.classList.remove('show'), 1600);
+    }
+
+    async function addWatch(code, name, button) {
+      if (button.dataset.done === '1') return;
+      button.disabled = true;
+      try {
+        const api = await watchApi();
+        const list = await api.getAllStocks('watchlist');
+        if ((list || []).some((item) => item.code === code)) {
+          state.added.add(code);
+          button.dataset.done = '1';
+          button.classList.add('on');
+          button.textContent = '已自选';
+          toast(`${name} 已在自选股中`);
+          return;
+        }
+        await api.addStock({ code, name, stock_type: 'watchlist' });
+        state.added.add(code);
+        button.dataset.done = '1';
+        button.classList.add('on');
+        button.textContent = '已自选';
+        toast(`已添加 ${name} 到自选股`);
+      } catch (err) {
+        toast('添加失败：' + err.message);
+      } finally {
+        button.disabled = false;
+      }
+    }
     el('dClose').addEventListener('click', () => {
       el('detail').classList.remove('open');
       state.detail = null;
