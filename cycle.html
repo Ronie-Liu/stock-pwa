@@ -8,8 +8,9 @@
     :root { color-scheme: dark; --up:#ef6b78; --dn:#3fc39b; --bg:#0a0f16; --card:#111b26; --line:#1d2a38; --text:#dfe8f2; --mute:#7d8fa4; }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body { height: 100%; }
-    body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.45 "PingFang SC", "Microsoft YaHei", sans-serif; display: flex; flex-direction: column; overflow: hidden; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.45 "PingFang SC", "Microsoft YaHei", sans-serif; display: flex; flex-direction: column; overflow: hidden; overscroll-behavior: none; }
     .wrap { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 8px 10px 0; }
+    .stick { flex: 0 0 auto; position: relative; z-index: 10; background: var(--bg); }
     .head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
     .head h1 { margin: 0; font-size: 15px; letter-spacing: .5px; }
     .meta { color: var(--mute); font-size: 11px; }
@@ -22,20 +23,22 @@
     .seg::-webkit-scrollbar { display: none; }
     .seg button { background: #111b26; color: #93a6ba; border: 1px solid #22303f; border-radius: 6px; padding: 4px 10px; font: 11px/1.2 inherit; white-space: nowrap; }
     .seg button.on { background: #1d3a31; border-color: #3f6b58; color: #d6efe2; }
-    .stat { display: flex; gap: 10px; color: #5b6c80; font-size: 10px; margin-bottom: 5px; }
-    .list { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
-    table { width: 100%; border-collapse: collapse; }
-    th { position: sticky; top: 0; background: #0d1721; color: #64798f; font-size: 10px; font-weight: 500; padding: 5px 4px; text-align: right; z-index: 2; }
-    th:first-child, td:first-child { text-align: left; }
-    td { padding: 6px 4px; font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; border-bottom: 1px solid #131f2a; white-space: nowrap; }
-    tr:nth-child(odd) td { background: #0d1520; }
-    td.name { color: #cfe2f8; max-width: 44vw; overflow: hidden; text-overflow: ellipsis; }
-    td.n { color: #6f8aa5; font-size: 11px; }
+    .stat { color: #5b6c80; font-size: 10px; padding-bottom: 5px; }
+    .list { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; position: relative; z-index: 1; padding-bottom: 6px; }
+    .item { padding: 8px 10px; border-bottom: 1px solid #131f2a; background: #0d1520; }
+    .item:nth-child(odd) { background: #0b131c; }
+    .line1 { display: flex; align-items: baseline; gap: 7px; }
+    .line1 b { font-size: 13px; font-weight: 600; color: #e2eefa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .line1 .n { color: #5f7b95; font-size: 10px; }
+    .line1 .close { margin-left: auto; color: #9fb4c9; font-size: 12px; font-variant-numeric: tabular-nums; }
+    .line2 { display: flex; flex-wrap: wrap; gap: 3px 10px; margin-top: 4px; }
+    .tag { display: inline-flex; align-items: baseline; gap: 3px; font-size: 11px; }
+    .tag i { color: #566a7f; font-style: normal; font-size: 10px; }
+    .tag b { font-weight: 600; }
     .up { color: var(--up); }
     .dn { color: var(--dn); }
     .empty { color: var(--mute); text-align: center; padding: 40px 0; font-size: 12px; }
     .foot { flex: 0 0 auto; color: #4d5d6f; font-size: 10px; padding: 4px 0 6px; text-align: center; }
-    body.embed .head { margin-bottom: 4px; }
     body.embed .head h1 { display: none; }
     body.embed .foot { display: none; }
     body.embed .wrap { padding: 6px 8px 0; }
@@ -43,12 +46,14 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="head"><h1>周期汇总</h1><span class="meta" id="meta">加载中…</span></div>
-  <div class="market" id="market"></div>
-  <div class="seg" id="kinds"></div>
-  <div class="stat"><span id="stat"></span></div>
+  <div class="stick">
+    <div class="head"><h1>周期汇总</h1><span class="meta" id="meta">加载中…</span></div>
+    <div class="market" id="market"></div>
+    <div class="seg" id="kinds"></div>
+    <div class="stat" id="stat"></div>
+  </div>
   <div class="list" id="list"><div class="empty">加载中…</div></div>
-  <p class="foot">按当日涨跌幅排序 · 分组为等权指数 · 每 2 分钟自动刷新</p>
+  <p class="foot">按趋势强弱排序 · 位置/趋势/筹码/情绪口径同桌面「指数与情绪」 · 每 2 分钟刷新</p>
 </div>
 
 <script>
@@ -59,6 +64,12 @@
     if (new URLSearchParams(location.search).get('embed') === '1') document.body.classList.add('embed');
 
     const KINDS = [['wide', '宽基'], ['theme', '主题'], ['segment', '细分'], ['l2', '二级行业'], ['l3', '三级行业']];
+    const COLORS = {
+      position: { '高位': '#ef6b78', '中高位': '#e3a25c', '中位': '#8ba0b6', '中低位': '#5fb98f', '低位': '#3fc39b' },
+      trend: { '主升': '#ef6b78', '启动': '#e3a25c', '反弹': '#6ba6f2', '震荡': '#8ba0b6', '下跌': '#5fb98f', '恐慌': '#3f9c7a' },
+      health: { '非常健康': '#3fc39b', '健康': '#5fb98f', '中等': '#8ba0b6', '偏脆弱': '#e3a25c', '脆弱': '#ef6b78' },
+      sentiment: { '情绪沸腾': '#ef6b78', '情绪亢奋': '#e3a25c', '情绪修复': '#6ba6f2', '情绪昏沉': '#8ba0b6', '透心凉': '#3fc39b' }
+    };
     const state = { kind: 'theme', data: null, loading: false };
 
     const pct = (value) => (value === null || value === undefined || Number.isNaN(Number(value)))
@@ -79,23 +90,28 @@
         </div>`).join('');
     }
 
-    function paintTable() {
+    function tag(dim, label) {
+      const color = (COLORS[dim] || {})[label] || '#8ba0b6';
+      return `<span class="tag"><i>${dim === 'position' ? '位置' : dim === 'trend' ? '趋势' : dim === 'health' ? '筹码' : '情绪'}</i>`
+        + `<b style="color:${color}">${label || '—'}</b></span>`;
+    }
+
+    function paintList() {
       const rows = ((state.data && state.data.kinds) || {})[state.kind] || [];
       if (!rows.length) {
         document.getElementById('list').innerHTML = '<div class="empty">暂无数据</div>';
         document.getElementById('stat').textContent = '';
         return;
       }
-      const body = rows.map((row) => `<tr>
-          <td class="name">${row.name}</td>
-          <td class="${cls(row.change)}">${pct(row.change)}</td>
-          <td class="${cls(row.chg5)}">${pct(row.chg5)}</td>
-          <td class="${cls(row.chg20)}">${pct(row.chg20)}</td>
-          <td class="n">${row.universe === null || row.universe === undefined ? '—' : row.universe}</td>
-        </tr>`).join('');
-      document.getElementById('list').innerHTML = '<table><thead><tr>'
-        + '<th>名称</th><th>当日</th><th>5日</th><th>20日</th><th>成分</th>'
-        + `</tr></thead><tbody>${body}</tbody></table>`;
+      document.getElementById('list').innerHTML = rows.map((row) => `<div class="item">
+          <div class="line1"><b>${row.name}</b>
+            <span class="n">${row.universe === null || row.universe === undefined ? '' : row.universe + ' 只'}</span>
+            <span class="close">${num(row.close)}</span></div>
+          <div class="line2">${tag('position', row.position && row.position.label)}
+            ${tag('trend', row.trend && row.trend.label)}
+            ${tag('health', row.health && row.health.label)}
+            ${tag('sentiment', row.sentiment && row.sentiment.label)}</div>
+        </div>`).join('');
       const label = ((state.data && state.data.labels) || {})[state.kind] || '';
       document.getElementById('stat').textContent = `${label} ${rows.length} 个 · 最新交易日 ${state.data.asof || '—'}`;
     }
@@ -108,7 +124,8 @@
           if (state.kind === button.dataset.kind) return;
           state.kind = button.dataset.kind;
           paintKinds();
-          paintTable();
+          paintList();
+          document.getElementById('list').scrollTop = 0;
         });
       });
     }
@@ -121,7 +138,7 @@
         if (!response.ok) throw new Error(`接口返回 ${response.status}`);
         state.data = await response.json();
         paintMarket(state.data.market);
-        paintTable();
+        paintList();
         const stamp = state.data.generated_at ? state.data.generated_at.slice(11, 16) : '—';
         document.getElementById('meta').textContent = `最新交易日 ${state.data.asof || '—'} · 更新 ${stamp}`;
         document.getElementById('meta').style.color = '';
