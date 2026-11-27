@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>周期汇总</title>
+  <style>
+    :root { color-scheme: dark; --up:#ef6b78; --dn:#3fc39b; --bg:#0a0f16; --card:#111b26; --line:#1d2a38; --text:#dfe8f2; --mute:#7d8fa4; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.45 "PingFang SC", "Microsoft YaHei", sans-serif; display: flex; flex-direction: column; overflow: hidden; }
+    .wrap { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 8px 10px 0; }
+    .head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+    .head h1 { margin: 0; font-size: 15px; letter-spacing: .5px; }
+    .meta { color: var(--mute); font-size: 11px; }
+    .market { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 7px; }
+    .mcard { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; }
+    .mcard i { display: block; color: #64798f; font-size: 10px; font-style: normal; }
+    .mcard b { display: block; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .mrow { display: flex; gap: 8px; margin-top: 3px; font-size: 10px; color: #8ba0b6; }
+    .seg { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; margin-bottom: 6px; }
+    .seg::-webkit-scrollbar { display: none; }
+    .seg button { background: #111b26; color: #93a6ba; border: 1px solid #22303f; border-radius: 6px; padding: 4px 10px; font: 11px/1.2 inherit; white-space: nowrap; }
+    .seg button.on { background: #1d3a31; border-color: #3f6b58; color: #d6efe2; }
+    .stat { display: flex; gap: 10px; color: #5b6c80; font-size: 10px; margin-bottom: 5px; }
+    .list { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { position: sticky; top: 0; background: #0d1721; color: #64798f; font-size: 10px; font-weight: 500; padding: 5px 4px; text-align: right; z-index: 2; }
+    th:first-child, td:first-child { text-align: left; }
+    td { padding: 6px 4px; font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; border-bottom: 1px solid #131f2a; white-space: nowrap; }
+    tr:nth-child(odd) td { background: #0d1520; }
+    td.name { color: #cfe2f8; max-width: 44vw; overflow: hidden; text-overflow: ellipsis; }
+    td.n { color: #6f8aa5; font-size: 11px; }
+    .up { color: var(--up); }
+    .dn { color: var(--dn); }
+    .empty { color: var(--mute); text-align: center; padding: 40px 0; font-size: 12px; }
+    .foot { flex: 0 0 auto; color: #4d5d6f; font-size: 10px; padding: 4px 0 6px; text-align: center; }
+    body.embed .head { margin-bottom: 4px; }
+    body.embed .head h1 { display: none; }
+    body.embed .foot { display: none; }
+    body.embed .wrap { padding: 6px 8px 0; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head"><h1>周期汇总</h1><span class="meta" id="meta">加载中…</span></div>
+  <div class="market" id="market"></div>
+  <div class="seg" id="kinds"></div>
+  <div class="stat"><span id="stat"></span></div>
+  <div class="list" id="list"><div class="empty">加载中…</div></div>
+  <p class="foot">按当日涨跌幅排序 · 分组为等权指数 · 每 2 分钟自动刷新</p>
+</div>
+
+<script>
+  (function () {
+    const IS_LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+    const OSS = 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/boardcycle.json';
+    const SRC = IS_LOCAL ? 'http://127.0.0.1:8765/api/v1/boardcycle/daily' : OSS;
+    if (new URLSearchParams(location.search).get('embed') === '1') document.body.classList.add('embed');
+
+    const KINDS = [['wide', '宽基'], ['theme', '主题'], ['segment', '细分'], ['l2', '二级行业'], ['l3', '三级行业']];
+    const state = { kind: 'theme', data: null, loading: false };
+
+    const pct = (value) => (value === null || value === undefined || Number.isNaN(Number(value)))
+      ? '—' : `${value > 0 ? '+' : ''}${Number(value).toFixed(2)}%`;
+    const cls = (value) => (value === null || value === undefined) ? ''
+      : (value > 0 ? 'up' : (value < 0 ? 'dn' : ''));
+    const num = (value) => (value === null || value === undefined) ? '—'
+      : Number(value).toLocaleString('zh-CN', { maximumFractionDigits: 2 });
+
+    function paintMarket(market) {
+      document.getElementById('market').innerHTML = (market || []).map((row) => `
+        <div class="mcard">
+          <i>${row.name}</i>
+          <b class="${cls(row.change)}">${num(row.close)}</b>
+          <div class="mrow"><span class="${cls(row.change)}">当日 ${pct(row.change)}</span>
+            <span class="${cls(row.chg5)}">5日 ${pct(row.chg5)}</span>
+            <span class="${cls(row.chg20)}">20日 ${pct(row.chg20)}</span></div>
+        </div>`).join('');
+    }
+
+    function paintTable() {
+      const rows = ((state.data && state.data.kinds) || {})[state.kind] || [];
+      if (!rows.length) {
+        document.getElementById('list').innerHTML = '<div class="empty">暂无数据</div>';
+        document.getElementById('stat').textContent = '';
+        return;
+      }
+      const body = rows.map((row) => `<tr>
+          <td class="name">${row.name}</td>
+          <td class="${cls(row.change)}">${pct(row.change)}</td>
+          <td class="${cls(row.chg5)}">${pct(row.chg5)}</td>
+          <td class="${cls(row.chg20)}">${pct(row.chg20)}</td>
+          <td class="n">${row.universe === null || row.universe === undefined ? '—' : row.universe}</td>
+        </tr>`).join('');
+      document.getElementById('list').innerHTML = '<table><thead><tr>'
+        + '<th>名称</th><th>当日</th><th>5日</th><th>20日</th><th>成分</th>'
+        + `</tr></thead><tbody>${body}</tbody></table>`;
+      const label = ((state.data && state.data.labels) || {})[state.kind] || '';
+      document.getElementById('stat').textContent = `${label} ${rows.length} 个 · 最新交易日 ${state.data.asof || '—'}`;
+    }
+
+    function paintKinds() {
+      document.getElementById('kinds').innerHTML = KINDS.map(([key, label]) =>
+        `<button type="button" data-kind="${key}" class="${key === state.kind ? 'on' : ''}">${label}</button>`).join('');
+      document.querySelectorAll('#kinds button').forEach((button) => {
+        button.addEventListener('click', () => {
+          if (state.kind === button.dataset.kind) return;
+          state.kind = button.dataset.kind;
+          paintKinds();
+          paintTable();
+        });
+      });
+    }
+
+    async function load() {
+      if (state.loading) return;
+      state.loading = true;
+      try {
+        const response = await fetch(SRC + (SRC.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now(), { cache: 'no-store' });
+        if (!response.ok) throw new Error(`接口返回 ${response.status}`);
+        state.data = await response.json();
+        paintMarket(state.data.market);
+        paintTable();
+        const stamp = state.data.generated_at ? state.data.generated_at.slice(11, 16) : '—';
+        document.getElementById('meta').textContent = `最新交易日 ${state.data.asof || '—'} · 更新 ${stamp}`;
+        document.getElementById('meta').style.color = '';
+      } catch (error) {
+        document.getElementById('meta').textContent = `读取失败：${error.message}`;
+        document.getElementById('meta').style.color = '#ef6b78';
+        if (!state.data) document.getElementById('list').innerHTML = '<div class="empty">读取失败，稍后自动重试</div>';
+      } finally {
+        state.loading = false;
+      }
+    }
+
+    paintKinds();
+    load();
+    setInterval(load, 120000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+  })();
+</script>
+</body>
+</html>

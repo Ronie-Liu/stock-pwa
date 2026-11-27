@@ -180,8 +180,6 @@ async function refreshCurrentPage() {
     await renderWatchlistPage();
   } else if (currentTab === 'holdings') {
     await renderHoldingsPage();
-  } else if (currentTab === 'selection') {
-    renderSelectionTab();
   } else if (currentTab === 'environment') {
     await renderEnvironmentTab();
   }
@@ -214,8 +212,6 @@ async function switchTab(tabId) {
     await renderWatchlistPage();
   } else if (tabId === 'holdings') {
     await renderHoldingsPage();
-  } else if (tabId === 'selection') {
-    renderSelectionTab();
   } else if (tabId === 'environment') {
     await renderEnvironmentTab();
   }

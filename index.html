@@ -23,25 +23,27 @@
     <!-- Tab 2: 自选股监控 -->
     <div class="page" id="page-watchlist"></div>
 
-    <!-- Tab 3: 条件选股 -->
-    <div class="page" id="page-selection"></div>
-
-    <!-- Tab 4: 环境 -->
+    <!-- Tab 3: 环境 -->
     <div class="page" id="page-environment"></div>
 
-    <!-- Tab 5: 多空博弈（内嵌，不新开网址） -->
+    <!-- Tab 4: 多空博弈（内嵌，不新开网址） -->
     <div class="page active" id="page-battle" style="padding:0;overflow:hidden;position:relative">
       <iframe src="battle-classic.html?embed=1" title="全市场多空博弈" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#0a0f16"></iframe>
     </div>
 
-    <!-- Tab 6: 主题热力（内嵌） -->
+    <!-- Tab 5: 主题热力（内嵌） -->
     <div class="page" id="page-theme" style="padding:0;overflow:hidden;position:relative">
       <iframe src="theme.html?embed=1" title="主题多空热力" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#0a0f16"></iframe>
     </div>
 
-    <!-- Tab 7: 异动拉升（内嵌，每 30 分钟一轮） -->
+    <!-- Tab 6: 异动拉升（内嵌，每 30 分钟一轮） -->
     <div class="page" id="page-surge" style="padding:0;overflow:hidden;position:relative">
       <iframe src="surge.html?embed=1&v=20261126a" title="盘中异动拉升选股" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#0a0f16"></iframe>
+    </div>
+
+    <!-- Tab 7: 周期汇总（内嵌） -->
+    <div class="page" id="page-cycle" style="padding:0;overflow:hidden;position:relative">
+      <iframe src="cycle.html?embed=1&v=20261127a" title="周期汇总" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#0a0f16"></iframe>
     </div>
 
     <!-- 底部导航 -->
@@ -58,12 +60,6 @@
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
         </svg>
         <span>自选股</span>
-      </button>
-      <button class="nav-item" data-tab="selection">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>
-        </svg>
-        <span>条件选股</span>
       </button>
       <button class="nav-item" data-tab="environment">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -92,6 +88,13 @@
         </svg>
         <span>异动</span>
       </button>
+      <button class="nav-item" data-tab="cycle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 7v5l3 2"/>
+        </svg>
+        <span>周期</span>
+      </button>
     </nav>
   </div>
 
@@ -106,13 +109,12 @@
   <script src="/js/charts.js?v=20260906n"></script>
   <script src="/js/market.js?v=20260906n"></script>
   <script src="/js/third_board.js?v=20260906n"></script>
-  <script src="/js/selection.js?v=20260922a"></script>
   <script src="/js/sentiment.js?v=20260922a"></script>
   <script src="/js/resonance.js?v=20261025a"></script>
   <script src="/js/liquidity.js?v=20260906q"></script>
   <script src="/data/high_low_data.js?v=67659cc6e9"></script>
   <script src="/data/resonance_data.js?v=35201a2c18"></script>
   <script src="/js/high_low.js?v=20260910h"></script>
-  <script src="/js/app.js?v=20261125a"></script>
+  <script src="/js/app.js?v=20261127a"></script>
 </body>
 </html>
