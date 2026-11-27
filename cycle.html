@@ -14,34 +14,48 @@
     .head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
     .head h1 { margin: 0; font-size: 15px; letter-spacing: .5px; }
     .meta { color: var(--mute); font-size: 11px; }
-    .market { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 7px; }
-    .mcard { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; }
+    .market { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+    .mcard { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; }
     .mcard i { display: block; color: #64798f; font-size: 10px; font-style: normal; }
     .mcard b { display: block; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
-    .mrow { display: flex; gap: 8px; margin-top: 3px; font-size: 10px; color: #8ba0b6; }
-    .seg { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; margin-bottom: 6px; }
+    .mrow { display: flex; gap: 8px; margin-top: 2px; font-size: 10px; color: #8ba0b6; }
+    .seg { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; margin-bottom: 5px; }
     .seg::-webkit-scrollbar { display: none; }
     .seg button { background: #111b26; color: #93a6ba; border: 1px solid #22303f; border-radius: 6px; padding: 4px 10px; font: 11px/1.2 inherit; white-space: nowrap; }
     .seg button.on { background: #1d3a31; border-color: #3f6b58; color: #d6efe2; }
-    .stat { color: #5b6c80; font-size: 10px; padding-bottom: 5px; }
+    .tools { display: flex; gap: 5px; margin-bottom: 5px; }
+    .tools input { flex: 1 1 auto; min-width: 0; background: #0d1721; border: 1px solid #22303f; border-radius: 6px; color: #d3e4f2; padding: 5px 8px; font: 11px/1.3 inherit; }
+    .tools select { flex: 0 0 auto; background: #0d1721; border: 1px solid #22303f; border-radius: 6px; color: #b8cbdd; padding: 4px 4px; font: 11px/1.3 inherit; }
+    .chips { display: flex; flex-wrap: wrap; gap: 5px; padding-bottom: 4px; }
+    .chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px; background: #17301f; border: 1px solid #2f5a44; color: #9fd7bd; font-size: 10px; }
+    .stat { color: #5b6c80; font-size: 10px; padding-bottom: 4px; }
     .list { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; position: relative; z-index: 1; padding-bottom: 6px; }
     .item { padding: 8px 10px; border-bottom: 1px solid #131f2a; background: #0d1520; }
     .item:nth-child(odd) { background: #0b131c; }
     .line1 { display: flex; align-items: baseline; gap: 7px; }
-    .line1 b { font-size: 13px; font-weight: 600; color: #e2eefa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .line1 b { font-size: 13px; font-weight: 600; color: #e2eefa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-bottom: 1px dashed #2b3d4f; }
     .line1 .n { color: #5f7b95; font-size: 10px; }
     .line1 .close { margin-left: auto; color: #9fb4c9; font-size: 12px; font-variant-numeric: tabular-nums; }
     .line2 { display: flex; flex-wrap: wrap; gap: 3px 10px; margin-top: 4px; }
     .tag { display: inline-flex; align-items: baseline; gap: 3px; font-size: 11px; }
     .tag i { color: #566a7f; font-style: normal; font-size: 10px; }
     .tag b { font-weight: 600; }
-    .up { color: var(--up); }
-    .dn { color: var(--dn); }
+    .tag em { color: #6f8aa5; font-style: normal; font-size: 10px; font-variant-numeric: tabular-nums; }
+    .tag.on { outline: 1px solid #3f6b58; border-radius: 4px; }
     .empty { color: var(--mute); text-align: center; padding: 40px 0; font-size: 12px; }
     .foot { flex: 0 0 auto; color: #4d5d6f; font-size: 10px; padding: 4px 0 6px; text-align: center; }
     body.embed .head h1 { display: none; }
     body.embed .foot { display: none; }
     body.embed .wrap { padding: 6px 8px 0; }
+    .mask { position: fixed; inset: 0; background: rgba(4,8,12,.86); z-index: 40; display: flex; flex-direction: column; padding: 10px 10px 14px; }
+    .mask[hidden] { display: none; }
+    .bhead { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+    .bhead b { font-size: 13px; }
+    .bhead span { color: #5f7488; font-size: 10px; }
+    .bhead button { margin-left: auto; background: none; border: none; color: #8fa3b7; font-size: 22px; line-height: 1; }
+    #bcanvas { width: 100%; flex: 0 0 auto; height: 300px; display: block; background: #0c141d; border: 1px solid #1e2b38; border-radius: 8px; }
+    .blegend { color: #6f8095; font-size: 10px; margin-top: 6px; line-height: 1.6; }
+    .blegend b { color: #b3c5d6; font-weight: 500; }
   </style>
 </head>
 <body>
@@ -50,17 +64,37 @@
     <div class="head"><h1>周期汇总</h1><span class="meta" id="meta">加载中…</span></div>
     <div class="market" id="market"></div>
     <div class="seg" id="kinds"></div>
+    <div class="tools">
+      <input id="q" placeholder="搜索名称…">
+      <select id="sort">
+        <option value="trend:-1">趋势 强→弱</option>
+        <option value="trend:1">趋势 弱→强</option>
+        <option value="position:-1">位置 高→低</option>
+        <option value="position:1">位置 低→高</option>
+        <option value="health:-1">筹码 健康→脆弱</option>
+        <option value="health:1">筹码 脆弱→健康</option>
+        <option value="sentiment:-1">情绪 多→少</option>
+        <option value="name:1">名称</option>
+      </select>
+    </div>
+    <div class="chips" id="chips"></div>
     <div class="stat" id="stat"></div>
   </div>
   <div class="list" id="list"><div class="empty">加载中…</div></div>
-  <p class="foot">按趋势强弱排序 · 位置/趋势/筹码/情绪口径同桌面「指数与情绪」 · 每 2 分钟刷新</p>
+  <p class="foot">点名称看近 250 日气泡图 · 点标签可筛选 · 每 2 分钟刷新</p>
+</div>
+
+<div class="mask" id="mask" hidden>
+  <div class="bhead"><b id="btitle">—</b><span id="bmeta"></span><button type="button" id="bclose">×</button></div>
+  <canvas id="bcanvas"></canvas>
+  <div class="blegend" id="blegend"></div>
 </div>
 
 <script>
   (function () {
     const IS_LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
-    const OSS = 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/boardcycle.json';
-    const SRC = IS_LOCAL ? 'http://127.0.0.1:8765/api/v1/boardcycle/daily' : OSS;
+    const OSS = 'https://yunfei-station-2026.oss-cn-shanghai.aliyuncs.com/battle/';
+    const SRC = IS_LOCAL ? 'http://127.0.0.1:8765/api/v1/boardcycle/daily' : OSS + 'boardcycle.json';
     if (new URLSearchParams(location.search).get('embed') === '1') document.body.classList.add('embed');
 
     const KINDS = [['wide', '宽基'], ['theme', '主题'], ['segment', '细分'], ['l2', '二级行业'], ['l3', '三级行业']];
@@ -70,7 +104,17 @@
       health: { '非常健康': '#3fc39b', '健康': '#5fb98f', '中等': '#8ba0b6', '偏脆弱': '#e3a25c', '脆弱': '#ef6b78' },
       sentiment: { '情绪沸腾': '#ef6b78', '情绪亢奋': '#e3a25c', '情绪修复': '#6ba6f2', '情绪昏沉': '#8ba0b6', '透心凉': '#3fc39b' }
     };
-    const state = { kind: 'theme', data: null, loading: false };
+    const NAMES = { position: '位置', trend: '趋势', health: '筹码', sentiment: '情绪' };
+    const SORT_KEYS = {
+      name: (row) => row.name,
+      position: (row) => row.position && row.position.score,
+      trend: (row) => row.trend && row.trend.score,
+      health: (row) => row.health && row.health.score,
+      sentiment: (row) => row.sentiment && row.sentiment.count,
+      close: (row) => row.close,
+    };
+    const state = { kind: 'theme', data: null, loading: false, search: '', sort: { key: 'trend', dir: -1 }, filters: {} };
+    const bubbleCache = {};
 
     const pct = (value) => (value === null || value === undefined || Number.isNaN(Number(value)))
       ? '—' : `${value > 0 ? '+' : ''}${Number(value).toFixed(2)}%`;
@@ -90,30 +134,95 @@
         </div>`).join('');
     }
 
-    function tag(dim, label) {
+    function tagValue(dim, row) {
+      if (dim === 'position') return row.position && row.position.score !== null && row.position.score !== undefined
+        ? row.position.score.toFixed(1) : '';
+      if (dim === 'trend') {
+        const value = row.trend && row.trend.score;
+        return value === null || value === undefined ? '' : `${value > 0 ? '+' : ''}${value.toFixed(1)}`;
+      }
+      if (dim === 'health') {
+        const value = row.health && row.health.score;
+        return value === null || value === undefined ? '' : Math.round(value * 100);
+      }
+      return row.sentiment && row.sentiment.count !== undefined ? row.sentiment.count : '';
+    }
+
+    function tag(dim, row) {
+      const label = row[dim] && row[dim].label;
       const color = (COLORS[dim] || {})[label] || '#8ba0b6';
-      return `<span class="tag"><i>${dim === 'position' ? '位置' : dim === 'trend' ? '趋势' : dim === 'health' ? '筹码' : '情绪'}</i>`
-        + `<b style="color:${color}">${label || '—'}</b></span>`;
+      const on = state.filters[dim] === label ? ' on' : '';
+      return `<span class="tag${on}" data-dim="${dim}" data-label="${label || ''}">`
+        + `<i>${NAMES[dim]}</i><b style="color:${color}">${label || '—'}</b>`
+        + `<em>${tagValue(dim, row)}</em></span>`;
+    }
+
+    function filtered() {
+      let rows = ((state.data && state.data.kinds) || {})[state.kind] || [];
+      const query = state.search.trim().toLowerCase();
+      rows = rows.slice();
+      if (query) rows = rows.filter((row) => row.name.toLowerCase().includes(query));
+      Object.keys(state.filters).forEach((dim) => {
+        const want = state.filters[dim];
+        if (want) rows = rows.filter((row) => row[dim] && row[dim].label === want);
+      });
+      const keyFn = SORT_KEYS[state.sort.key] || SORT_KEYS.trend;
+      rows.sort((a, b) => {
+        const va = keyFn(a);
+        const vb = keyFn(b);
+        const na = va === null || va === undefined;
+        const nb = vb === null || vb === undefined;
+        if (na && nb) return 0;
+        if (na) return 1;
+        if (nb) return -1;
+        if (typeof va === 'string') return va.localeCompare(vb, 'zh') * state.sort.dir;
+        return (va - vb) * state.sort.dir;
+      });
+      return rows;
+    }
+
+    function paintChips() {
+      const active = Object.keys(state.filters).filter((dim) => state.filters[dim]);
+      document.getElementById('chips').innerHTML = active.map((dim) =>
+        `<span class="chip" data-dim="${dim}">筛选 ${NAMES[dim]} · ${state.filters[dim]} ×</span>`).join('');
+      document.querySelectorAll('#chips .chip').forEach((chip) => {
+        chip.addEventListener('click', () => {
+          state.filters[chip.dataset.dim] = null;
+          paintChips();
+          paintList();
+        });
+      });
     }
 
     function paintList() {
-      const rows = ((state.data && state.data.kinds) || {})[state.kind] || [];
+      const rows = filtered();
       if (!rows.length) {
-        document.getElementById('list').innerHTML = '<div class="empty">暂无数据</div>';
+        document.getElementById('list').innerHTML = '<div class="empty">没有符合条件的分组</div>';
         document.getElementById('stat').textContent = '';
         return;
       }
       document.getElementById('list').innerHTML = rows.map((row) => `<div class="item">
-          <div class="line1"><b>${row.name}</b>
+          <div class="line1"><b data-key="${row.key}">${row.name}</b>
             <span class="n">${row.universe === null || row.universe === undefined ? '' : row.universe + ' 只'}</span>
             <span class="close">${num(row.close)}</span></div>
-          <div class="line2">${tag('position', row.position && row.position.label)}
-            ${tag('trend', row.trend && row.trend.label)}
-            ${tag('health', row.health && row.health.label)}
-            ${tag('sentiment', row.sentiment && row.sentiment.label)}</div>
+          <div class="line2">${tag('position', row)}${tag('trend', row)}${tag('health', row)}${tag('sentiment', row)}</div>
         </div>`).join('');
       const label = ((state.data && state.data.labels) || {})[state.kind] || '';
-      document.getElementById('stat').textContent = `${label} ${rows.length} 个 · 最新交易日 ${state.data.asof || '—'}`;
+      const total = (((state.data || {}).kinds || {})[state.kind] || []).length;
+      document.getElementById('stat').textContent =
+        `${label} ${rows.length}/${total} 个 · 最新交易日 ${(state.data && state.data.asof) || '—'}`;
+      document.querySelectorAll('#list .line1 b').forEach((node) => {
+        node.addEventListener('click', () => openBubble(state.kind, node.dataset.key, node.textContent));
+      });
+      document.querySelectorAll('#list .tag').forEach((node) => {
+        node.addEventListener('click', () => {
+          const dim = node.dataset.dim;
+          if (!node.dataset.label) return;
+          state.filters[dim] = state.filters[dim] === node.dataset.label ? null : node.dataset.label;
+          paintChips();
+          paintList();
+        });
+      });
     }
 
     function paintKinds() {
@@ -123,7 +232,9 @@
         button.addEventListener('click', () => {
           if (state.kind === button.dataset.kind) return;
           state.kind = button.dataset.kind;
+          state.filters = {};
           paintKinds();
+          paintChips();
           paintList();
           document.getElementById('list').scrollTop = 0;
         });
@@ -151,7 +262,163 @@
       }
     }
 
+    async function bubbleData(kind, key) {
+      if (IS_LOCAL) {
+        const response = await fetch(`http://127.0.0.1:8765/api/v1/boardcycle/bubble?kind=${kind}&name=${encodeURIComponent(key)}&days=250`, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`接口返回 ${response.status}`);
+        return response.json();
+      }
+      if (!bubbleCache[kind]) {
+        const response = await fetch(`${OSS}bubble_${kind}.json?t=${Date.now()}`, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`接口返回 ${response.status}`);
+        bubbleCache[kind] = await response.json();
+      }
+      const pack = bubbleCache[kind];
+      const group = (pack.groups || {})[key];
+      if (!group) throw new Error('暂无该分组气泡数据');
+      const rows = ((state.data || {}).kinds || {})[kind] || [];
+      const row = rows.find((item) => item.key === key) || {};
+      return { name: group.name, kind, asof: pack.asof, universe: group.universe,
+               dates: group.dates, position: group.position, trend: group.trend,
+               health: group.health, up_ratio: group.up_ratio,
+               latest: { position: row.position, trend: row.trend, health: row.health,
+                         sentiment: row.sentiment, close: row.close } };
+    }
+
+    async function openBubble(kind, key, name) {
+      const mask = document.getElementById('mask');
+      mask.hidden = false;
+      document.getElementById('btitle').textContent = `${name} · 近 250 日轨迹`;
+      document.getElementById('bmeta').textContent = '加载中…';
+      document.getElementById('blegend').textContent = '';
+      try {
+        const payload = await bubbleData(kind, key);
+        document.getElementById('bmeta').textContent =
+          `${payload.asof || ''} · ${payload.dates.length} 个采样点 · 成分 ${payload.universe || '—'}`;
+        drawBubble(payload);
+        const latest = payload.latest || {};
+        const position = latest.position || {};
+        const trend = latest.trend || {};
+        const health = latest.health || {};
+        const sentiment = latest.sentiment || {};
+        document.getElementById('blegend').innerHTML =
+          `<b>最新</b> 位置 ${position.score !== undefined && position.score !== null ? position.score.toFixed(1) : '—'}（${position.label || '—'}）`
+          + ` · 趋势 ${trend.score !== undefined && trend.score !== null ? trend.score.toFixed(1) : '—'}（${trend.label || '—'}）`
+          + ` · 筹码 ${health.score !== undefined && health.score !== null ? Math.round(health.score * 100) : '—'}（${health.label || '—'}）`
+          + ` · 情绪 ${sentiment.count !== undefined ? sentiment.count : '—'} 家（${sentiment.label || '—'}）<br>`
+          + '气泡大小＝当日成分股上涨占比 · 颜色＝筹码健康度（红脆弱 → 绿健康）· 越靠右越贵、越靠上趋势越强';
+      } catch (error) {
+        document.getElementById('bmeta').textContent = `读取失败：${error.message}`;
+      }
+    }
+
+    function healthColor(score) {
+      const value = Math.max(0, Math.min(1, score === null || score === undefined ? 0.4 : score));
+      const low = [239, 107, 120];
+      const mid = [227, 162, 92];
+      const high = [63, 195, 155];
+      const [a, b, t] = value < 0.5 ? [low, mid, value / 0.5] : [mid, high, (value - 0.5) / 0.5];
+      return `rgb(${a.map((channel, i) => Math.round(channel + (b[i] - channel) * t)).join(',')})`;
+    }
+
+    function drawBubble(payload) {
+      const canvas = document.getElementById('bcanvas');
+      const box = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const width = Math.max(280, box.width || 340);
+      const height = box.height || 300;
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+      const pad = { left: 40, right: 12, top: 12, bottom: 28 };
+      const innerW = width - pad.left - pad.right;
+      const innerH = height - pad.top - pad.bottom;
+      const trends = payload.trend.map((value) => (value === null || value === undefined ? null : value));
+      const valid = trends.filter((value) => value !== null);
+      let lo = valid.length ? Math.min(...valid) : -10;
+      let hi = valid.length ? Math.max(...valid) : 10;
+      const span = Math.max(4, hi - lo);
+      lo -= span * 0.12;
+      hi += span * 0.12;
+      const px = (value) => pad.left + (Math.max(0, Math.min(100, value || 0)) / 100) * innerW;
+      const py = (value) => pad.top + innerH - ((value - lo) / (hi - lo)) * innerH;
+
+      ctx.font = '9px "PingFang SC", "Microsoft YaHei", sans-serif';
+      ctx.strokeStyle = 'rgba(120,150,180,.14)';
+      ctx.fillStyle = '#5f7488';
+      for (let tick = 0; tick <= 100; tick += 25) {
+        const x = px(tick);
+        ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + innerH); ctx.stroke();
+        ctx.textAlign = 'center';
+        ctx.fillText(String(tick), x, pad.top + innerH + 12);
+      }
+      for (let i = 0; i <= 3; i += 1) {
+        const value = lo + ((hi - lo) * i) / 3;
+        const y = py(value);
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + innerW, y); ctx.stroke();
+        ctx.textAlign = 'right';
+        ctx.fillText(value.toFixed(1), pad.left - 4, y + 3);
+      }
+      ctx.textAlign = 'center';
+      ctx.fillText('位置分位（左低 → 右高）', pad.left + innerW / 2, height - 4);
+
+      const points = [];
+      payload.dates.forEach((day, index) => {
+        if (trends[index] === null || payload.position[index] === null || payload.position[index] === undefined) return;
+        points.push({ day, x: px(payload.position[index]), y: py(trends[index]),
+                      count: (payload.up_ratio && payload.up_ratio[index]) || 0, health: payload.health[index] });
+      });
+      if (!points.length) {
+        ctx.fillStyle = '#5f7488';
+        ctx.textAlign = 'center';
+        ctx.fillText('暂无足够数据', pad.left + innerW / 2, pad.top + innerH / 2);
+        return;
+      }
+      if (points.length > 1) {
+        ctx.beginPath();
+        points.forEach((point, index) => (index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y)));
+        ctx.strokeStyle = 'rgba(110,150,190,.20)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      const maxCount = Math.max(1, ...points.map((point) => point.count));
+      points.forEach((point, index) => {
+        const ratio = points.length > 1 ? index / (points.length - 1) : 1;
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 2.2 + 9 * Math.sqrt(point.count / maxCount), 0, Math.PI * 2);
+        ctx.fillStyle = healthColor(point.health);
+        ctx.globalAlpha = 0.22 + 0.7 * ratio;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      });
+      const last = points[points.length - 1];
+      ctx.beginPath();
+      ctx.arc(last.x, last.y, 12, 0, Math.PI * 2);
+      ctx.strokeStyle = '#e8f3ff';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.fillStyle = '#cfe2f8';
+      ctx.textAlign = last.x > pad.left + innerW * 0.7 ? 'right' : 'left';
+      ctx.fillText(`最新 ${last.day}`, last.x + (last.x > pad.left + innerW * 0.7 ? -14 : 14), last.y - 13);
+    }
+
+    document.getElementById('bclose').addEventListener('click', () => {
+      document.getElementById('mask').hidden = true;
+    });
+    document.getElementById('q').addEventListener('input', (event) => {
+      state.search = event.target.value;
+      paintList();
+    });
+    document.getElementById('sort').addEventListener('change', (event) => {
+      const [key, dir] = event.target.value.split(':');
+      state.sort = { key, dir: Number(dir) };
+      paintList();
+    });
+
     paintKinds();
+    paintChips();
     load();
     setInterval(load, 120000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
